@@ -1,0 +1,68 @@
+﻿<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>lojax.js</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap-theme.min.css">
+    <link rel="stylesheet" href="styles.css" media="screen">
+    <link rel="stylesheet" href="lojax.css" media="screen">
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+    <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+    <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+</head>
+<body>
+    <div class="navbar navbar-inverse">
+        <div class="container">
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a href="default.html" class="navbar-brand">lojax.js</a>
+            </div>
+            <div class="navbar-collapse collapse">
+                <ul class="nav navbar-nav" data-toggle="collapse" data-target=".navbar-collapse">
+                    <li>
+                        <a href="#howitworks.html" data-method="ajax-get">how it works</a>
+                    </li>
+                    <li>
+                        <a href="#injectingcontent.html" data-method="ajax-get">injecting content</a>
+                    </li>
+                    <li>
+                        <a href="#modals.html" data-method="ajax-get">modals</a>
+                    </li>
+                    <li>
+                        <a href="#navigationhistory.html" data-method="ajax-get">navigation history</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="container">
+        <div id="top">
+            <div data-jaxpanel="panel1"></div>
+        </div>
+    </div>
+    <script src="http://code.jquery.com/jquery-2.1.4.min.js"></script>
+    <script src="lojax.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+    <script>
+        // load the intro page
+        new jax.Request({
+            method:'ajax-get',
+            action:'#intro.html'
+        })
+            .exec()
+            .then(function(response){
+                jax.instance.injectContent(null, response);
+            });
+    </script>
+</body>
+</html>

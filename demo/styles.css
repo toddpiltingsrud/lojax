@@ -1,0 +1,14 @@
+h4 {
+  font-family: 'courier new';
+  margin-top: 2em;
+}
+p {
+  margin-top: 1.5em;
+  margin-bottom: 1.5em;
+}
+pre {
+  margin: 3em 1em;
+}
+.bottom-buttons {
+  margin: 2em 0;
+}

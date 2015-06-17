@@ -1,0 +1,71 @@
+<div data-jaxpanel="panel1" data-transition="flip-horizontal">
+
+    <h4>custom attributes</h4>
+
+    <p>lojax uses custom attributes to allow any clickable element to trigger any kind of call to a web server.</p>
+
+    <h4>@data-method</h4>
+
+    <p>An element must at least have a "data-method" attribute to be handled by lojax. This attribute specifies what type of call to make:</p>
+
+    <pre class="html4strict" style="font-family:monospace;"><span style="color: #009900;">&lt;<span style="color: #000000; font-weight: bold;">a</span> <span style="color: #000066;">href</span><span style="color: #66cc66;">=</span><span style="color: #ff0000;">&quot;#howitworks.html&quot;</span> <span style="color: #000066;">data-method</span><span style="color: #66cc66;">=</span><span style="color: #ff0000;">&quot;ajax-get&quot;</span>&gt;</span>How it Works<span style="color: #009900;">&lt;<span style="color: #66cc66;">/</span><span style="color: #000000; font-weight: bold;">a</span>&gt;</span></pre>
+
+    <p>The following methods are supported:</p>
+
+    <ul>
+        <li>get</li>
+        <li>post</li>
+        <li>put</li>
+        <li>delete</li>
+        <li>ajax-get</li>
+        <li>ajax-post</li>
+        <li>ajax-put</li>
+        <li>ajax-delete</li>
+        <li>jsonp</li>
+    </ul>
+
+    <h4>@data-action</h4>
+
+    <p>You can use the data-action attribute instead of href:</p>
+
+    <pre class="html4strict" style="font-family:monospace;"><span style="color: #009900;">&lt;<span style="color: #000000; font-weight: bold;">button</span> <span style="color: #000066;">data-method</span><span style="color: #66cc66;">=</span><span style="color: #ff0000;">&quot;ajax-get&quot;</span> <span style="color: #000066;">data-action</span><span style="color: #66cc66;">=</span><span style="color: #ff0000;">&quot;#howitworks.html&quot;</span>&gt;</span>How it Works<span style="color: #009900;">&lt;<span style="color: #66cc66;">/</span><span style="color: #000000; font-weight: bold;">button</span>&gt;</span></pre>
+
+    <h4>@data-form</h4>
+
+    <p>The data-form attribute is a jQuery selector that specifies a collection of input elements:</p>
+
+<pre class="html4strict" style="font-family:monospace;"><span style="color: #009900;">&lt;<span style="color: #000000; font-weight: bold;">input</span> <span style="color: #000066;">type</span><span style="color: #66cc66;">=</span><span style="color: #ff0000;">&quot;text&quot;</span> <span style="color: #000066;">name</span><span style="color: #66cc66;">=</span><span style="color: #ff0000;">&quot;FirstName&quot;</span> <span style="color: #000066;">value</span><span style="color: #66cc66;">=</span><span style="color: #ff0000;">&quot;Todd&quot;</span>&gt;</span>
+&nbsp;
+<span style="color: #009900;">&lt;<span style="color: #000000; font-weight: bold;">input</span> <span style="color: #000066;">type</span><span style="color: #66cc66;">=</span><span style="color: #ff0000;">&quot;text&quot;</span> <span style="color: #000066;">name</span><span style="color: #66cc66;">=</span><span style="color: #ff0000;">&quot;LastName&quot;</span> <span style="color: #000066;">value</span><span style="color: #66cc66;">=</span><span style="color: #ff0000;">&quot;Piltingsrud&quot;</span>&gt;</span>
+&nbsp;
+<span style="color: #009900;">&lt;<span style="color: #000000; font-weight: bold;">button</span> <span style="color: #000066;">data-method</span><span style="color: #66cc66;">=</span><span style="color: #ff0000;">&quot;ajax-post&quot;</span> <span style="color: #000066;">data-action</span><span style="color: #66cc66;">=</span><span style="color: #ff0000;">&quot;Create&quot;</span> </span> <span style="color: #000066;">data-form</span><span style="color: #66cc66;">=</span><span style="color: #ff0000;">&quot;[name]&quot;</span>&gt;</span>Submit<span style="color: #009900;">&lt;<span style="color: #66cc66;">/</span><span style="color: #000000; font-weight: bold;">button</span>&gt;</span>&nbsp;</pre>
+
+    <p>If you use an ajax method with the data-form attribute, lojax passes the value of data-form to jQuery's serialize function.
+        If you use a non-AJAX method (POST, GET, etc), lojax creates a hidden form for the matching elements and calls the submit function on it.
+        This frees you to put input elements anywhere on the page and submit any queryable combination of them to the server.
+    </p>
+
+    <h4>
+    @data-model
+    </h4>
+    <p>
+        This attribute expects either a JavaScript object or a JSON string.
+        Similar to the data-form attribute, submitting via AJAX serializes the model before making the call.
+        Submitting via non-AJAX methods creates a hidden form and populates it with the model's object names and values and then submits the form.
+    </p>
+
+    <div class="bottom-buttons">
+
+        <a class="pull-left btn btn-default" href="default.html">
+            <span class="glyphicon glyphicon-menu-left"></span>
+            intro
+        </a>
+
+        <a class="pull-right btn btn-default" href="#injectingcontent.html" data-method="ajax-get">
+            injecting content
+            <span class="glyphicon glyphicon-menu-right"></span>
+        </a>
+
+    </div>
+
+</div>

@@ -1,0 +1,26 @@
+<div data-jaxpanel="panel1" data-transition="flip-vertical">
+
+    <h4>controlling navigation history</h4>
+
+    <p>
+        lojax uses the URL's hash to track navigation history.
+        To place an item into the browser's navigation history, preface the URL with "#".
+    </p>
+
+    <pre class="html4strict" style="font-family:monospace;"><span style="color: #009900;">&lt;<span style="color: #000000; font-weight: bold;">a</span> <span style="color: #000066;">href</span><span style="color: #66cc66;">=</span><span style="color: #ff0000;">&quot;#navigationhistory.html&quot;</span> <span style="color: #000066;">data-method</span><span style="color: #66cc66;">=</span><span style="color: #ff0000;">&quot;ajax-get&quot;</span>&gt;</span>navigation history<span style="color: #009900;">&lt;<span style="color: #66cc66;">/</span><span style="color: #000000; font-weight: bold;">a</span>&gt;</span></pre>
+
+    <p>lojax handles the "hashchange" event and queries the page for an element with a data-action or href attribute that matches the hash and has a data-method of "ajax-get".
+        This is how lojax decides whether or not it's a hash that it should handle.
+        Filtering for an "ajax-get" ensures that lojax doesn't issue posts or deletes against the server from users clicking the browser's navigation buttons or clicking a link in an email.
+    </p>
+
+    <div class="bottom-buttons">
+
+        <a class="pull-left btn btn-default" href="#modals.html" data-method="ajax-get">
+            <span class="glyphicon glyphicon-menu-left"></span>
+            modals
+        </a>
+
+    </div>
+
+</div>
