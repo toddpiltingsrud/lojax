@@ -232,7 +232,7 @@ var jax = jax || {};
             var form = null;
             method = method || 'post';
             if (priv.hasValue(this.form)) {
-                form = priv.buildForm(this.form, this.action);
+                form = priv.buildForm(this.form, this.action, method);
             }
             else if (priv.hasValue(this.model)) {
                 form = priv.formFromModel(this.model, method, this.action);
@@ -257,7 +257,7 @@ var jax = jax || {};
         ajax: function (type) {
             var self = this;
             var search;
-            if (priv.hasValue(this.model) && typeof this.model === 'object') {
+            if (typeof this.model === 'object') {
                 search = this.model;
             }
             else {
@@ -265,7 +265,7 @@ var jax = jax || {};
             }
             $.ajax({
                 url: this.action,
-                type: type,
+                type: type.toUpperCase(),
                 data: search
             })
                 .done(self.done.bind(self))
@@ -312,10 +312,10 @@ var jax = jax || {};
                 this.ajax('post');
             },
             'ajax-put': function () {
-                this.ajax('PUT');
+                this.ajax('put');
             },
             'ajax-delete': function () {
-                this.ajax('DELETE');
+                this.ajax('delete');
             },
             jsonp: function () {
                 var self = this;
@@ -446,8 +446,8 @@ var jax = jax || {};
         },
         buildForm: function (forms, action, method) {
             if ($(forms).size() > 0) {
-                method = method || 'post';
-                var form = $("<form method='" + method + "' action='" + action + "' style='display:none'></form>");
+                method = method || 'POST';
+                var form = $("<form method='" + method.toUpperCase() + "' action='" + action + "' style='display:none'></form>");
                 var inputs = $(forms).find(':input').serializeArray();
                 if (inputs.length === 0) {
                     inputs = $(forms).filter(':input').serializeArray();
@@ -461,9 +461,9 @@ var jax = jax || {};
         },
         formFromModel: function (model, method, action, rootName, form) {
             if (!priv.hasValue(form)) {
-                method = method || 'post';
+                method = method || 'POST';
                 action = action || '';
-                form = $("<form method='" + method + "' action='" + action + "' style='display:none'></form>");
+                form = $("<form method='" + method.toUpperCase() + "' action='" + action + "' style='display:none'></form>");
                 rootName = '';
             }
 

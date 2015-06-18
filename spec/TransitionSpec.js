@@ -1,7 +1,7 @@
 /**
  * Created by kitntodd on 6/13/2015.
  */
-fdescribe('injectContent', function(){
+xdescribe('injectContent', function(){
 
     it('should use fade-in as default transition', function(done){
 

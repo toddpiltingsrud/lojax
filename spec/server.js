@@ -3,7 +3,8 @@ var http = require('http');
 var app = http.createServer(function(request, response){
     response.setHeader('Content-Type', 'application/json');
     response.setHeader('Access-Control-Allow-Origin', '*');
-
+    response.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS, PUT, DELETE');
+    response.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     var obj = dump(request);
 
     var json = JSON.stringify(obj);

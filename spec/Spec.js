@@ -110,6 +110,45 @@ describe('Request', function () {
                 expect(error).toEqual('not!');
                 done();
             });
+
+    });
+
+    it('ajax-put', function (done) {
+
+        var request = new jax.Request({
+            method:'ajax-put',
+            action:'http://localhost:1338'
+        });
+
+        request.exec().
+            then(function(response){
+                expect(response.method).toEqual('PUT');
+                done();
+            }).
+            catch(function(error){
+                logError(error);
+                expect(error).toEqual('not!');
+                done();
+            });
+    });
+
+    it('ajax-delete', function (done) {
+
+        var request = new jax.Request({
+            method:'ajax-delete',
+            action:'http://localhost:1338'
+        });
+
+        request.exec().
+            then(function(response){
+                expect(response.method).toEqual('DELETE');
+                done();
+            }).
+            catch(function(error){
+                logError(error);
+                expect(error).toEqual('not!');
+                done();
+            });
     });
 
     xit('should cancel', function (done) {
@@ -157,6 +196,68 @@ describe('Request', function () {
 
         var request = new jax.Request({
             method:'post',
+            action:'http://localhost:1338'
+        })
+            .exec()
+            .then(function(response){
+                expect(response).toEqual('not!');
+                done();
+            })
+            .catch(function(error){
+                logError(error);
+                expect(error).toEqual('not!');
+                done();
+            });
+
+//        expect(true).toEqual('not!');
+
+        //done();
+    });
+
+    xit('put', function (done) {
+
+        $(document).one('beforeRequest', function(evt){
+            expect(true).toEqual(true);
+        });
+
+        $(document).one('afterRequest', function(evt){
+            expect(true).toEqual(true);
+            done();
+        });
+
+        var request = new jax.Request({
+            method:'put',
+            action:'http://localhost:1338'
+        })
+            .exec()
+            .then(function(response){
+                expect(response).toEqual('not!');
+                done();
+            })
+            .catch(function(error){
+                logError(error);
+                expect(error).toEqual('not!');
+                done();
+            });
+
+//        expect(true).toEqual('not!');
+
+        //done();
+    });
+
+    it('delete', function (done) {
+
+        $(document).one('beforeRequest', function(evt){
+            expect(true).toEqual(true);
+        });
+
+        $(document).one('afterRequest', function(evt){
+            expect(true).toEqual(true);
+            done();
+        });
+
+        var request = new jax.Request({
+            method:'delete',
             action:'http://localhost:1338'
         })
             .exec()

@@ -16,11 +16,11 @@ module.exports = function(config) {
     // list of files / patterns to load in the browser
     files: [
       '../*.js',
-      '../src/jquery-2.1.1.min.js',
+      '../src/jquery.min.js',
       '../src/lojax.js',
       '*Spec.js',
       'stops.js',
-        '../src/styles.css',
+      '../src/styles.css',
       '../src/lojax.css'
     ],
 
