@@ -49,7 +49,6 @@ var jax = jax || {};
             }, 1000);
         },
         'slide-left': function (oldPanel, newPanel) {
-            var width = oldPanel.width();
             var parent = oldPanel.parent().addClass('slide-left');
             $(oldPanel).addClass('left');
             $(newPanel).addClass('right').appendTo(parent);
@@ -85,7 +84,6 @@ var jax = jax || {};
             console.log(error);
             alert(error);
         };
-        this.hashHandled = false;
 
         $(function () {
             self.div = $("<div style='display:none'></div>").appendTo('body');
@@ -102,7 +100,7 @@ var jax = jax || {};
 
             self.loadAsyncContent();
 
-            setTimeout(self.handleHash);
+            setTimeout(self.handleHash, 0);
         });
     };
 
@@ -111,7 +109,7 @@ var jax = jax || {};
         handleRequest: function (evt) {
             // handles click, change, submit
             // 'this' will be the element that was clicked, changed, or submitted
-            var hashIndex, params, $this = $(this);
+            var params, $this = $(this);
             if ($this.is('[data-request]')) {
                 params = JSON.parse($this.data('request').replace(/'/g, '"'));
             }
@@ -214,7 +212,6 @@ var jax = jax || {};
                 // match up with panels on the page
                 id = $(this).data('jaxpanel');
                 target = $('[data-jaxpanel="' + id + '"]').not(this);
-
 
                 if (target.size() > 0) {
 
@@ -527,19 +524,19 @@ var jax = jax || {};
             }
             return null;
         },
-        resolveRoute: function (request) {
-            var url = request.action;
-            var start = url.indexOf('#') != -1 ? url.indexOf('#') : 0;
-            var end = url.indexOf('?') != -1 ? url.indexOf('?') - 1 : url.length - 1;
-            start = start > end ? 0 : start;
-            url = request.action.substr(start, end);
-            if (priv.hasValue(jax.Route[url])) {
-                jax.Route[url].action = request.action;
-                return jax.Route[url];
-            }
-            jax.Route[url] = request;
-            return request;
-        },
+        //resolveRoute: function (request) {
+        //    var url = request.action;
+        //    var start = url.indexOf('#') != -1 ? url.indexOf('#') : 0;
+        //    var end = url.indexOf('?') != -1 ? url.indexOf('?') - 1 : url.length - 1;
+        //    start = start > end ? 0 : start;
+        //    url = request.action.substr(start, end);
+        //    if (priv.hasValue(jax.Route[url])) {
+        //        jax.Route[url].action = request.action;
+        //        return jax.Route[url];
+        //    }
+        //    jax.Route[url] = request;
+        //    return request;
+        //},
         buildForm: function (forms, action, method) {
             if ($(forms).size() > 0) {
                 method = method || 'POST';
