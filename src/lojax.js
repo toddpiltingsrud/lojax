@@ -2,7 +2,7 @@
 TODO: 
 - Handle files?
 - rewrite formFromModel to recurse through arrays
-- refactor: diagram everything out and clean it all up
+- refactor: diagram everything out and reorganize
 */
 
 /*
