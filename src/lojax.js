@@ -2,6 +2,7 @@
 TODO: 
 - Handle files?
 - rewrite formFromModel to recurse through arrays
+- refactor: diagram everything out and clean it all up
 */
 
 /*
@@ -16,43 +17,64 @@ var jax = jax || {};
 
     jax.Transitions = {
 
-        'fade-in' : function(oldPanel, newPanel) {
+        'fade-in': function (oldPanel, newPanel) {
             $(newPanel).fadeOut(0);
             $(oldPanel).fadeOut(0).replaceWith(newPanel);
             $(newPanel).fadeIn('slow');
         },
-        'flip-horizontal': function(oldPanel, newPanel) {
-            var parent = $(oldPanel).parent().addClass('flip-horizontal');
+        'flip-horizontal': function (oldPanel, newPanel) {
+            var parent = oldPanel.parent().addClass('flip-vertical').css('position', 'relative');
             $(oldPanel).addClass('front');
-            $(newPanel).addClass('back').appendTo(parent);
-            setTimeout(function(){
+            $(newPanel).addClass('back').appendTo(parent).css('width', oldPanel.width());
+            setTimeout(function () {
                 parent.addClass('flip');
             }, 100);
-            setTimeout(function(){
+            setTimeout(function () {
                 $(oldPanel).remove();
                 parent.removeClass('flip').removeClass('flip-horizontal');
-                $(newPanel).removeClass('back');
+                $(newPanel).removeClass('back').css('width', '');
             }, 1000);
         },
         'flip-vertical': function (oldPanel, newPanel) {
-            var parent = oldPanel.parent().addClass('flip-vertical');
+            var parent = oldPanel.parent().addClass('flip-vertical').css('position', 'relative');
             oldPanel.addClass('front');
-            $(newPanel).addClass('back').appendTo(parent);
+            $(newPanel).addClass('back').appendTo(parent).css('width', oldPanel.width());
             setTimeout(function () {
                 parent.addClass('flip');
             }, 100);
             setTimeout(function () {
                 oldPanel.remove();
-                parent.removeClass('flip').removeClass('flip-vertical');
-                $(newPanel).removeClass('back');
+                parent.removeClass('flip').removeClass('flip-vertical').css('position', '');
+                $(newPanel).removeClass('back').css('width', '');
             }, 1000);
+        },
+        'slide-left': function (oldPanel, newPanel) {
+            var width = oldPanel.width();
+            var parent = oldPanel.parent().addClass('slide-left');
+            $(oldPanel).addClass('left');
+            $(newPanel).addClass('right').appendTo(parent);
+            setTimeout(function () {
+                parent.addClass('slide');
+            }, 100);
+            setTimeout(function () {
+                oldPanel.remove();
+                parent.removeClass('slide').removeClass('slide-left');
+                $(newPanel).removeClass('right');
+            }, 800);
+        },
+        'append-children': function (oldPanel, newPanel) {
+            // useful for paging
+            $(newPanel).children().fadeOut(0).appendTo(oldPanel).fadeIn('slow');
         }
     };
+
+    jax.Route = {};
 
     jax.Gator = function () {
         var self = this;
         this.div = null;
         this.modal = null;
+        this.currentTransition = null;
         this.handleError = function (response) {
             var error = [];
             Object.getOwnPropertyNames(response).forEach(function (name) {
@@ -68,57 +90,90 @@ var jax = jax || {};
         $(function () {
             self.div = $("<div style='display:none'></div>").appendTo('body');
 
+            $(document).on('click', '[data-request]', self.handleRequest);
             $(document).on('click', '[data-method]:not([data-trigger])', self.handleRequest);
-            $(document).on('change', '[data-method][data-trigger=change]', self.handleRequest);
-            $(document).on('submit', '[data-method][data-trigger=submit]', self.handleRequest);
+            $(document).on('change', '[data-method][data-trigger*=change]', self.handleRequest);
+            $(document).on('keydown', '[data-method][data-trigger*=enter]', self.handleEnterKey);
             $(document).on('jsonp', function (evt, result) {
                 priv.triggerAfterRequest(result);
             });
 
             window.addEventListener("hashchange", self.handleHash, false);
 
-            self.handleHash();
+            self.loadAsyncContent();
+
+            setTimeout(self.handleHash);
         });
     };
 
     jax.Gator.prototype = {
 
         handleRequest: function (evt) {
-            // 'this' will be the element that was clicked
-            var params = $(this).data();
+            // handles click, change, submit
+            // 'this' will be the element that was clicked, changed, or submitted
+            var hashIndex, params, $this = $(this);
+            if ($this.is('[data-request]')) {
+                params = JSON.parse($this.data('request').replace(/'/g, '"'));
+            }
+            else {
+                params = $this.data();
+            }
             params.source = this;
             var request = new jax.Request(params);
             if (request.action === null) return;
-            request.exec()
-                .then(function (response) {
-                    instance.injectContent(request, response);
-                })
-                .catch(instance.handleError);
-            // ignore hash changes to allow hashes into the navigation history
-            if (request.action.indexOf('#') === -1) {
-                evt.preventDefault();
+
+            if (request.action.indexOf('#') !== -1 && params.method === 'ajax-get') {
+
+                // delegate hashes to handleHash
+
+                var newHash = request.getHash();
+
+                // store the request's transition so handleHash can pick it up
+                instance.currentTransition = request.transition;
+
+                // if hash equals the current hash, hashchange event won't fire
+                // so call handleHash directly
+                if ('#' + newHash === window.location.hash) {
+                    instance.handleHash();
+                }
+                else {
+                    window.location.hash = newHash;
+                }
             }
             else {
-                instance.hashHandled = true;
+                request.exec()
+                    .then(function (response) {
+                        instance.injectContent(request, response);
+                    })
+                    .catch(instance.handleError);
+                instance.currentTransition = null;
+            }
+
+            evt.preventDefault();
+        },
+
+        handleEnterKey: function (evt) {
+            if (evt.which == 13) {
+                instance.handleRequest.call(this, evt);
             }
         },
 
         handleHash: function () {
-            if (instance.hashHandled === true) {
-                instance.hashHandled = false;
-                return;
-            }
-            var hash = window.location.hash;
+            // grab the current hash and request it with ajax-get
+
+            var handler, request, hash = window.location.hash;
+
             // hash has to be longer than just '#'
             if (priv.hasValue(hash) && hash.length > 1) {
-                // if there's an element declared with this action, use it's configuration
-                // disallow post as a security measure
-                var handler = $('[data-action="' + hash + '"][data-method="ajax-get"]')
-                    .add('[href="' + hash + '"][data-method="ajax-get"]').first();
-                if (handler.size() > 0) {
-                    var params = $(handler).data();
-                    params.source = handler[0];
-                    var request = new jax.Request(params);
+
+                // if there's no anchor with this name, handle with default settings
+                handler = $('a[name="' + hash.substr(1) + '"]');
+                if (handler.size() === 0) {
+                    request = new jax.Request({
+                        action: hash,
+                        method: 'ajax-get',
+                        transition: instance.currentTransition
+                    });
                     request
                         .exec()
                         .then(function (response) {
@@ -126,10 +181,11 @@ var jax = jax || {};
                         })
                         .catch(instance.handleError);
                 }
+                instance.currentTransition = null;
             }
         },
 
-        // provides an opportunity to manipulate the content before it gets displayed to the user
+        // provides an opportunity to manipulate the content before it is displayed
         triggerBeforeInject: function (arg) {
             $.event.trigger({
                 type: 'beforeInject',
@@ -158,8 +214,18 @@ var jax = jax || {};
                 // match up with panels on the page
                 id = $(this).data('jaxpanel');
                 target = $('[data-jaxpanel="' + id + '"]').not(this);
+
+
                 if (target.size() > 0) {
-                    transition = jax.Transitions[$(this).attr('data-transition') || 'fade-in'];
+
+                    // check for a transition in the request first
+                    if (request.transition) {
+                        transition = jax.Transitions[request.transition] || jax.Transitions['fade-in'];
+                    }
+                    else {
+                        // check for a transition on the panel
+                        transition = jax.Transitions[$(this).attr('data-transition')] || jax.Transitions['fade-in'];
+                    }
                     transition(target, this);
                     if (priv.hasValue(request)) {
                         this.refresh = request.exec.bind(request);
@@ -188,17 +254,18 @@ var jax = jax || {};
             }
         },
 
+        // an AJAX alternative to iframes
         loadAsyncContent: function (root) {
             root = root || document;
             $(root).find('div[data-src]').each(function () {
                 var url = $(this).data('src');
-                priv.triggerBeforeRequest({
-                    action: url
-                });
+                var params = {
+                    action: url,
+                    source: this
+                };
+                priv.triggerBeforeRequest(params);
                 $(this).load(url, function () {
-                    priv.triggerAfterRequest({
-                        action: url
-                    });
+                    priv.triggerAfterRequest(params);
                 });
             });
         }
@@ -210,6 +277,7 @@ var jax = jax || {};
         this.form = priv.resolveForm(params);
         this.action = priv.resolveAction(params);
         this.model = priv.resolveModel(params);
+        this.transition = params.transition;
         this.cancel = false;
         this.resolve = null;
         this.reject = null;
@@ -243,6 +311,14 @@ var jax = jax || {};
             }
             return form;
         },
+        getHash: function () {
+            var hash = priv.checkHash(this.action);
+            if (hash !== null) {
+                var search = this.getSearch();
+                return hash + (search !== '' ? '?' + search : '');
+            }
+            return null;
+        },
         formal: function (type) {
             var form = this.getForm(type);
             form.appendTo('body');
@@ -255,9 +331,10 @@ var jax = jax || {};
             }, 0);
         },
         ajax: function (type) {
+            // handles put, post, delete
             var self = this;
             var search;
-            if (typeof this.model === 'object') {
+            if (typeof this.model === 'object' && this.model !== null) {
                 search = this.model;
             }
             else {
@@ -354,31 +431,37 @@ var jax = jax || {};
             return this;
         },
 
+        // fake promise
         then: function (resolve, reject) {
             if (priv.hasValue(resolve)) {
                 this.resolve = resolve;
                 if (this.result !== null) {
+                    // the response came before calling this function
                     this.resolve(this.result);
                 }
             }
             if (priv.hasValue(reject)) {
                 this.reject = reject;
                 if (this.error !== null) {
+                    // the response came before calling this function
                     this.reject(this.error);
                 }
             }
             return this;
         },
 
+        // fake promise
         catch: function (reject) {
             return this.then(undefined, reject);
         }
     };
 
+    // handle an arbitrary event
     jax.on = function (event, params) {
         var request = new jax.Request(params);
         $(document).on(event, function () {
-            request.exec()
+            request
+                .exec()
                 .then(function (response) {
                     instance.injectContent(request, response);
                 })
@@ -393,10 +476,10 @@ var jax = jax || {};
 
     // private functions
     var priv = {
-        hasValue : function (val) {
+        hasValue: function (val) {
             return typeof val !== 'undefined' && val !== null;
         },
-        resolveForm : function (params) {
+        resolveForm: function (params) {
             var form;
             if (priv.hasValue(params.form)) {
                 return $(params.form);
@@ -411,7 +494,7 @@ var jax = jax || {};
             }
             return null;
         },
-        resolveAction : function (params) {
+        resolveAction: function (params) {
             // if there's an action in the params, return it
             if (priv.hasValue(params.action) && params.action.length) {
                 return params.action;
@@ -435,7 +518,7 @@ var jax = jax || {};
                 params.model = JSON.parse($(params.source).attr('data-model'));
                 return params.model;
             }
-            if (typeof params.model === 'object') {
+            if (priv.hasValue(params.model) && typeof params.model === 'object') {
                 return params.model;
             }
             if (typeof params.model === 'string') {
@@ -443,6 +526,19 @@ var jax = jax || {};
                 return params.model;
             }
             return null;
+        },
+        resolveRoute: function (request) {
+            var url = request.action;
+            var start = url.indexOf('#') != -1 ? url.indexOf('#') : 0;
+            var end = url.indexOf('?') != -1 ? url.indexOf('?') - 1 : url.length - 1;
+            start = start > end ? 0 : start;
+            url = request.action.substr(start, end);
+            if (priv.hasValue(jax.Route[url])) {
+                jax.Route[url].action = request.action;
+                return jax.Route[url];
+            }
+            jax.Route[url] = request;
+            return request;
         },
         buildForm: function (forms, action, method) {
             if ($(forms).size() > 0) {
@@ -474,7 +570,7 @@ var jax = jax || {};
 
                 names.forEach(function (name) {
                     if (Array.isArray(model[name])) {
-                        model[name].forEach(function(val){
+                        model[name].forEach(function (val) {
                             if (priv.hasValue(val) && val !== '') {
                                 // add hidden input to form
                                 $("<input type='hidden' name='" + rootName + name + "' value='" + val + "' />").appendTo(form);

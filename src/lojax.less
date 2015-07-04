@@ -1,13 +1,15 @@
-#top {
-  position: relative;
-}
+/***************/
+/* flip        */
+/***************/
 .front,
 .back {
   -moz-backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
-  position: absolute;
-  width: 100%;
+}
+.back {
+    position:absolute;
+    top:0;
 }
 .flip-horizontal .back {
   -webkit-transform: rotateY(-180deg);
@@ -67,3 +69,44 @@
   -webkit-transition: 0.6s;
   transition: 0.6s;
 }
+
+/***************/
+/* slide       */
+/***************/
+.slide-left {
+  position: relative;
+  overflow: hidden;
+  height:100%;
+}
+
+.slide-left > .right, .slide-left > .left {
+  position: relative;
+  -webkit-transition: .6s ease-in-out;
+       -o-transition: .6s ease-in-out;
+          transition: .6s ease-in-out;
+}
+
+.slide-left > .right {
+   position: absolute;
+   top: 0;
+   opacity:0;
+   width:100%;
+   left:100%;
+}
+
+.slide-left.slide > .left {
+    left: 0;
+    -webkit-transform: translate3d(-140%, 0, 0);
+            transform: translate3d(-140%, 0, 0);
+            height:50%;
+    opacity:0;
+}
+
+.slide-left.slide > .right {
+    left:0;
+    -webkit-transform: translate3d(0, 0, 0);
+            transform: translate3d(0, 0, 0);
+    opacity:1;
+}
+
+
