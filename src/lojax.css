@@ -1,4 +1,4 @@
-/***************/
+﻿/***************/
 /* flip        */
 /***************/
 .front,
@@ -70,7 +70,7 @@
   transition: 0.6s;
 }
 /***************/
-/* slide       */
+/* slide-left  */
 /***************/
 .slide-left {
   position: relative;
@@ -80,9 +80,9 @@
 .slide-left > .right,
 .slide-left > .left {
   position: relative;
-  -webkit-transition: 0.6s ease-in-out;
-  -o-transition: 0.6s ease-in-out;
-  transition: 0.6s ease-in-out;
+  -webkit-transition: .6s linear;
+  -o-transition: .6s linear;
+  transition: .6s linear;
 }
 .slide-left > .right {
   position: absolute;
@@ -104,3 +104,4 @@
   transform: translate3d(0, 0, 0);
   opacity: 1;
 }
+/*# sourceMappingURL=lojax.css.map */

@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap-theme.min.css">
     <link rel="stylesheet" href="styles.css" media="screen">
-    <link rel="stylesheet" href="../src/lojax.css" media="screen">
+    <link rel="stylesheet" href="lojax.css" media="screen">
     <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -41,9 +41,6 @@
                     <li>
                         <a href="#navigationhistory.html" data-method="ajax-get">navigation history</a>
                     </li>
-                    <li>
-                        <a href="#tables.html" data-method="ajax-get">tables</a>
-                    </li>
                 </ul>
             </div>
         </div>
@@ -54,18 +51,14 @@
         </div>
     </div>
     <script src="http://code.jquery.com/jquery-2.1.4.min.js"></script>
-    <script src="../src/lojax.js"></script>
+    <script src="lojax.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
     <script>
-        // load the intro page
-        new jax.Request({
-            method:'ajax-get',
-            action:'#intro.html'
-        })
-            .exec()
-            .then(function(response){
-                jax.instance.injectContent(null, response);
-            });
+        $(function(){
+            if (window.location.hash === '') {
+                window.location.hash = 'intro.html';
+            }
+        });
     </script>
 </body>
 </html>

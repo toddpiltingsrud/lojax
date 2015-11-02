@@ -4,9 +4,9 @@
 
 var url = 'http://localhost:1338/';
 
-fdescribe('event handlers', function(){
+describe('event handlers', function(){
 
-    it('should handle click', function(done){
+    xit('should handle click', function(done){
 
         var element = $('<a href="' + url + '" data-method="ajax-get">ajax-get</a>').appendTo('body');
 
@@ -18,7 +18,7 @@ fdescribe('event handlers', function(){
 
     });
 
-    it('data-action should set hash', function(done){
+    xit('data-action should set hash', function(done){
 
         var hash = '#test?id=1';
 
@@ -33,7 +33,7 @@ fdescribe('event handlers', function(){
 
     });
 
-    it('should handle hash change', function(done){
+    xit('should handle hash change', function(done){
 
         $(document).one('afterRequest', function(evt, request){
             expect(request.action).toEqual('#test');
@@ -44,7 +44,7 @@ fdescribe('event handlers', function(){
 
     });
 
-    it('should handle input change event', function(done){
+    xit('should handle input change event', function(done){
 
         var element = $('<div data-method="ajax-get" data-action="' + url + '" data-form="[name]" data-trigger="change" ><input type="text" name="test" /></div>').appendTo('body');
 
@@ -56,7 +56,7 @@ fdescribe('event handlers', function(){
 
     });
 
-    fit('get should ', function(done){
+    xit('get should ', function(done){
 
         var hash = url + '#test?id=1';
 
@@ -65,12 +65,7 @@ fdescribe('event handlers', function(){
         $(document).one('beforeRequest', function(evt, request){
             expect(request.action).toEqual(hash);
             element.remove();
-            //evt.cancel = true;
-        });
-
-        $(document).one('afterRequest', function(evt, request){
-            expect(window.location.href).toEqual(hash);
-            done();
+            evt.cancel = true;
         });
 
     });

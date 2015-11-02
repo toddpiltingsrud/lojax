@@ -3,6 +3,12 @@ TODO:
 - Handle files?
 - rewrite formFromModel to recurse through arrays
 - refactor: diagram everything out and reorganize
+- handle request timeouts
+- raise an event on AJAX errors
+- use MutationObserver to detect creation of async elements: div[data-src]
+- provide a mechanism for pre-loading resources and caching them on the client
+- create a list of attributes that can be pre-compiled
+- implement dependency declarations
 */
 
 /*
@@ -15,92 +21,29 @@ var jax = jax || {};
 
 (function ($) {
 
-    jax.Transitions = {
-
-        'fade-in': function (oldPanel, newPanel) {
-            $(newPanel).fadeOut(0);
-            $(oldPanel).fadeOut(0).replaceWith(newPanel);
-            $(newPanel).fadeIn('slow');
-        },
-        'flip-horizontal': function (oldPanel, newPanel) {
-            var parent = oldPanel.parent().addClass('flip-vertical').css('position', 'relative');
-            $(oldPanel).addClass('front');
-            $(newPanel).addClass('back').appendTo(parent).css('width', oldPanel.width());
-            setTimeout(function () {
-                parent.addClass('flip');
-            }, 100);
-            setTimeout(function () {
-                $(oldPanel).remove();
-                parent.removeClass('flip').removeClass('flip-horizontal');
-                $(newPanel).removeClass('back').css('width', '');
-            }, 1000);
-        },
-        'flip-vertical': function (oldPanel, newPanel) {
-            var parent = oldPanel.parent().addClass('flip-vertical').css('position', 'relative');
-            oldPanel.addClass('front');
-            $(newPanel).addClass('back').appendTo(parent).css('width', oldPanel.width());
-            setTimeout(function () {
-                parent.addClass('flip');
-            }, 100);
-            setTimeout(function () {
-                oldPanel.remove();
-                parent.removeClass('flip').removeClass('flip-vertical').css('position', '');
-                $(newPanel).removeClass('back').css('width', '');
-            }, 1000);
-        },
-        'slide-left': function (oldPanel, newPanel) {
-            var parent = oldPanel.parent().addClass('slide-left');
-            $(oldPanel).addClass('left');
-            $(newPanel).addClass('right').appendTo(parent);
-            setTimeout(function () {
-                parent.addClass('slide');
-            }, 100);
-            setTimeout(function () {
-                oldPanel.remove();
-                parent.removeClass('slide').removeClass('slide-left');
-                $(newPanel).removeClass('right');
-            }, 800);
-        },
-        'append-children': function (oldPanel, newPanel) {
-            // useful for paging
-            $(newPanel).children().fadeOut(0).appendTo(oldPanel).fadeIn('slow');
-        }
-    };
-
-    jax.Route = {};
-
     jax.Gator = function () {
         var self = this;
         this.div = null;
         this.modal = null;
         this.currentTransition = null;
-        this.handleError = function (response) {
-            var error = [];
-            Object.getOwnPropertyNames(response).forEach(function (name) {
-                if (typeof response[name] !== 'function') {
-                    error.push(response[name]);
-                }
-            });
-            console.log(error);
-            alert(error);
-        };
+        this.cache = {};
 
         $(function () {
+            self.defaultTarget = $('[data-default-target]');
             self.div = $("<div style='display:none'></div>").appendTo('body');
 
-            $(document).on('click', '[data-request]', self.handleRequest);
-            $(document).on('click', '[data-method]:not([data-trigger])', self.handleRequest);
-            $(document).on('change', '[data-method][data-trigger*=change]', self.handleRequest);
-            $(document).on('keydown', '[data-method][data-trigger*=enter]', self.handleEnterKey);
-            $(document).on('jsonp', function (evt, result) {
-                priv.triggerAfterRequest(result);
-            });
+            $(document).on('click', '[data-request],[jx-request]', self.handleRequest);
+            $(document).on('click', '[data-method]:not([data-trigger]),[jx-method]:not([jx-trigger])', self.handleRequest);
+            $(document).on('change', '[data-method][data-trigger*=change],[jx-method][jx-trigger*=change]', self.handleRequest);
+            $(document).on('keydown', '[data-method][data-trigger*=enter],[jx-method][jx-trigger*=enter]', self.handleEnterKey);
 
             window.addEventListener("hashchange", self.handleHash, false);
 
             self.loadAsyncContent();
 
-            setTimeout(self.handleHash, 0);
+            if (priv.hasHash()) {
+                setTimeout(self.handleHash, 0);
+            }
         });
     };
 
@@ -117,6 +60,15 @@ var jax = jax || {};
                 params = $this.data();
             }
             params.source = this;
+
+            instance.executeRequest(params);
+
+            evt.stopPropagation();
+
+            evt.preventDefault();
+        },
+
+        executeRequest: function (params) {
             var request = new jax.Request(params);
             if (request.action === null) return;
 
@@ -146,8 +98,22 @@ var jax = jax || {};
                     .catch(instance.handleError);
                 instance.currentTransition = null;
             }
+        },
 
-            evt.preventDefault();
+        getRequest: function (elem) {
+            var params, $elem = $(elem);
+            if ($elem.is('[data-request]')) {
+                params = JSON.parse($elem.data('request').replace(/'/g, '"'));
+            }
+            else if ($elem.is('[jx-request]')) {
+                params = JSON.parse($elem.attr('jx-request').replace(/'/g, '"'));
+            }
+            else {
+                params = $elem.data();
+
+            }
+            params.source = elem;
+            return new jax.Request(params);
         },
 
         handleEnterKey: function (evt) {
@@ -161,10 +127,14 @@ var jax = jax || {};
 
             var handler, request, hash = window.location.hash;
 
-            // hash has to be longer than just '#'
-            if (priv.hasValue(hash) && hash.length > 1) {
+            if (priv.hasHash()) {
 
-                // if there's no anchor with this name, handle with default settings
+                // If there's no anchor with this name, handle with default settings.
+                // We want to support url-only access, and we don't want to clutter 
+                // the url with request settings like transition and target. That 
+                // means that there must be enough information already in the page 
+                // (like default-target) or in the response (jx-panel) to be able to 
+                // properly handle the response.
                 handler = $('a[name="' + hash.substr(1) + '"]');
                 if (handler.size() === 0) {
                     request = new jax.Request({
@@ -172,8 +142,7 @@ var jax = jax || {};
                         method: 'ajax-get',
                         transition: instance.currentTransition
                     });
-                    request
-                        .exec()
+                    request.exec()
                         .then(function (response) {
                             instance.injectContent(request, response);
                         })
@@ -181,9 +150,17 @@ var jax = jax || {};
                 }
                 instance.currentTransition = null;
             }
+            else {
+                // we got here because a browser navigation button was clicked which changed the hash to nothing
+                // so load the current page via ajax
+                instance.executeRequest({
+                    action: window.location.href,
+                    method: 'ajax-get'
+                });
+            }
         },
 
-        // provides an opportunity to manipulate the content before it is displayed
+        // provides an opportunity to manipulate the content before it gets displayed to the user
         triggerBeforeInject: function (arg) {
             $.event.trigger({
                 type: 'beforeInject',
@@ -193,17 +170,25 @@ var jax = jax || {};
 
         injectContent: function (request, response) {
             var id, target, newModal, transition;
+            var foundMatches = false;
+
             // inject the content into the hidden div so we can query it
             instance.div.html(response);
 
             instance.triggerBeforeInject(instance.div);
 
+            if (request.target) {
+                transition = jax.Transitions[request.target.attr('data-transition') || 'fade-in'];
+                transition(request.target, instance.div);
+                request.target.refresh = request;
+                instance.loadAsyncContent(request.target);
+                return;
+            }
+
             // check for modal
-            if (instance.modal === null) {
+            if (instance.modal === null && $(instance.div).find('.modal').size() > 0) {
                 newModal = $(instance.div).find('.modal');
-                if (newModal.size() > 0) {
-                    instance.createModal(newModal);
-                }
+                instance.createModal(newModal);
             }
 
             // find all the panels in the new content
@@ -214,6 +199,7 @@ var jax = jax || {};
                 target = $('[data-jaxpanel="' + id + '"]').not(this);
 
                 if (target.size() > 0) {
+                    foundMatches = true;
 
                     // check for a transition in the request first
                     if (request.transition) {
@@ -230,24 +216,76 @@ var jax = jax || {};
                     instance.loadAsyncContent(this);
                 }
             });
+
+            if (foundMatches === false) {
+                // check for a default target
+                if (instance.defaultTarget.size() > 0) {
+                    // make sure there are visible elements
+                    var visible = instance.div.children().not('script,style');
+                    if (visible.size() > 0) {
+                        transition = jax.Transitions[instance.defaultTarget.attr('data-transition') || 'fade-in'];
+                        transition(instance.defaultTarget, instance.div);
+                        instance.defaultTarget.refresh = request;
+                        instance.loadAsyncContent(instance.defaultTarget);
+                    }
+                }
+            }
         },
 
         createModal: function (content) {
-            instance.modal = $(content).appendTo('body').modal({
-                show: false,
-                keyboard: true
-            });
-            instance.modal.on('hidden.bs.modal', instance.onModalClose);
-            instance.loadAsyncContent(instance.modal);
-            instance.modal.modal('show');
+            // check for bootstrap
+            if ($.fn.modal) {
+                instance.modal = $(content).appendTo('body').modal({
+                    show: false,
+                    keyboard: true
+                });
+                instance.modal.on('hidden.bs.modal', function () {
+                    if (priv.hasValue(instance.modal)) {
+                        instance.modal.off('hidden.bs.modal', instance.onModalClose);
+                        instance.modal.modal('hide');
+                        $(instance.modal).remove();
+                        instance.modal = null;
+                    }
+                });
+                instance.loadAsyncContent(instance.modal);
+                instance.modal.modal('show');
+            }
+                // check for kendo
+            else if ($.fn.kendoWindow) {
+                instance.modal = $(content).appendTo('body').kendoWindow({
+                    title: $(content).find('.dialog-header').text(),
+                    modal: true,
+                    animation: {
+                        open: {
+                            effects: "fade:in"
+                        }
+                    },
+                    visible: false,
+                    close: function () {
+                        if (priv.hasValue(instance.modal)) {
+                            instance.modal.data('kendoWindow').destroy();
+                            $(instance.modal).remove();
+                            instance.modal = null;
+                        }
+                    }
+                });
+                instance.modal.data('kendoWindow').center().open();
+                instance.modal.find('[data-dismiss=modal]').click(function () {
+                    instance.modal.data('kendoWindow').close();
+                });
+            }
         },
 
-        onModalClose: function () {
+        // this is often called when the server returns a success 
+        // response from a form submission that came from a modal
+        closeModal: function () {
             if (priv.hasValue(instance.modal)) {
-                instance.modal.off('hidden.bs.modal', instance.onModalClose);
-                instance.modal.modal('hide');
-                $(instance.modal).remove();
-                instance.modal = null;
+                if ($.fn.modal) {
+                    instance.modal.hide();
+                }
+                else if ($.fn.kendoWindow) {
+                    instance.modal.data('kendoWindow').close();
+                }
             }
         },
 
@@ -256,17 +294,37 @@ var jax = jax || {};
             root = root || document;
             $(root).find('div[data-src]').each(function () {
                 var url = $(this).data('src');
-                var params = {
-                    action: url,
-                    source: this
-                };
-                priv.triggerBeforeRequest(params);
+                var type = $(this).data('type');
+                priv.triggerBeforeRequest({
+                    action: url
+                });
                 $(this).load(url, function () {
-                    priv.triggerAfterRequest(params);
+                    priv.triggerAfterRequest({
+                        action: url
+                    });
                 });
             });
-        }
+        },
 
+        handleError: function (response) {
+            instance.triggerAjaxErrorEvents(response);
+            if (response.handled) return;
+            var error = [];
+            Object.getOwnPropertyNames(response).forEach(function (name) {
+                if (typeof response[name] !== 'function') {
+                    error.push(response[name]);
+                }
+            });
+            console.log(response);
+            console.log(response.responseText);
+        },
+
+        triggerAjaxErrorEvents: function (err) {
+            $.event.trigger({
+                type: 'ajaxError',
+                source: err
+            }, err);
+        }
     };
 
     jax.Request = function (params) {
@@ -275,6 +333,7 @@ var jax = jax || {};
         this.action = priv.resolveAction(params);
         this.model = priv.resolveModel(params);
         this.transition = params.transition;
+        this.target = priv.resolveTarget(params);
         this.cancel = false;
         this.resolve = null;
         this.reject = null;
@@ -286,7 +345,7 @@ var jax = jax || {};
         getSearch: function () {
             var queryString = '';
             if (priv.hasValue(this.form)) {
-                queryString = $(this.form).serialize();
+                queryString = priv.resolveInputs(this.form).serialize();
             }
             else if (priv.hasValue(this.model)) {
                 queryString = $.param(this.model);
@@ -317,6 +376,7 @@ var jax = jax || {};
             return null;
         },
         formal: function (type) {
+            var self = this;
             var form = this.getForm(type);
             form.appendTo('body');
             form[0].submit();
@@ -324,14 +384,13 @@ var jax = jax || {};
             // so we still need to clean up after ourselves
             setTimeout(function () {
                 form.remove();
-                priv.triggerAfterRequest(this);
+                priv.triggerAfterRequest(self);
             }, 0);
         },
         ajax: function (type) {
-            // handles put, post, delete
             var self = this;
             var search;
-            if (typeof this.model === 'object' && this.model !== null) {
+            if (priv.hasValue(this.model)) {
                 search = this.model;
             }
             else {
@@ -369,12 +428,6 @@ var jax = jax || {};
             post: function () {
                 this.formal('post');
             },
-            'put': function () {
-                this.formal('put');
-            },
-            'delete': function () {
-                this.formal('delete');
-            },
             'ajax-get': function () {
                 var url = priv.checkHash(this.action);
                 var search = this.getSearch();
@@ -395,8 +448,8 @@ var jax = jax || {};
                 var self = this;
                 var queryString = this.getSearch();
                 var url = priv.checkHash(this.action);
-                var s = document.createElement("script");
-                s.type = "text/javascript";
+                var s = document.createElement('script');
+                s.type = 'text/javascript';
                 s.src = url + '?' + queryString;
                 document.body.appendChild(s);
                 setTimeout(function () {
@@ -419,6 +472,7 @@ var jax = jax || {};
             if (priv.hasValue(this.action) && this.action !== '') {
                 priv.triggerBeforeRequest(this);
                 if (this.cancel == false) {
+                    // execute the method function
                     this.methods[this.method].bind(this)();
                 }
                 else {
@@ -453,22 +507,80 @@ var jax = jax || {};
         }
     };
 
+    jax.Transitions = {
+        'replace': function (oldPanel, newPanel) {
+            $(newPanel).fadeOut(0);
+            $(oldPanel).fadeOut(0).replaceWith(newPanel);
+            $(newPanel).fadeIn('slow');
+        },
+        'fade-in': function (oldPanel, newPanel) {
+            // text must be handled differently than HTML nodes
+            children = $(newPanel).children();
+            if (children.size() > 0) {
+                oldPanel.fadeOut(0).empty().append(children).fadeIn();
+            }
+            else {
+                oldPanel.fadeOut(0).empty().text($(newPanel).text()).fadeIn();
+            }
+        },
+        'flip-horizontal': function (oldPanel, newPanel) {
+            var parent = $(oldPanel).parent().addClass('flip-horizontal').css('position', 'relative');
+            $(oldPanel).addClass('front');
+            $(newPanel).addClass('back').width(oldPanel.width()).appendTo(parent);
+            setTimeout(function () {
+                parent.addClass('flip');
+            }, 100);
+            setTimeout(function () {
+                $(oldPanel).remove();
+                parent.removeClass('flip').removeClass('flip-horizontal');
+                $(newPanel).removeClass('back').css('width', '');
+            }, 1000);
+        },
+        'flip-vertical': function (oldPanel, newPanel) {
+            var parent = $(oldPanel).parent().addClass('flip-vertical').css('position', 'relative');
+            oldPanel.addClass('front');
+            $(newPanel).addClass('back').css('width', oldPanel.width()).appendTo(parent);
+            setTimeout(function () {
+                parent.addClass('flip');
+            }, 100);
+            setTimeout(function () {
+                oldPanel.remove();
+                parent.removeClass('flip').removeClass('flip-vertical');
+                $(newPanel).removeClass('back').css('width', '');
+            }, 1000);
+        },
+        'slide-left': function (oldPanel, newPanel) {
+            var parent = oldPanel.parent().addClass('slide-left').css('position', 'relative');
+            $(oldPanel).addClass('left');
+            $(newPanel).addClass('right').appendTo(parent);
+            setTimeout(function () {
+                parent.addClass('slide');
+            }, 100);
+            setTimeout(function () {
+                oldPanel.remove();
+                parent.removeClass('slide').removeClass('slide-left');
+                $(newPanel).removeClass('right');
+            }, 800);
+        },
+        'append-children': function (oldPanel, newPanel) {
+            // useful for paging
+            $(newPanel).children().fadeOut(0).appendTo(oldPanel).fadeIn('slow');
+        }
+    };
+
     // handle an arbitrary event
     jax.on = function (event, params) {
-        var request = new jax.Request(params);
         $(document).on(event, function () {
-            request
-                .exec()
-                .then(function (response) {
-                    instance.injectContent(request, response);
-                })
-                .catch(instance.handleError);
+            instance.executeRequest(params);
         });
-        return request;
     };
 
     jax.off = function (event) {
         $(document).off(event);
+    };
+
+    jax.get = function (params) {
+        instance.executeRequest(params);
     };
 
     // private functions
@@ -478,13 +590,15 @@ var jax = jax || {};
         },
         resolveForm: function (params) {
             var form;
+            // use the jQuery selector if present
             if (priv.hasValue(params.form)) {
                 return $(params.form);
             }
+            // if there's a model, don't search for a form
             if (priv.hasValue(params.model)) {
-                // if there's a model, don't search for a form
                 return null;
             }
+            // find the closest form element
             form = $(params.source).closest('form');
             if (form.size() === 1) {
                 return form;
@@ -515,7 +629,7 @@ var jax = jax || {};
                 params.model = JSON.parse($(params.source).attr('data-model'));
                 return params.model;
             }
-            if (priv.hasValue(params.model) && typeof params.model === 'object') {
+            if (typeof params.model === 'object') {
                 return params.model;
             }
             if (typeof params.model === 'string') {
@@ -524,27 +638,24 @@ var jax = jax || {};
             }
             return null;
         },
-        //resolveRoute: function (request) {
-        //    var url = request.action;
-        //    var start = url.indexOf('#') != -1 ? url.indexOf('#') : 0;
-        //    var end = url.indexOf('?') != -1 ? url.indexOf('?') - 1 : url.length - 1;
-        //    start = start > end ? 0 : start;
-        //    url = request.action.substr(start, end);
-        //    if (priv.hasValue(jax.Route[url])) {
-        //        jax.Route[url].action = request.action;
-        //        return jax.Route[url];
-        //    }
-        //    jax.Route[url] = request;
-        //    return request;
-        //},
+        resolveTarget: function (params) {
+            if (priv.hasValue(params.target)) {
+                return $(params.target);
+            }
+            return null;
+        },
+        resolveInputs: function (form) {
+            var inputs = $(form).find(':input');
+            if (inputs.size() === 0) {
+                inputs = $(form).filter(':input');
+            }
+            return inputs;
+        },
         buildForm: function (forms, action, method) {
             if ($(forms).size() > 0) {
                 method = method || 'POST';
                 var form = $("<form method='" + method.toUpperCase() + "' action='" + action + "' style='display:none'></form>");
-                var inputs = $(forms).find(':input').serializeArray();
-                if (inputs.length === 0) {
-                    inputs = $(forms).filter(':input').serializeArray();
-                }
+                var inputs = priv.resolveInputs(forms).serializeArray();
                 inputs.forEach(function (obj) {
                     $("<input type='hidden' name='" + obj.name + "' value='" + obj.value + "' />").appendTo(form);
                 });
@@ -606,6 +717,10 @@ var jax = jax || {};
                 return url.substring(index + 1);
             }
             return url;
+        },
+        hasHash: function () {
+            // hash has to be longer than just '#_' and have some alpha characters in it
+            return window.location.hash.length > 2 && /[a-z]/i.test(window.location.hash);
         }
     };
 
