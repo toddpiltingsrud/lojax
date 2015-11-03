@@ -3,11 +3,13 @@ TODO:
 - Handle files?
 - rewrite formFromModel to recurse through arrays
 - refactor: diagram everything out and reorganize
+- double calls: Detect changes to the URL path, then the hash. Request the main path first, then the hash.
 - handle request timeouts
 - raise an event on AJAX errors
 - use MutationObserver to detect creation of async elements: div[data-src]
 - provide a mechanism for pre-loading resources and caching them on the client
 - create a list of attributes that can be pre-compiled
+- add refresh functions to target elements on page load
 - implement dependency declarations
 */
 
@@ -657,7 +659,7 @@ var jax = jax || {};
                 var form = $("<form method='" + method.toUpperCase() + "' action='" + action + "' style='display:none'></form>");
                 var inputs = priv.resolveInputs(forms).serializeArray();
                 inputs.forEach(function (obj) {
-                    $("<input type='hidden' name='" + obj.name + "' value='" + obj.value + "' />").appendTo(form);
+                    $("<input type='hidden' name='' value='' />").appendTo(form).prop('name', obj.name).val(obj.value);
                 });
                 return form;
             }
@@ -681,7 +683,7 @@ var jax = jax || {};
                         model[name].forEach(function (val) {
                             if (priv.hasValue(val) && val !== '') {
                                 // add hidden input to form
-                                $("<input type='hidden' name='" + rootName + name + "' value='" + val + "' />").appendTo(form);
+                                $("<input type='hidden' />").appendTo(form).prop('name', rootName + name).val(val);
                             }
                         });
                     }
@@ -691,7 +693,7 @@ var jax = jax || {};
                     }
                     else if (typeof model[name] !== 'function' && model[name] !== null) {
                         // add hidden input to form
-                        $("<input type='hidden' name='" + rootName + name + "' value='" + model[name].toString() + "' />").appendTo(form);
+                        $("<input type='hidden' />").appendTo(form).prop('name', rootName + name).val(model[name].toString());
                     }
                 });
             }
