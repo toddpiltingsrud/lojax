@@ -3,13 +3,10 @@ TODO:
 - Handle files?
 - rewrite formFromModel to recurse through arrays
 - refactor: diagram everything out and reorganize
-- double calls: Detect changes to the URL path, then the hash. Request the main path first, then the hash.
 - handle request timeouts
 - raise an event on AJAX errors
 - use MutationObserver to detect creation of async elements: div[data-src]
 - provide a mechanism for pre-loading resources and caching them on the client
-- create a list of attributes that can be pre-compiled
-- add refresh functions to target elements on page load
 - implement dependency declarations
 */
 
@@ -31,7 +28,6 @@ var jax = jax || {};
         this.cache = {};
 
         $(function () {
-            self.defaultTarget = $('[data-default-target]');
             self.div = $("<div style='display:none'></div>").appendTo('body');
 
             $(document).on('click', '[data-request],[jx-request]', self.handleRequest);
@@ -135,8 +131,7 @@ var jax = jax || {};
                 // We want to support url-only access, and we don't want to clutter 
                 // the url with request settings like transition and target. That 
                 // means that there must be enough information already in the page 
-                // (like default-target) or in the response (jx-panel) to be able to 
-                // properly handle the response.
+                // or in the response to properly handle the response.
                 handler = $('a[name="' + hash.substr(1) + '"]');
                 if (handler.size() === 0) {
                     request = new jax.Request({
@@ -172,20 +167,19 @@ var jax = jax || {};
 
         injectContent: function (request, response) {
             var id, target, newModal, transition;
-            var foundMatches = false;
-
-            // inject the content into the hidden div so we can query it
-            instance.div.html(response);
 
             instance.triggerBeforeInject(instance.div);
 
             if (request.target) {
-                transition = jax.Transitions[request.target.attr('data-transition') || 'fade-in'];
-                transition(request.target, instance.div);
+                transition = priv.resolveTransition(request, request.target);
+                transition(request.target, response);
                 request.target.refresh = request;
                 instance.loadAsyncContent(request.target);
                 return;
             }
+
+            // inject the content into the hidden div so we can query it
+            instance.div.html(response);
 
             // check for modal
             if (instance.modal === null && $(instance.div).find('.modal').size() > 0) {
@@ -202,15 +196,7 @@ var jax = jax || {};
 
                 if (target.size() > 0) {
                     foundMatches = true;
-
-                    // check for a transition in the request first
-                    if (request.transition) {
-                        transition = jax.Transitions[request.transition] || jax.Transitions['fade-in'];
-                    }
-                    else {
-                        // check for a transition on the panel
-                        transition = jax.Transitions[$(this).attr('data-transition')] || jax.Transitions['fade-in'];
-                    }
+                    transition = priv.resolveTransition(request, this);
                     transition(target, this);
                     if (priv.hasValue(request)) {
                         this.refresh = request.exec.bind(request);
@@ -218,20 +204,6 @@ var jax = jax || {};
                     instance.loadAsyncContent(this);
                 }
             });
-
-            if (foundMatches === false) {
-                // check for a default target
-                if (instance.defaultTarget.size() > 0) {
-                    // make sure there are visible elements
-                    var visible = instance.div.children().not('script,style');
-                    if (visible.size() > 0) {
-                        transition = jax.Transitions[instance.defaultTarget.attr('data-transition') || 'fade-in'];
-                        transition(instance.defaultTarget, instance.div);
-                        instance.defaultTarget.refresh = request;
-                        instance.loadAsyncContent(instance.defaultTarget);
-                    }
-                }
-            }
         },
 
         createModal: function (content) {
@@ -564,9 +536,13 @@ var jax = jax || {};
                 $(newPanel).removeClass('right');
             }, 800);
         },
-        'append-children': function (oldPanel, newPanel) {
+        'append': function (oldPanel, newPanel) {
             // useful for paging
             $(newPanel).children().fadeOut(0).appendTo(oldPanel).fadeIn('slow');
+        },
+        'prepend': function (oldPanel, newPanel) {
+            // useful for adding new rows to tables, for example
+            $(newPanel).fadeOut(0).prependTo(oldPanel).fadeIn('slow');
         }
     };
 
@@ -653,13 +629,23 @@ var jax = jax || {};
             }
             return inputs;
         },
+        resolveTransition: function (request, target) {
+            // check for a transition in the request first
+            if (request.transition) {
+                return jax.Transitions[request.transition] || jax.Transitions['fade-in'];
+            }
+            else {
+                // check for a transition on the target
+                return jax.Transitions[$(target).attr('data-transition')] || jax.Transitions['fade-in'];
+            }
+        },
         buildForm: function (forms, action, method) {
             if ($(forms).size() > 0) {
                 method = method || 'POST';
                 var form = $("<form method='" + method.toUpperCase() + "' action='" + action + "' style='display:none'></form>");
                 var inputs = priv.resolveInputs(forms).serializeArray();
                 inputs.forEach(function (obj) {
-                    $("<input type='hidden' name='' value='' />").appendTo(form).prop('name', obj.name).val(obj.value);
+                    $("<input type='hidden' />").appendTo(form).prop('name', obj.name).val(obj.value);
                 });
                 return form;
             }
