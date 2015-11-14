@@ -1,4 +1,4 @@
-stops = [
+[
 [34,"Chicago Ave S & 8th St S",44.971165,-93.262383],
 [36,"Chicago Ave S & 14th St E",44.968975,-93.262611],
 [37,"Chicago Ave S & 15th St E",44.968182,-93.262619],
@@ -97,4 +97,4 @@ stops = [
 [168,"Bryant Ave S & 31st St W",44.946369,-93.290588],
 [169,"Lyndale Ave S & 31st St W",44.946697,-93.288025],
 [170,"Lyndale Ave S & Lake St W",44.948460,-93.288017]
-];
+]

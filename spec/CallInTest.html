@@ -1,0 +1,18 @@
+﻿<div data-jaxpanel="hidden-div">
+    <input type="hidden" value="call-in-test" />
+    <script>
+        jax.in(function () {
+            val = $(this).find('input').val();
+            window.callInTest(val);
+        });
+    </script>
+</div>
+<div data-jaxpanel="hidden-div2">
+    <input type="hidden" value="call-in-test2" />
+    <script>
+        jax.in(function () {
+            val = $(this).find('input').val();
+            window.callInTest2(val);
+        });
+    </script>
+</div>
