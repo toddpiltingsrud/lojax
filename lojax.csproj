@@ -217,6 +217,7 @@
     <Content Include="spec\scripts\modernizr-2.8.3.min.js" />
     <Content Include="spec\scripts\qunit-1.20.0.js" />
     <Content Include="spec\scripts\respond.js" />
+    <Content Include="TODO.txt" />
     <None Include="spec\scripts\data\stops.json" />
     <Content Include="src\jquery.min.js" />
     <Content Include="src\lojax.css" />

@@ -77,7 +77,7 @@ var jax = jax || {};
 
             if (request.action === null) return;
 
-            if (request.action.indexOf('#') !== -1 && params.method === 'ajax-get') {
+            if (priv.hasHash(request.action) && params.method === 'ajax-get') {
 
                 // delegate hashes to handleHash
 
@@ -153,11 +153,11 @@ var jax = jax || {};
 
         bindToModels: function (context) {
             context = context || document;
-            var model, inputs, value, type, $this, models = [];
+            var model, $this, models = [];
             var dataModels = $(context).find('[data-model]').add(context).filter('[data-model]');
 
-            jax.log('bindToModels:').log('|-context: ').log(context);
-            jax.log('|-dataModels:').log(dataModels);
+            jax.log('bindToModels: context: ').log(context);
+            jax.log('bindToModels: dataModels:').log(dataModels);
 
             // iterate over the data-models found in context
             dataModels.each(function () {
@@ -171,33 +171,16 @@ var jax = jax || {};
                     $this.data('model', model);
                 }
                 else {
-                    // set the inputs to the model
-                    $this.find('[name]').each(function () {
-                        value = priv.getModelValue(model, this.name);
-                        type = priv.getType(value);
-                        // lojax assumes ISO 8601 date serialization format
-                        // http://www.hanselman.com/blog/OnTheNightmareThatIsJSONDatesPlusJSONNETAndASPNETWebAPI.aspx
-                        // ISO 8601 is easy to parse
-                        // making it possible to skip the problem of converting date strings to JS Date objects
-                        if (type === 'date' || this.type === 'date') {
-                            $(this).val(priv.standardDateFormat(value));
-                        }
-                        else if (type === 'boolean' && this.type === 'checkbox') {
-                            this.checked = value;
-                        }
-                        else {
-                            $(this).val(value);
-                        }
-                    });
+                    priv.setElementsFromModel($this, model);
                 }
                 models.push(model);
-                jax.log('|-model:').log(model);
+                jax.log('bindToModels: model:').log(model);
             });
+            // for testing
             return models;
         },
 
         updateModel: function (evt) {
-            jax.log('updateModel:');
             // provides simple one-way binding from HTML elements to a model
             var $this = $(this);
             var $target = $(evt.target);
@@ -214,39 +197,26 @@ var jax = jax || {};
                 model: model,
                 cancel: false
             };
-            // coerce the value to the proper type
-            switch (o.type) {
-                case 'number':
-                    o.value = parseFloat(o.value);
-                    break;
-                case 'boolean':
-                    if (evt.target.type == 'checkbox') {
-                        o.value = evt.target.checked;
-                    }
-                    else {
-                        o.value = o.value.toLocaleLowerCase() === 'true';
-                    }
-                    break;
-                default:
-                    break;
-            }
+
             jax.log('updateModel: o:').log(o);
-            if (o.model[o.name] !== o.value) {
-                priv.triggerEvent(jax.events.beforeUpdateModel, o);
-                if (o.cancel === true) return;
-                o.model[o.name] = o.value;
-                // TODO: set an isDirty flag without corrupting the model
-                // maybe use a wrapper class to observe the model
-                priv.triggerEvent(jax.events.afterUpdateModel, o);
-            }
+
+            priv.triggerEvent(jax.events.beforeUpdateModel, o);
+            if (o.cancel === true) return;
+
+            jax.log('updateModel: o.model').log(o.model);
+
+            priv.setModelProperty($this, o.model, evt.target);
+            // TODO: set an isDirty flag without corrupting the model
+            // maybe use a wrapper class to observe the model
+            priv.triggerEvent(jax.events.afterUpdateModel, o);
         },
 
         injectContent: function (request, response) {
-            jax.log('injectContent:');
-
             var id, target, newModal, transition, $node, result;
             var nodes = $.parseHTML(response, true);
-            jax.log('|-nodes:').log(nodes);
+            jax.log('injectContent: nodes:').log(nodes);
+
+            if (nodes === null) return;
 
             priv.triggerEvent(jax.events.beforeInject, nodes);
 
@@ -267,7 +237,7 @@ var jax = jax || {};
                 target = $('[data-jaxpanel="' + id + '"]');
 
                 if (target.size() > 0) {
-                    jax.log('data-jaxpanel: ' + id);
+                    jax.log('injectContent: data-jaxpanel: ' + id);
                     transition = priv.resolveTransition(request, node);
                     result = transition(target, node);
                     if (priv.hasValue(request)) {
@@ -382,6 +352,7 @@ var jax = jax || {};
             root = root || document;
             $(root).find('div[data-src]').each(function () {
                 var url = $(this).data('src');
+                url = priv.cacheProof(url);
                 priv.triggerEvent(jax.events.beforeRequest, {
                     action: url
                 });
@@ -390,6 +361,7 @@ var jax = jax || {};
                     priv.triggerEvent(jax.events.afterRequest, {
                         action: url
                     });
+                    priv.triggerEvent(jax.events.afterInject, this);
                 });
             });
         },
@@ -403,8 +375,8 @@ var jax = jax || {};
                     error.push(response[name]);
                 }
             });
-            console.log(response);
-            console.log(response.responseText);
+            jax.log(response);
+            jax.log(response.responseText);
         }
     };
 
@@ -424,9 +396,10 @@ var jax = jax || {};
 
     jax.Request.prototype = {
         getSearch: function () {
-            var queryString = '';
+            var inputs, queryString = '';
             if (priv.hasValue(this.form)) {
-                queryString = priv.resolveInputs(this.form).serialize();
+                inputs = priv.resolveInputs(this.form);
+                queryString = priv.buildForm(inputs).serialize();
             }
             else if (priv.hasValue(this.model)) {
                 queryString = $.param(this.model);
@@ -591,7 +564,7 @@ var jax = jax || {};
             return newPanel;
         },
         'fade-in': function (oldPanel, newPanel) {
-            oldPanel.fadeOut(0).empty().append($(newPanel).children()).fadeIn();
+            oldPanel.fadeOut(0).empty().append($(newPanel).contents()).fadeIn();
             return oldPanel;
         },
         'flip-horizontal': function (oldPanel, newPanel) {
@@ -638,15 +611,21 @@ var jax = jax || {};
         },
         'append': function (oldPanel, newPanel) {
             // useful for paging
-            $(newPanel).children().fadeOut(0).appendTo(oldPanel).fadeIn('slow');
+            $(newPanel).contents().fadeOut(0).appendTo(oldPanel).fadeIn('slow');
             return newPanel;
         },
         'prepend': function (oldPanel, newPanel) {
-            // useful for paging
             $(newPanel).fadeOut(0).prependTo(oldPanel).fadeIn('slow');
             return newPanel;
         }
     };
+
+    var rexp = {
+        segments: /'.+'|".+"|[\w\$]+|\[\d+\]/g,
+        indexer: /\[\d+\]/,
+        quoted: /'.+'|".+"/,
+    };
+
     // private functions
     var priv = {
         hasValue: function (val) {
@@ -676,11 +655,9 @@ var jax = jax || {};
             if (priv.hasValue(params.model)) {
                 return null;
             }
-            // find the closest form element
-            form = $(params.source).closest('form');
-            if (form.size() > 0) {
-                return form;
-            }
+            // we should make no assumptions about what the developer wants to do
+            // the ability to post a form via ajax without specifying a data-form attribute
+            // should probably not be implemented
             return null;
         },
         resolveModel: function (params) {
@@ -714,11 +691,10 @@ var jax = jax || {};
             return null;
         },
         resolveInputs: function (form) {
-            var inputs = $(form).find(':input');
-            if (inputs.size() === 0) {
-                inputs = $(form).filter(':input');
-            }
-            return inputs;
+            // account for selectors that either select a top element with inputs inside it (e.g. 'form')
+            // or that select specific input elements (e.g. '#div1 [name]')
+            // or both (e.g. 'form,#div1 [name]')
+            return $(form).find(':input').add($(form).filter(':input'));
         },
         resolveTransition: function (request, target) {
             // check for a transition in the request first
@@ -731,6 +707,9 @@ var jax = jax || {};
             }
         },
         buildForm: function (forms, action, method) {
+            // WARNING: 
+            // Trying to use jQuery's clone function hear will fail for select elements.
+            // The clone function doesn't preserve select element values.
             if ($(forms).size() > 0) {
                 method = method || 'POST';
                 var form = $("<form method='" + method.toUpperCase() + "' action='" + action + "' style='display:none'></form>");
@@ -738,7 +717,6 @@ var jax = jax || {};
                 inputs.forEach(function (obj) {
                     $("<input type='hidden' />").appendTo(form).prop('name', obj.name).val(obj.value);
                 });
-                jax.log('buildForm: form: ').log(form);
                 return form;
             }
             return forms;
@@ -785,72 +763,78 @@ var jax = jax || {};
 
             return form;
         },
-        buildPropertyPath: function (obj, path, value) {
+        getPathSegments: function(path) {
+            return path.match(rexp.segments);
+        },
+        resolvePathSegment: function(segment) {
+            // is this segment an array index?
+            if (rexp.indexer.test(segment)) {
+                return parseInt(/\d+/.exec(segment));
+            }
+            else if (rexp.quoted.test(segment)) {
+                return segment.slice(1, -1);
+            }
+            return segment;
+        },
+        getObjectAtPath: function (root, path, forceArray) {
             // o is our placeholder
-            var o = obj, val, prop, index, paths = path.split('.');
-            val = value;
-            if (val === undefined) val = null;
-            // split out any array indexers
-            paths.forEach(function (path, index) {
-                paths[index] = path.replace(']', '').split('[');
-            });
+            var o = root, val, segment, paths = Array.isArray(path) ? path : priv.getPathSegments(path);
+
+            jax.log('getObjectAtPath: root:');
+            jax.log(root);
+            jax.log(typeof root);
 
             for (var i = 0; i < paths.length; i++) {
-                prop = paths[i][0]; // property name
-                index = paths[i][1]; // array index
+                segment = priv.resolvePathSegment(paths[i]);
+
                 // don't overwrite previously defined properties
-                if (o[prop] === undefined) {
-                    // if this is not the last one, set it to an object
-                    // so we have something to add properties to on the next loop
-                    if (i < paths.length - 1) {
-                        o[prop] = {};
+                if (o[segment] === undefined) {
+                    // if it's not the last one, we need to look ahead to see if this is supposed to be an array
+                    if (i < paths.length - 1 && rexp.indexer.test(paths[i + 1])) {
+                        o[segment] = [];
+                    }
+                    else if (i === paths.length - 1 && forceArray) {
+                        // forceArray is for arrays of varying length (list of checkboxes)
+                        o[segment] = [];
+                    }
+                    else if (i < paths.length - 1) {
+                        // if it's not the one, create an object for the next iteration
+                        o[segment] = {};
                     }
                     else {
-                        // last one
-                        o[prop] = val;
+                        // last one, set to null
+                        o[segment] = null;
                     }
                 }
-                if (paths[i].length === 2) {
-                    // don't overwrite previously defined arrays
-                    if (!Array.isArray(o[prop])) {
-                        o[prop] = [];
-                    }
-                    // advance the placeholder
-                    o = o[prop];
-                    // don't overwrite previously defined array elements
-                    if (index && o[index] === undefined) {
-                        // if this is not the last one, set it to an object
-                        // so we have something to add properties to on the next loop
-                        if (i < paths.length - 1) {
-                            o[index] = {};
-                        }
-                        else {
-                            // last one
-                            o[index] = val;
-                        }
-                    }
-                    else if (value !== undefined) {
-                        o.push(value);
-                    }
-                    // advance the placeholder
-                    o = o[index];
+
+                // 3 possibilities:
+                // 1: last segment is a property name
+                // 2: last segment is an array index
+                // 3: last segment is an array
+
+                // we don't want to return the first two
+                // so if this is the last one and it's a property name or array index then return early
+                // else keep going
+                if (i === paths.length - 1 && (rexp.indexer.test(segment) || Array.isArray(o[segment]) === false)) {
+                    return o;
                 }
-                else {
-                    // advance the placeholder
-                    o = o[prop];
-                }
+
+                o = o[segment];
             }
 
             return o;
         },
-        setModelProperty: function(context, model, elem) {
+        setModelProperty: function (context, model, elem) {
             // derive an object path from the input name
-            name = elem.name;
-            type = elem.type;
-            // if this is a checkbox and their are other checkboxes with this name, assume an array of indeterminate length
+            var obj,
+                forceArray = false,
+                segments = priv.getPathSegments(elem.name),
+                type = elem.type;
+
+            // if this is a checkbox and their are other checkboxes with this name, assume an array of varying length
             if (type === 'checkbox'
-                && $(context).find('input[type=checkbox][name="' + name + '"]').length > 1) {
-                name = name + '[]';
+                && $(context).find('input[type=checkbox][name="' + elem.name + '"]').length > 1) {
+                forceArray = true;
             }
 
             // derive a data type
@@ -865,7 +849,7 @@ var jax = jax || {};
             // derive a value or undefined
             if (elem.value == '') {
                 value = undefined;
-            } 
+            }
             else {
                 switch (type) {
                     case 'number':
@@ -883,7 +867,21 @@ var jax = jax || {};
                 }
             }
 
-            priv.buildPropertyPath(model, name, value);
+            jax.log('setModelProperty: model:').log(model);
+
+            obj = priv.getObjectAtPath(model, segments, forceArray);
+
+            if (forceArray) {
+                // clear out the array and repopulate it
+                obj.splice(0, obj.length);
+                $(context).find('input[type=checkbox][name="' + elem.name + '"]:checked').each(function () {
+                    obj.push(this.value);
+                });
+            }
+            else {
+                var prop = priv.resolvePathSegment(segments[segments.length - 1]);
+                obj[prop] = value;
+            }
         },
         buildModelFromElements: function (context) {
             var model = {};
@@ -892,32 +890,50 @@ var jax = jax || {};
                 priv.setModelProperty(context, model, this);
             });
 
-            jax.log('buildModelFromElements:').log('|-model:').log(model);
+            jax.log('buildModelFromElements: model:').log(model);
             return model;
         },
-        getModelValue(model, path) {
-            // split by dots, then square brackets
-            // we're assuming there won't be dots between square brackets
-            try {
-                var currentObj = model;
-                var paths = path.split('.');
+        setElementsFromModel: function (context, model) {
+            var value,
+                type,
+                $this = $(context);
+            jax.log('setELementsFromModel: model:').log(model);
 
-                for (var i = 0; i < paths.length && currentObj; i++) {
-                    var name = paths[i];
-                    var split = name.split('[');
-                    var objName = split[0];
-                    currentObj = currentObj[objName];
-                    if (currentObj && split.length > 1) {
-                        var indexer = split[1].slice(0, -1);
-                        currentObj = currentObj[indexer];
-                    }
+            // set the inputs to the model
+            $this.find('[name]').each(function () {
+                value = priv.getModelValue(model, this.name);
+                jax.log('setELementsFromModel: name:').log(this.name);
+                jax.log('setELementsFromModel: value:').log(value);
+                type = priv.getType(value);
+                // lojax assumes ISO 8601 date serialization format
+                // http://www.hanselman.com/blog/OnTheNightmareThatIsJSONDatesPlusJSONNETAndASPNETWebAPI.aspx
+                // ISO 8601 is easy to parse
+                // making it possible to skip the problem of converting date strings to JS Date objects
+                if (type === 'date' || this.type === 'date') {
+                    $(this).val(priv.standardDateFormat(value));
                 }
+                else if (type === 'boolean' && this.type === 'checkbox') {
+                    this.checked = value;
+                }
+                else {
+                    $(this).val(value);
+                }
+            });
+        },
+        getModelValue: function (root, path) {
+            var obj,
+                segments = priv.getPathSegments(path),
+                prop = priv.resolvePathSegment(segments[segments.length - 1]);
 
-                return currentObj;
+            try {
+                obj = priv.getObjectAtPath(root, segments);
+                if (obj[prop] !== undefined)
+                    return obj[prop];
+                return obj;
             }
             catch (err) {
-                console.log('Could not resolve object path: ' + path);
-                console.log(err);
+                jax.log('Could not resolve object path: ' + path);
+                jax.log(err);
             }
         },
         getType: function (a) {
@@ -934,10 +950,16 @@ var jax = jax || {};
             return typeof (a);
         },
         triggerEvent: function (name, arg) {
-            $.event.trigger({
-                type: name,
-                source: arg
-            }, arg);
+            try {
+                $.event.trigger({
+                    type: name,
+                    source: arg
+                }, arg);
+            } catch (ex) {
+                if (console && console.log) {
+                    console.log(ex);
+                }
+            }
         },
         checkHash: function (url) {
             // return the hash portion if present
@@ -947,9 +969,13 @@ var jax = jax || {};
             }
             return url;
         },
-        hasHash: function () {
+        hasHash: function (url) {
+            url = url || window.location.href;
+            var index = url.indexOf('#');
+            if (index === -1) return false;
+            var hash = url.substring(index);
             // hash has to be longer than just '#_' and have some alpha characters in it
-            return window.location.hash.length > 2 && /[a-z]/i.test(window.location.hash);
+            return hash.length > 2 && /[a-z]/i.test(hash);
         },
         standardDateFormat: function (date) {
             if (priv.hasValue(date) === false) return;
@@ -976,6 +1002,14 @@ var jax = jax || {};
                 instance.in.call(panel);
                 instance.in = null;
             }
+        },
+        nonce: jQuery.now(),
+        cacheProof: function (url) {
+            var nocache = url;
+            nocache += (url.indexOf('?') === -1) ? '?' : '&';
+            nocache = nocache + '_=' + (priv.nonce++);
+            jax.log(nocache);
+            return nocache;
         }
     };
 
@@ -1011,9 +1045,12 @@ var jax = jax || {};
     jax.logging = false;
 
     jax.log = function (arg) {
-        if (jax.logging) {
-            console.log(arg);
+        try {
+            if (jax.logging && console && console.log) {
+                console.log(arg);
+            }
         }
+        catch (ex) { }
         return jax;
     };
 

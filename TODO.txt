@@ -1,0 +1,15 @@
+Test setElementsFromModel
+
+Better error handling. Currently if a request fails, afterRequest doesn't fire, leaving everybody hanging.
+
+Compound data-form selectors will fail if one of them is selecting a form parent and the other is selecting a specific set of elements.
+
+Turn the modal creation feature into more of a service that controls the lifetime of modals. 
+It needs to be able to import modals and keep their content around if necessary.
+Perhaps we'd be looking at using a custom element:
+
+<jax-modal id='modal1' src='http://...' prefetch='true/false' destroy-on-close='true/false'></jax-modal>
+
+So the modal could be opened multiple times, and optionally downloaded from the server every time.
+
+Create a nuget package 

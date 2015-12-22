@@ -61,7 +61,7 @@
 $.mockjax({
     url: "/Home/ModelTest2",
     response: function () {
-        var sb = [];
+        var out = [];
 
         out.push('<div data-jaxpanel="hidden-div">');
         out.push('    <div class="box-border">');
@@ -114,7 +114,7 @@ $.mockjax({
         out.push('        </div>');
         out.push('    </div>');
         out.push('</div>');
-        this.responseText = sb.join('');
+        this.responseText = out.join('');
     }
     
 });
@@ -136,9 +136,62 @@ $.mockjax({
 });
 $.mockjax({
     url: "/File/InjectTest",
-    proxy: "InjectTest.html"
+    response: function (settings) {
+        var out = [];
+
+        out.push('<div data-jaxpanel="hidden-div">');
+        out.push('    <div class="box-border">');
+        out.push('        <div class="box dark">');
+        out.push('            <input id="testinput" type="text" value="1" />');
+        out.push('        </div>');
+        out.push('    </div>');
+        out.push('    <script>');
+        out.push('        window.testvalue = document.getElementById("testinput").value;');
+        out.push('    </script>');
+        out.push('</div>');
+        out.push('');
+        out.push('<script>');
+        out.push('    window.testvalue2 = true;');
+        out.push('</script>');
+        out.push('');
+        out.push('<style type="text/css">');
+        out.push('    #background {');
+        out.push('        background-image:none;');
+        out.push('    }');
+        out.push('</style>');
+
+        this.responseText = out.join('');
+    }
 });
 $.mockjax({
     url: "/File/CallInTest",
-    proxy: "CallInTest.html"
+    response: function (settings) {
+        var out = [];
+
+        out.push('<div data-jaxpanel="hidden-div">');
+        out.push('    <input type="hidden" value="call-in-test" />');
+        out.push('    <script>');
+        out.push('        jax.in(function () {');
+        out.push('            val = $(this).find("input").val();');
+        out.push('            window.callInTest(val);');
+        out.push('        });');
+        out.push('    </script>');
+        out.push('</div>');
+        out.push('<div data-jaxpanel="hidden-div2">');
+        out.push('    <input type="hidden" value="call-in-test2" />');
+        out.push('    <script>');
+        out.push('        jax.in(function () {');
+        out.push('            val = $(this).find("input").val();');
+        out.push('            window.callInTest2(val);');
+        out.push('        });');
+        out.push('    </script>');
+        out.push('</div>');
+
+        this.responseText = out.join('');
+    }
+});
+
+$.mockjax({
+    url: "/EmptyResponse",
+    responseText: ''
 });
