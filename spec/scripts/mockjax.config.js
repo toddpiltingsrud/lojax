@@ -246,8 +246,9 @@ $.mockjax( {
         out.push( '                    Modal Test' );
         out.push( '                </h4>' );
         out.push( '            </div>' );
-        out.push( '            <div class="modal-body" data-jaxpanel="modalBody">' );
+        out.push( '            <div class="modal-body" data-jaxpanel="modalBody" data-model>' );
         out.push( '                <p>Modal body</p> ' );
+        out.push( getForm() );
         out.push( '                <div data-src="/LoadAsyncContent"></div>' );
         out.push( '            </div>' );
         out.push( '            <div class="modal-footer" data-jaxpanel="modalFooter">' );
@@ -255,11 +256,11 @@ $.mockjax( {
         out.push( '            </div>' );
         out.push( '        </div>' );
         out.push( '    </div>' );
-        out.push( '    <input type="hidden" value="call-in-test4" />' );
+        out.push( '    <input type="hidden" value="call-in-test4" name="callintest" />' );
         out.push( '    <script>' );
         out.push( '        jax.in(function () {' );
-        out.push( '            val = $(this).find("input").val();' );
-        out.push( '            window.callInTest4(val);' );
+        out.push( '            val = $(this).find("input[name=callintest]").val();' );
+        out.push( '            window.callInTest4(val, this);' );
         out.push( '        });' );
         out.push( '    </script>' );
         out.push( '</div>' );

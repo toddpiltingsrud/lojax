@@ -4,6 +4,8 @@ Compound data-form selectors will fail if one of them is selecting a form parent
 
 Use an object proxy to provide two-way binding for data models.
 
+Assume an array whenever there are multiple form elements with the same name.
+
 Figure out how to hook into client-side validation.
 
 Turn modal creation into a service that controls the lifetime of modals. 

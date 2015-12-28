@@ -237,8 +237,8 @@ var jax = jax || {};
                         result.refresh = request.exec.bind( request );
                     }
                     priv.triggerEvent( jax.events.afterInject, result );
-                    priv.callIn( result );
                     instance.bindToModels( result );
+                    priv.callIn( result );
                     instance.loadAsyncContent( result );
                 }
             };
@@ -323,8 +323,8 @@ var jax = jax || {};
                 } );
             }
             if ( instance.modal ) {
-                priv.callIn( instance.modal );
                 instance.bindToModels( instance.modal );
+                priv.callIn( instance.modal );
                 instance.loadAsyncContent( instance.modal );
             }
         },
@@ -787,9 +787,6 @@ var jax = jax || {};
             // o is our placeholder
             var o = root, segment, paths = Array.isArray( path ) ? path : priv.getPathSegments( path );
 
-            jax.log( 'getObjectAtPath: root:' );
-            jax.log( root );
-
             for ( var i = 0; i < paths.length; i++ ) {
                 segment = priv.resolvePathSegment( paths[i] );
 
@@ -834,20 +831,23 @@ var jax = jax || {};
             var obj,
                 prop,
                 type,
-                isCheckboxList = false,
-                // derive an object path from the input name
-                segments = priv.getPathSegments( elem.name );
+                val,
+                isArray,
+                segments;
 
-            jax.log( 'setModelProperty: model:' ).log( model );
-
-            if ( elem.type === 'checkbox' && $( context ).find( 'input[type=checkbox][name="' + elem.name + '"]' ).length > 1 ) {
-                // if there are other checkboxes with this name, assume an array of varying length (list of checkboxes)
-                isCheckboxList = true;
+            if ( !Array.isArray( elem ) ) {
+                // find all the elements with this name
+                elem = $( context ).find( '[name="' + elem.name + '"]' ).toArray();
             }
+
+            // derive an object path from the input name
+            segments = priv.getPathSegments( elem[0].name );
+
+            isArray = ( elem.length > 1 );
 
             prop = priv.resolvePathSegment( segments[segments.length - 1] );
 
-            obj = priv.getObjectAtPath( model, segments, isCheckboxList );
+            obj = priv.getObjectAtPath( model, segments, isArray );
 
             // attempt to resolve the data type in the model
             // if we can't get a type from the model
@@ -859,26 +859,43 @@ var jax = jax || {};
                 type = priv.getType( obj[0] );
             }
 
-            if ( Array.isArray(obj) && isCheckboxList ) {
+            if ( Array.isArray( obj ) && isArray ) {
                 // clear out the array and repopulate it
                 // but preserve the object reference in case it's referenced elsewhere
                 obj.splice( 0, obj.length );
-                $( context ).find( 'input[type=checkbox][name="' + elem.name + '"]:checked' ).each( function () {
-                    obj.push( priv.convertElementValue( elem, type ) );
+                elem.forEach( function ( e ) {
+                    e = $( e )[0];
+                    if ( !( /radio|checkbox/.test( e.type ) ) || e.checked ) {
+                        obj.push( priv.convertElementValue( e, type ) );
+                    }
                 } );
             }
             else {
-                obj[prop] = priv.convertElementValue( elem, type );
+                obj[prop] = priv.convertElementValue( elem[0], type );
             }
         },
         buildModelFromElements: function ( context ) {
             var model = {};
 
-            $( context ).find( '[name]' ).each( function () {
-                priv.setModelProperty( context, model, this );
+            // there may be multiple elements with the same name
+            // so build a dictionary of names and elements
+            var names = {};
+            var elems = $( context ).find( '[name]' );
+            elems.each( function () {
+                if ( !( this.name in names ) ) {
+                    names[this.name] = [];
+                }
+                // push all elements, even if they're not checked
+                // that way setModelProperty will know whether to create arrays or not
+                names[this.name].push( this );
+            } );
+
+            Object.getOwnPropertyNames( names ).forEach( function ( name ) {
+                priv.setModelProperty( context, model, names[name] );
             } );
 
             jax.log( 'buildModelFromElements: model:' ).log( model );
+
             return model;
         },
         setElementsFromModel: function ( context, model ) {

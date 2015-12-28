@@ -584,6 +584,28 @@ QUnit.test( 'posting forms 1', function ( assert ) {
 
 } );
 
+var getForm = function () {
+    var out = [];
+
+    out.push( '<input type="number" name="number" value="5" />' );
+    out.push( '<input type="date" name="daterange[0]" value="2015-01-01" />' );
+    out.push( '<input type="date" name="daterange[1]" value="2015-12-31" />' );
+    out.push( '<input type="checkbox" name="bool" value="true" checked="checked" />' );
+    out.push( '<input type="checkbox" name="arrays.names" value="Todd" checked="checked" />' );
+    out.push( '<input type="checkbox" name="arrays.names" value="Kit" checked="checked" />' );
+    out.push( '<input type="checkbox" name="arrays.names" value="Anders" />' );
+    out.push( '<input type="checkbox" name="arrays.names" value="Kaleb" />' );
+    out.push( '<input type="text" name="no.value" />' );
+    out.push( '<select name="select">' );
+    out.push( '<option>Select one...</option> ' );
+    out.push( '<option value="a">A</option> ' );
+    out.push( '<option value="b" selected="selected">B</option> ' );
+    out.push( '<option value="c">C</option> ' );
+    out.push( '</select>' );
+
+    return out.join( '' );
+};
+
 QUnit.test( 'posting forms 2', function ( assert ) {
 
     div.empty();
@@ -604,6 +626,12 @@ QUnit.test( 'posting forms 2', function ( assert ) {
     form.append( '<input type="checkbox" name="arrays.names" value="Anders" />' );
     form.append( '<input type="checkbox" name="arrays.names" value="Kaleb" />' );
     form.append( '<input type="text" name="no.value" />' );
+    form.append( '<select name="select">' );
+    form.append( '<option>Select one...</option> ' );
+    form.append( '<option value="a">A</option> ' );
+    form.append( '<option value="b" selected="selected">B</option> ' );
+    form.append( '<option value="c">C</option> ' );
+    form.append( '</select>' );
     form.append( submitBtn );
 
     var done1 = assert.async();
@@ -664,20 +692,31 @@ QUnit.test( 'modals', function ( assert ) {
     var done1 = assert.async();
     var done2 = assert.async();
 
-    window.callInTest4 = function ( val ) {
+    window.callInTest4 = function ( val, context ) {
         assert.equal( val, 'call-in-test4', 'in called' );
+        var model = context.find( '[data-model]' ).data( 'model' );
+
+        assert.equal( model.number, 5 );
+        assert.equal( model.daterange[0], '2015-01-01' );
+        assert.equal( model.daterange[1], '2015-12-31' );
+        assert.equal( model.bool, true );
+        assert.equal( model.arrays.names[0], 'Todd' );
+        assert.equal( model.arrays.names[1], 'Kit' );
+        assert.equal( model.arrays.names.length, 2 );
+        assert.equal( model.no.value, null );
+        assert.equal( model.select, 'b' );
+
         done1();
     };
 
     window.loadAsyncContentTest = function ( val ) {
         assert.equal( val, 'load async content' );
         done2();
+        jax.logging = false;
         jax.closeModal();
     };
 
     $( '<button data-method="ajax-get" data-action="/modal">' ).appendTo( div ).click().remove();
-
-    jax.logging = false;
 
 } );
 
