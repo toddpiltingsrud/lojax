@@ -2,6 +2,10 @@ Better error handling. Currently if a request fails, afterRequest doesn't fire, 
 
 Compound data-form selectors will fail if one of them is selecting a form parent and the other is selecting a specific set of elements.
 
+Use an object proxy to provide two-way binding for data models.
+
+Figure out how to hook into client-side validation.
+
 Turn modal creation into a service that controls the lifetime of modals. 
 It needs to be able to import modals and keep their content around if necessary.
 Perhaps we'd be looking at using a custom element:
@@ -13,3 +17,39 @@ So the modal could be opened multiple times, and optionally downloaded from the 
 Do we need a different content type for JSONP?
 
 Create a nuget package.
+
+Supported scenarios/patterns:
+
+- Clicking an element executes a request with optional form or model.
+- Specify data-trigger = change to handle the change event on an element containing inputs and execute a request with optional form or model
+- An element with data-method and data-trigger containg 'enter' executes a request with optional form or model when enter key is pressed.
+- Clicking a submit button inside a form with a data-method attribute executes a request with the form.
+- Clicking a submit button inside an element with a data-model attribute executes a request with the model.
+- Add an empty data-model attribute to any parent element to create a JSON model from the child inputs.
+- A non-empty data-model attribute on a parent element will set the values of the child inputs to the model by matching model properties to input names.
+- Change the url's hash to trigger an ajax-get request. Simple way to get cross-browser navigation history for ajax requests.
+- If input elements are inside an element with a data-model attribute, the change event writes the changes to the data model.
+- Use jax.in(callback) inside a data-jaxpanel to execute a function with context ('this' keyword) set to the containing data-jaxpanel.
+
+AJAX responses:
+
+- Parse response into a collection of nodes.
+- If there are no nodes, return.
+- Trigger the beforeInject event with the node list as an argument.
+- Check the request for a target. If found, inject the entire response into the target.
+- Iterate through the nodes.
+- If there is not currently a modal being displayed and the node is a modal, instantiate a modal and show it. Continue.
+- If there is not currently a modal being displayed and the node contains a modal, instantiate a modal and show it.
+- If the node is a data-jaxpanel, inject it.
+- If the node contains data-jaxpanels, inject them.
+- Once we're done iterating through the nodes, check for any loose script and style nodes. Inject them into a hidden div at the bottom of the page.
+
+Modal Creation
+
+- Supports bootstrap and kendo
+- Passed-in content is appended to document body and a modal is instantiated and shown.
+- Optional: Call jax.closeModal() to close the modal.
+- Handle the modal's hidden/close event and null out the modal instance and remove the element.
+
+Tip: Use a layout to create modals on the server.
+

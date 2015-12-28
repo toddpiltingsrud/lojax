@@ -369,10 +369,13 @@ QUnit.test( 'handleHash', function ( assert ) {
 
 QUnit.test( 'callIn', function ( assert ) {
 
+    jax.logging = true;
+
     var div2 = $( '<div data-jaxpanel="hidden-div2" style="display:none"></div>' ).appendTo( 'body' );
 
     var done = assert.async();
     var done2 = assert.async();
+    var done3 = assert.async();
 
     window.callInTest = function ( val ) {
         assert.ok( true, 'jax.in called' );
@@ -384,9 +387,18 @@ QUnit.test( 'callIn', function ( assert ) {
         assert.ok( true, 'jax.in called' );
         assert.equal( val, 'call-in-test2', '' );
         done2();
+        console.clear();
+    };
+
+    window.loadAsyncContentTest = function ( val ) {
+        assert.ok( true, 'jax.in called' );
+        assert.equal( val, 'load async content', '' );
+        done3();
     };
 
     $( '<button data-method="ajax-get" data-action="/File/CallInTest">' ).appendTo( div ).click().remove();
+
+    jax.logging = false;
 
 } );
 
@@ -645,10 +657,33 @@ QUnit.test( 'posting forms 3', function ( assert ) {
 
 } );
 
+QUnit.test( 'modals', function ( assert ) {
+
+    jax.logging = true;
+
+    var done1 = assert.async();
+    var done2 = assert.async();
+
+    window.callInTest4 = function ( val ) {
+        assert.equal( val, 'call-in-test4', 'in called' );
+        done1();
+    };
+
+    window.loadAsyncContentTest = function ( val ) {
+        assert.equal( val, 'load async content' );
+        done2();
+        jax.closeModal();
+    };
+
+    $( '<button data-method="ajax-get" data-action="/modal">' ).appendTo( div ).click().remove();
+
+    jax.logging = false;
+
+} );
+
 QUnit.test( 'make sure logging is turned off', function ( assert ) {
     div.empty();
 
     assert.equal( jax.logging, false );
 
 } );
-

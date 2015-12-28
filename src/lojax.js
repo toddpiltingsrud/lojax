@@ -118,7 +118,7 @@ var jax = jax || {};
 
             var handler, request, hash = window.location.hash;
 
-            jax.log( 'handleHash: hash: ' ).log( hash );
+            jax.log( 'handleHash: hash:' ).log( hash );
 
             if ( priv.hasHash() ) {
 
@@ -126,8 +126,7 @@ var jax = jax || {};
                 // We want to support url-only access, and we don't want to clutter 
                 // the url with request settings like transition and target. That 
                 // means that there must be enough information already in the page 
-                // (like default-target) or in the response (jx-panel) to be able to 
-                // properly handle the response.
+                // or response (jx-panel) to be able to properly handle the response.
                 handler = $( 'a[name="' + hash.substr( 1 ) + '"]' );
                 if ( handler.size() === 0 ) {
                     request = new jax.Request( {
@@ -143,8 +142,9 @@ var jax = jax || {};
                 }
                 instance.currentTransition = null;
             }
-            else {
-                // we got here because a browser navigation button was clicked which changed the hash to nothing
+            else if (hash === '') {
+                // we got here because a browser navigation button 
+                // was clicked which changed the hash to nothing
                 // so load the current page via ajax
                 instance.executeRequest( {
                     action: window.location.href,
@@ -158,10 +158,9 @@ var jax = jax || {};
             var model, $this, models = [];
             var dataModels = $( context ).find( '[data-model]' ).add( context ).filter( '[data-model]' );
 
-            jax.log( 'bindToModels: context: ' ).log( context );
             jax.log( 'bindToModels: dataModels:' ).log( dataModels );
 
-            // iterate over the data-models found in context
+            // iterate over the data-models in context
             dataModels.each( function () {
                 $this = $( this );
                 // grab the data-model
@@ -183,14 +182,14 @@ var jax = jax || {};
         },
 
         updateModel: function ( evt ) {
+            // model's change handler 
             // provides simple one-way binding from HTML elements to a model
             var $this = $( this );
             var $target = $( evt.target );
             var model = $this.data( 'model' );
             var name = evt.target.name;
-            if ( priv.hasValue( name ) === false ) {
-                return;
-            }
+            if ( !priv.hasValue( name ) ) return;
+
             var o = {
                 target: evt.target,
                 name: name,
@@ -203,7 +202,7 @@ var jax = jax || {};
             jax.log( 'updateModel: o:' ).log( o );
 
             priv.triggerEvent( jax.events.beforeUpdateModel, o );
-            if ( o.cancel === true ) return;
+            if ( o.cancel ) return;
 
             jax.log( 'updateModel: o.model' ).log( o.model );
 
@@ -215,29 +214,20 @@ var jax = jax || {};
 
         injectContent: function ( request, response ) {
             var id, target, newModal, transition, $node, result;
+            // create a list of nodes from the response
             var nodes = $.parseHTML( response, true );
             jax.log( 'injectContent: nodes:' ).log( nodes );
 
+            // empty response?
             if ( nodes === null ) return;
 
             priv.triggerEvent( jax.events.beforeInject, nodes );
-
-            if ( request.target ) {
-                transition = priv.resolveTransition( request, request.target );
-                result = transition( request.target, response );
-                request.target.refresh = request;
-                priv.triggerEvent( jax.events.afterInject, result );
-                instance.loadAsyncContent( request.target );
-                instance.bindToModels( request.target );
-                priv.callIn( result );
-                return;
-            }
 
             var doPanel = function () {
                 var node = $( this );
                 // match up with panels on the page
                 id = node.data( 'jaxpanel' );
-                target = $( '[data-jaxpanel="' + id + '"]' );
+                target = request.target || $( '[data-jaxpanel="' + id + '"]' );
 
                 if ( target.size() > 0 ) {
                     jax.log( 'injectContent: data-jaxpanel: ' + id );
@@ -247,15 +237,15 @@ var jax = jax || {};
                         result.refresh = request.exec.bind( request );
                     }
                     priv.triggerEvent( jax.events.afterInject, result );
-                    instance.loadAsyncContent( result );
-                    instance.bindToModels( result );
                     priv.callIn( result );
+                    instance.bindToModels( result );
+                    instance.loadAsyncContent( result );
                 }
             };
 
             for ( var i = 0; i < nodes.length; i++ ) {
                 $node = $( nodes[i] );
-                // check for modal
+                // don't create more than one modal at a time
                 if ( instance.modal === null ) {
                     // check if the node is a modal
                     if ( $node.is( '.modal' ) ) {
@@ -265,16 +255,15 @@ var jax = jax || {};
                     else {
                         // check if the node contains a modal
                         newModal = $node.find( '.modal' );
-                        if ( newModal.length > 0 ) {
+                        if ( newModal.length ) {
                             instance.createModal( newModal );
                         }
                     }
                 }
 
                 // find all the panels in the new content
-                if ( $node.is( '[data-jaxpanel]' ) ) {
+                if ( request.target || $node.is( '[data-jaxpanel]' ) ) {
                     doPanel.call( $node );
-                    continue;
                 }
                 else {
                     // iterate through the panels
@@ -282,7 +271,7 @@ var jax = jax || {};
                 }
             }
 
-            // find any loose script and style nodes
+            // process any loose script or style nodes
             instance.div.empty();
             nodes.forEach( function ( node ) {
                 $node = $( node );
@@ -307,8 +296,6 @@ var jax = jax || {};
                         instance.modal = null;
                     }
                 } );
-                instance.loadAsyncContent( instance.modal );
-                instance.bindToModels( instance.modal );
                 instance.modal.modal( 'show' );
             }
                 // check for kendo
@@ -335,18 +322,10 @@ var jax = jax || {};
                     instance.modal.data( 'kendoWindow' ).close();
                 } );
             }
-        },
-
-        // this is often called when the server returns a success 
-        // response from a form submission that came from a modal
-        closeModal: function () {
-            if ( priv.hasValue( instance.modal ) ) {
-                if ( $.fn.modal ) {
-                    instance.modal.hide();
-                }
-                else if ( $.fn.kendoWindow ) {
-                    instance.modal.data( 'kendoWindow' ).close();
-                }
+            if ( instance.modal ) {
+                priv.callIn( instance.modal );
+                instance.bindToModels( instance.modal );
+                instance.loadAsyncContent( instance.modal );
             }
         },
 
@@ -354,17 +333,16 @@ var jax = jax || {};
         loadAsyncContent: function ( root ) {
             root = root || document;
             $( root ).find( 'div[data-src]' ).each( function () {
-                var url = $( this ).data( 'src' );
-                url = priv.cacheProof( url );
-                priv.triggerEvent( jax.events.beforeRequest, {
-                    action: url
-                } );
-                $( this ).load( url, function () {
-                    instance.bindToModels( this );
-                    priv.triggerEvent( jax.events.afterRequest, {
-                        action: url
-                    } );
-                    priv.triggerEvent( jax.events.afterInject, this );
+                var $this = $( this );
+                var url = $this.data( 'src' );
+                console.log( 'loadAsyncContent: url:' );
+                console.log( url );
+                instance.executeRequest( {
+                    action: priv.cacheProof( url ),
+                    method: 'ajax-get',
+                    target: $this,
+                    source: $this,
+                    transition: $this.data('transition') || 'append'
                 } );
             } );
         },
@@ -570,9 +548,7 @@ var jax = jax || {};
 
     jax.Transitions = {
         'replace': function ( oldPanel, newPanel ) {
-            $( newPanel ).fadeOut( 0 );
-            $( oldPanel ).fadeOut( 0 ).replaceWith( newPanel );
-            $( newPanel ).fadeIn( 'slow' );
+            $( oldPanel ).replaceWith( newPanel );
             return newPanel;
         },
         'fade-in': function ( oldPanel, newPanel ) {
@@ -623,11 +599,11 @@ var jax = jax || {};
         },
         'append': function ( oldPanel, newPanel ) {
             // useful for paging
-            $( newPanel ).contents().fadeOut( 0 ).appendTo( oldPanel ).fadeIn( 'slow' );
+            $( oldPanel ).append( newPanel );
             return newPanel;
         },
         'prepend': function ( oldPanel, newPanel ) {
-            $( newPanel ).fadeOut( 0 ).prependTo( oldPanel ).fadeIn( 'slow' );
+            $( oldPanel ).prepend( newPanel );
             return newPanel;
         }
     };
@@ -679,7 +655,7 @@ var jax = jax || {};
             if ( priv.hasValue( params.form ) ) {
                 return $( params.form );
             }
-            // only a submit button can post an enclosing form
+            // only a submit button can submit an enclosing form
             if ( $( params.source ).is( '[type=submit]' ) ) {
                 closest = $( params.source ).closest( 'form,[data-model]' );
                 if ( closest.is( 'form' ) ) {
@@ -702,7 +678,7 @@ var jax = jax || {};
             if ( typeof params.model === 'object' ) {
                 return params.model;
             }
-            // only a submit button can post an enclosing model
+            // only a submit button can submit an enclosing model
             if ( $( params.source ).is( '[type=submit]' ) ) {
                 closest = $( params.source ).closest( 'form,[data-model]' );
                 jax.log( 'resolveModel: closest:' ).log( closest );
@@ -722,7 +698,7 @@ var jax = jax || {};
             return null;
         },
         resolveInputs: function ( form ) {
-            // account for selectors that either select a top element with inputs inside it (e.g. 'form')
+            // account for selectors that either select a top element with inputs inside (e.g. 'form')
             // or that select specific input elements (e.g. '#div1 [name]')
             // or both (e.g. 'form,#div1 [name]')
             return $( form ).find( ':input' ).add( $( form ).filter( ':input' ) );
@@ -741,12 +717,12 @@ var jax = jax || {};
             // Trying to use jQuery's clone function here fails for select elements.
             // The clone function doesn't preserve select element values.
             // So copy everything manually instead.
-            if ( $( forms ).size() > 0 ) {
+            if ( $( forms ).length ) {
                 method = method || 'POST';
                 var form = $( "<form method='" + method.toUpperCase() + "' action='" + action + "' style='display:none'></form>" );
                 var inputs = priv.resolveInputs( forms ).serializeArray();
-                inputs.forEach( function ( obj ) {
-                    $( "<input type='hidden' />" ).appendTo( form ).prop( 'name', obj.name ).val( obj.value );
+                inputs.forEach( function ( input ) {
+                    $( "<input type='hidden' />" ).appendTo( form ).prop( 'name', input.name ).val( input.value );
                 } );
                 return form;
             }
@@ -828,7 +804,7 @@ var jax = jax || {};
                         o[segment] = [];
                     }
                     else if ( i < paths.length - 1 ) {
-                        // if it's not the one, create an object for the next iteration
+                        // if it's not the last one, create an object for the next iteration
                         o[segment] = {};
                     }
                     else {
@@ -855,17 +831,17 @@ var jax = jax || {};
             return o;
         },
         setModelProperty: function ( context, model, elem ) {
-            // derive an object path from the input name
             var obj,
                 prop,
                 type,
                 isCheckboxList = false,
+                // derive an object path from the input name
                 segments = priv.getPathSegments( elem.name );
 
             jax.log( 'setModelProperty: model:' ).log( model );
 
             if ( elem.type === 'checkbox' && $( context ).find( 'input[type=checkbox][name="' + elem.name + '"]' ).length > 1 ) {
-                // if there are other checkboxes with this name, assume an array of varying length
+                // if there are other checkboxes with this name, assume an array of varying length (list of checkboxes)
                 isCheckboxList = true;
             }
 
@@ -885,6 +861,7 @@ var jax = jax || {};
 
             if ( Array.isArray(obj) && isCheckboxList ) {
                 // clear out the array and repopulate it
+                // but preserve the object reference in case it's referenced elsewhere
                 obj.splice( 0, obj.length );
                 $( context ).find( 'input[type=checkbox][name="' + elem.name + '"]:checked' ).each( function () {
                     obj.push( priv.convertElementValue( elem, type ) );
@@ -919,6 +896,7 @@ var jax = jax || {};
                 // ISO 8601 is easy to parse
                 // making it possible to skip the problem of converting date strings to JS Date objects
                 if ( type === 'date' || this.type === 'date' ) {
+                    // date inputs expect yyyy-MM-dd
                     $( this ).val( priv.standardDateFormat( value ) );
                 }
                 else if ( type === 'boolean' && this.type === 'checkbox' ) {
@@ -1005,6 +983,7 @@ var jax = jax || {};
         callIn: function ( panel ) {
             if ( panel && instance.in ) {
                 instance.in.call( panel );
+                // ensure in is called only once
                 instance.in = null;
             }
         },
@@ -1043,7 +1022,7 @@ var jax = jax || {};
         }
     };
 
-    // handle an arbitrary event
+    // handle an arbitrary event and execute a request
     jax.on = function ( event, params ) {
         $( document ).on( event, function () {
             instance.executeRequest( params );
@@ -1061,6 +1040,19 @@ var jax = jax || {};
     jax.in = function ( callback ) {
         instance.in = callback;
     };
+
+    // this can be called explicitly when the server returns a success 
+    // response from a form submission that came from a modal
+    jax.closeModal = function () {
+        if ( priv.hasValue( instance.modal ) ) {
+            if ( $.fn.modal ) {
+                instance.modal.modal( 'hide' );
+            }
+            else if ( $.fn.kendoWindow ) {
+                instance.modal.data( 'kendoWindow' ).close();
+            }
+        }
+    }
 
     jax.events = {
         beforeRequest: 'beforeRequest',

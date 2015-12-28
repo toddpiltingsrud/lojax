@@ -1,0 +1,23 @@
+﻿<#@ template debug="false" hostspecific="true" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ import namespace="System.IO" #>
+<#@ output extension=".txt" #>
+<#
+var file = File.ReadAllLines(this.Host.ResolvePath("OutSource.txt"));
+var quot = "'";
+#>
+var out = [];
+
+<#
+foreach (var line in file)
+{
+#>
+out.push('<#= line.Replace(quot, "\"") #>');
+<#
+}
+#>
+
+return out.join('');

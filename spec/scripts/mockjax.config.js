@@ -163,6 +163,7 @@ $.mockjax( {
         this.responseText = out.join( '' );
     }
 } );
+
 $.mockjax( {
     url: "/File/CallInTest",
     response: function ( settings ) {
@@ -178,11 +179,31 @@ $.mockjax( {
         out.push( '    </script>' );
         out.push( '</div>' );
         out.push( '<div data-jaxpanel="hidden-div2">' );
+        out.push( '    <div data-src="/LoadAsyncContent"></div>' );
         out.push( '    <input type="hidden" value="call-in-test2" />' );
         out.push( '    <script>' );
         out.push( '        jax.in(function () {' );
         out.push( '            val = $(this).find("input").val();' );
         out.push( '            window.callInTest2(val);' );
+        out.push( '        });' );
+        out.push( '    </script>' );
+        out.push( '</div>' );
+
+        this.responseText = out.join( '' );
+    }
+} );
+
+$.mockjax( {
+    url: "/LoadAsyncContent*",
+    response: function ( settings ) {
+        var out = [];
+
+        out.push( '<div>' );
+        out.push( '    <input type="hidden" value="load async content" />' );
+        out.push( '    <script>' );
+        out.push( '        jax.in(function () {' );
+        out.push( '            val = $(this).find("input").val();' );
+        out.push( '            window.loadAsyncContentTest(val);' );
         out.push( '        });' );
         out.push( '    </script>' );
         out.push( '</div>' );
@@ -211,3 +232,38 @@ $.mockjax( {
     }
 } );
 
+$.mockjax( {
+    url: "/modal",
+    response: function ( settings ) {
+        var out = [];
+
+        out.push( '<div class="modal fade" role="dialog" aria-labelledby="modalTitle" aria-hidden="true">' );
+        out.push( '    <div class="modal-dialog">' );
+        out.push( '        <div class="modal-content">' );
+        out.push( '            <div class="modal-header">' );
+        out.push( '                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>' );
+        out.push( '                <h4 class="modal-title" data-jaxpanel="modalTitle">' );
+        out.push( '                    Modal Test' );
+        out.push( '                </h4>' );
+        out.push( '            </div>' );
+        out.push( '            <div class="modal-body" data-jaxpanel="modalBody">' );
+        out.push( '                <p>Modal body</p> ' );
+        out.push( '                <div data-src="/LoadAsyncContent"></div>' );
+        out.push( '            </div>' );
+        out.push( '            <div class="modal-footer" data-jaxpanel="modalFooter">' );
+        out.push( '                <button class="btn btn-default" data-dismiss="modal">Close</button> ' );
+        out.push( '            </div>' );
+        out.push( '        </div>' );
+        out.push( '    </div>' );
+        out.push( '    <input type="hidden" value="call-in-test4" />' );
+        out.push( '    <script>' );
+        out.push( '        jax.in(function () {' );
+        out.push( '            val = $(this).find("input").val();' );
+        out.push( '            window.callInTest4(val);' );
+        out.push( '        });' );
+        out.push( '    </script>' );
+        out.push( '</div>' );
+
+        this.responseText = out.join( '' );
+    }
+} );

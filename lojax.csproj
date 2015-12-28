@@ -204,6 +204,16 @@
     <Content Include="spec\CallInTest.html" />
     <Content Include="spec\InjectTest.html" />
     <Content Include="spec\ModelTest2.html" />
+    <Content Include="spec\Out.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>Out1.txt</LastGenOutput>
+    </Content>
+    <Content Include="spec\Out1.txt">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Out.tt</DependentUpon>
+    </Content>
+    <Content Include="spec\OutSource.txt" />
     <Content Include="spec\tests.js" />
     <Content Include="spec\styles\bootstrap.min.css" />
     <Content Include="spec\styles\qunit-1.20.0.css" />
@@ -229,6 +239,9 @@
     <Folder Include=".git\objects\info\" />
     <Folder Include=".git\objects\pack\" />
     <Folder Include=".git\refs\tags\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSHARP.Targets" />
   <ProjectExtensions>
