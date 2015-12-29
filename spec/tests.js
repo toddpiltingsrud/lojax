@@ -14,6 +14,31 @@ $( function () {
     div = $( '<div id="div1" data-jaxpanel="hidden-div" style="display:none"></div>' ).appendTo( 'body' );
 } );
 
+QUnit.test( 'jQuery data function', function ( assert ) {
+    div.empty();
+
+    var button = $( '<input type="submit" data-method="ajax-post" jx-action="/save" />' );
+
+    var obj = button.data();
+
+    var attributes = 'method action transition target form model cache expire renew'.split(' ');
+
+    attributes.forEach( function ( attr ) {
+        var name = 'jx-' + attr;
+        if ( !( attr in obj ) ) {
+            var val = button.attr( name );
+            if ( val !== undefined ) {
+                obj[attr] = val;
+            }
+        }
+    } );
+
+    console.log( obj );
+
+    assert.equal( lojax.logging, false );
+
+} );
+
 QUnit.test( 'click event handler', function ( assert ) {
 
     var done = assert.async();
@@ -52,7 +77,7 @@ QUnit.test( 'getObjectAtPath', function ( assert ) {
 
     var path = 'prop.array1[0].name';
 
-    var result = jax.priv.getObjectAtPath( obj, path, true );
+    var result = lojax.priv.getObjectAtPath( obj, path, true );
 
     assert.equal( Array.isArray( result ), true );
 
@@ -61,7 +86,7 @@ QUnit.test( 'getObjectAtPath', function ( assert ) {
 
     path = 'prop.array1[1].name.array2[2]';
 
-    result = jax.priv.getObjectAtPath( obj, path );
+    result = lojax.priv.getObjectAtPath( obj, path );
 
     assert.equal( obj.prop.array1[0], undefined );
 
@@ -74,7 +99,7 @@ QUnit.test( 'getObjectAtPath', function ( assert ) {
 
     path = 'prop.array1[0]';
 
-    var result = jax.priv.getObjectAtPath( obj, path );
+    var result = lojax.priv.getObjectAtPath( obj, path );
 
     assert.equal( Array.isArray( result ), true );
 
@@ -83,7 +108,7 @@ QUnit.test( 'getObjectAtPath', function ( assert ) {
 
     path = 'prop.arrays.names';
 
-    var result = jax.priv.getObjectAtPath( obj, path, true );
+    var result = lojax.priv.getObjectAtPath( obj, path, true );
 
     assert.equal( Array.isArray( result ), true );
 
@@ -94,16 +119,16 @@ QUnit.test( 'getModelValue', function ( assert ) {
 
     var model = { number: 5, daterange: ['2015-11-13', '2015-11-15'], bool: true, arrays: { names: ['Kit', 'Todd'] } };
 
-    var result = jax.priv.getModelValue( model, 'number' );
+    var result = lojax.priv.getModelValue( model, 'number' );
     assert.equal( result, 5 );
 
-    result = jax.priv.getModelValue( model, 'daterange[1]' );
+    result = lojax.priv.getModelValue( model, 'daterange[1]' );
     assert.equal( result, '2015-11-15' );
 
-    result = jax.priv.getModelValue( model, 'arrays.names' );
+    result = lojax.priv.getModelValue( model, 'arrays.names' );
     assert.ok( Array.isArray( result ) );
 
-    result = jax.priv.getModelValue( model, 'arrays.names.length' );
+    result = lojax.priv.getModelValue( model, 'arrays.names.length' );
     assert.equal( result, 2 );
 
 } );
@@ -115,7 +140,7 @@ QUnit.test( 'bindToModels1', function ( assert ) {
 
     div.append( input );
 
-    var models = jax.instance.bindToModels( input );
+    var models = lojax.instance.bindToModels( input );
 
     assert.equal( models.length, 1, 'Should find one model' );
 
@@ -125,7 +150,7 @@ QUnit.test( 'bindToModels1', function ( assert ) {
 
     div.append( input );
 
-    var models = jax.instance.bindToModels( input );
+    var models = lojax.instance.bindToModels( input );
 
     assert.equal( models.length, 0, 'Should find zero models' );
 
@@ -149,7 +174,7 @@ QUnit.test( 'bindToModels2', function ( assert ) {
 
     div.append( modelDiv );
 
-    var models = jax.instance.bindToModels( modelDiv );
+    var models = lojax.instance.bindToModels( modelDiv );
 
     assert.equal( models.length, 1, 'Should create one model' );
 
@@ -197,7 +222,7 @@ QUnit.test( 'bindToModels2', function ( assert ) {
 
     var done = assert.async();
 
-    $( document ).one( jax.events.afterUpdateModel, function ( evt, obj ) {
+    $( document ).one( lojax.events.afterUpdateModel, function ( evt, obj ) {
         assert.ok( true, 'model change events are being handled' );
         assert.equal( m.number, 5, 'Should resolve numbers' );
         done();
@@ -227,7 +252,7 @@ QUnit.test( 'bindToModels3', function ( assert ) {
 
     div.append( modelDiv );
 
-    jax.logging = true;
+    lojax.logging = true;
 
     assert.equal( modelDiv.find( '[name=number]' ).val(), '' );
     assert.equal( modelDiv.find( '[name="daterange[0]"]' ).val(), '' );
@@ -238,7 +263,7 @@ QUnit.test( 'bindToModels3', function ( assert ) {
     assert.equal( modelDiv.find( '[value=Anders]' ).prop( 'checked' ), false );
     assert.equal( modelDiv.find( '[value=Kaleb]' ).prop( 'checked' ), false );
 
-    jax.instance.bindToModels();
+    lojax.instance.bindToModels();
 
     assert.equal( modelDiv.find( '[name=number]' ).val(), '5' );
     assert.equal( modelDiv.find( '[name="daterange[0]"]' ).val(), '2015-11-13' );
@@ -250,10 +275,10 @@ QUnit.test( 'bindToModels3', function ( assert ) {
     assert.equal( modelDiv.find( '[value=Kaleb]' ).prop( 'checked' ), false );
 
     model.arrays.names.push( 'Kaleb' );
-    jax.instance.bindToModels(modelDiv);
+    lojax.instance.bindToModels(modelDiv);
     assert.equal( modelDiv.find( '[value=Kaleb]' ).prop( 'checked' ), true );
 
-    jax.logging = false;
+    lojax.logging = false;
 } );
 
 QUnit.test( 'loadAsyncContent', function ( assert ) {
@@ -261,7 +286,7 @@ QUnit.test( 'loadAsyncContent', function ( assert ) {
 
     var done = assert.async();
 
-    $( document ).one( jax.events.afterRequest, function () {
+    $( document ).one( lojax.events.afterRequest, function () {
         assert.ok( true, 'async content was loaded' );
 
         var datamodel = div.find( '[data-model]' ).data( 'model' );
@@ -273,7 +298,7 @@ QUnit.test( 'loadAsyncContent', function ( assert ) {
 
     div.append( '<div data-src="/Home/ModelTest"></div>' );
 
-    jax.instance.loadAsyncContent( div );
+    lojax.instance.loadAsyncContent( div );
 
 } );
 
@@ -284,7 +309,7 @@ QUnit.test( 'injectContent1', function ( assert ) {
 
     var done = assert.async();
 
-    $( document ).one( jax.events.afterRequest, function () {
+    $( document ).one( lojax.events.afterRequest, function () {
         assert.ok( true, 'async content was loaded' );
 
         assert.ok( window.scriptExecuted === true, 'scripts should run' );
@@ -303,7 +328,7 @@ QUnit.test( 'injectContent2', function ( assert ) {
 
     var done = assert.async();
 
-    $( document ).one( jax.events.afterRequest, function () {
+    $( document ).one( lojax.events.afterRequest, function () {
         assert.equal( window.testvalue, '1', 'new content should be queried by new script' );
         assert.equal( window.testvalue2, true, 'loose scripts should run' );
         done();
@@ -320,11 +345,11 @@ QUnit.test( 'event order', function ( assert ) {
 
     var beforeInjectFired = false;
 
-    $( document ).one( jax.events.beforeInject, function ( evt, request ) {
+    $( document ).one( lojax.events.beforeInject, function ( evt, request ) {
         beforeInjectFired = true;
     } );
 
-    $( document ).one( jax.events.afterRequest, function ( evt, request ) {
+    $( document ).one( lojax.events.afterRequest, function ( evt, request ) {
         assert.equal( beforeInjectFired, true, 'beforeInject should fire before afterRequest' );
         done();
     } );
@@ -339,11 +364,11 @@ QUnit.test( 'injectContent3 empty response', function ( assert ) {
 
     var beforeInjectFired = false;
 
-    $( document ).one( jax.events.beforeInject, function ( evt, request ) {
+    $( document ).one( lojax.events.beforeInject, function ( evt, request ) {
         beforeInjectFired = true;
     } );
 
-    $( document ).one( jax.events.afterRequest, function ( evt, request ) {
+    $( document ).one( lojax.events.afterRequest, function ( evt, request ) {
         assert.ok( true, 'empty response should not throw an error' );
         assert.equal( beforeInjectFired, false, 'empty response should return from injectContent early' );
         done();
@@ -369,7 +394,7 @@ QUnit.test( 'handleHash', function ( assert ) {
 
 QUnit.test( 'callIn', function ( assert ) {
 
-    jax.logging = true;
+    lojax.logging = true;
 
     var div2 = $( '<div data-jaxpanel="hidden-div2" style="display:none"></div>' ).appendTo( 'body' );
 
@@ -378,27 +403,27 @@ QUnit.test( 'callIn', function ( assert ) {
     var done3 = assert.async();
 
     window.callInTest = function ( val ) {
-        assert.ok( true, 'jax.in called' );
+        assert.ok( true, 'lojax.in called' );
         assert.equal( val, 'call-in-test', '' );
         done();
     };
 
     window.callInTest2 = function ( val ) {
-        assert.ok( true, 'jax.in called' );
+        assert.ok( true, 'lojax.in called' );
         assert.equal( val, 'call-in-test2', '' );
         done2();
         console.clear();
     };
 
     window.loadAsyncContentTest = function ( val ) {
-        assert.ok( true, 'jax.in called' );
+        assert.ok( true, 'lojax.in called' );
         assert.equal( val, 'load async content', '' );
         done3();
     };
 
     $( '<button data-method="ajax-get" data-action="/File/CallInTest">' ).appendTo( div ).click().remove();
 
-    jax.logging = false;
+    lojax.logging = false;
 
 } );
 
@@ -432,7 +457,7 @@ QUnit.test( 'buildForm', function ( assert ) {
 
     var selector = $( '#div1 form,#div2 [name]' );
 
-    var builtForm = jax.priv.buildForm( selector );
+    var builtForm = lojax.priv.buildForm( selector );
 
     var serialized = builtForm.serialize();
 
@@ -516,7 +541,7 @@ QUnit.test( 'posting models 2', function ( assert ) {
     modelDiv.append( '<input type="text" name="no.value" />' );
 
     // bind the inputs to the model
-    jax.instance.bindToModels( modelDiv );
+    lojax.instance.bindToModels( modelDiv );
 
     // change some of the values
     modelDiv.find( '[name="daterange[0]"]' ).val( '2015-11-13' ).change();
@@ -526,7 +551,7 @@ QUnit.test( 'posting models 2', function ( assert ) {
 
     var done = assert.async();
 
-    $( document ).on( jax.events.beforeRequest, function ( evt, arg ) {
+    $( document ).on( lojax.events.beforeRequest, function ( evt, arg ) {
         assert.ok( arg.model != null );
         assert.equal( arg.model.daterange[0], '2015-11-13' );
         assert.equal( arg.model.daterange[1], '2015-11-15' );
@@ -536,11 +561,11 @@ QUnit.test( 'posting models 2', function ( assert ) {
         done();
     } );
 
-    jax.logging = true;
+    lojax.logging = true;
 
     submitBtn.click();
 
-    jax.logging = false;
+    lojax.logging = false;
 
 } );
 
@@ -568,19 +593,19 @@ QUnit.test( 'posting forms 1', function ( assert ) {
 
     var done1 = assert.async();
 
-    $( document ).one( jax.events.afterRequest, function ( evt, arg ) {
+    $( document ).one( lojax.events.afterRequest, function ( evt, arg ) {
         assert.ok( arg != null );
         assert.equal( arg.contentType, 'application/x-www-form-urlencoded; charset=UTF-8' );
         assert.equal( arg.action, '/post#withhash' );
-        $( document ).off( jax.events.afterRequest );
+        $( document ).off( lojax.events.afterRequest );
         done1();
     } );
 
-    jax.logging = true;
+    lojax.logging = true;
 
     submitBtn.click();
 
-    jax.logging = false;
+    lojax.logging = false;
 
 } );
 
@@ -636,15 +661,15 @@ QUnit.test( 'posting forms 2', function ( assert ) {
 
     var done1 = assert.async();
 
-    $( document ).one( jax.events.afterRequest, function ( evt, arg ) {
+    $( document ).one( lojax.events.afterRequest, function ( evt, arg ) {
         assert.ok( arg != null );
         assert.equal( arg.contentType, 'application/x-www-form-urlencoded; charset=UTF-8' );
         assert.equal( arg.action, window.location.href );
-        $( document ).off( jax.events.afterRequest );
+        $( document ).off( lojax.events.afterRequest );
         done1();
     } );
 
-    jax.logging = true;
+    lojax.logging = true;
 
     submitBtn.click();
 
@@ -669,25 +694,25 @@ QUnit.test( 'posting forms 3', function ( assert ) {
 
     var done = assert.async();
 
-    $( document ).one( jax.events.afterRequest, function ( evt, arg ) {
+    $( document ).one( lojax.events.afterRequest, function ( evt, arg ) {
         assert.ok( true, 'form submit events can be intercepted' );
         done();
     } );
 
-    jax.logging = true;
+    lojax.logging = true;
 
     submitBtn.click();
 
     // test with default url (current page)
     div.empty();
 
-    jax.logging = false;
+    lojax.logging = false;
 
 } );
 
 QUnit.test( 'modals', function ( assert ) {
 
-    jax.logging = true;
+    lojax.logging = true;
 
     var done1 = assert.async();
     var done2 = assert.async();
@@ -712,17 +737,18 @@ QUnit.test( 'modals', function ( assert ) {
     window.loadAsyncContentTest = function ( val ) {
         assert.equal( val, 'load async content' );
         done2();
-        jax.logging = false;
-        jax.closeModal();
+        lojax.logging = false;
+        lojax.closeModal();
     };
 
     $( '<button data-method="ajax-get" data-action="/modal">' ).appendTo( div ).click().remove();
 
 } );
 
+
 QUnit.test( 'make sure logging is turned off', function ( assert ) {
     div.empty();
 
-    assert.equal( jax.logging, false );
+    assert.equal( lojax.logging, false );
 
 } );

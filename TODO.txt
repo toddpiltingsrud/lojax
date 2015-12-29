@@ -1,18 +1,27 @@
 Better error handling. Currently if a request fails, afterRequest doesn't fire, leaving everybody hanging.
 
-Compound data-form selectors will fail if one of them is selecting a form parent and the other is selecting a specific set of elements.
+Figure out how to hook into client-side validation.
 
 Use an object proxy to provide two-way binding for data models.
 
-Assume an array whenever there are multiple form elements with the same name.
-
-Figure out how to hook into client-side validation.
+Use data-model to reuse chunks of HTML. Store a chunk of HTML using it's url as the key. Then just swap out its data-model.
+How can we use familiar patterns to do this? We could load a resource and specify that we want it cached.
+Then use the same click handling logic to load that resource with a data model.
+But the data-model needs its own URL. We're looking at specifying 2 url's: one for the template, the other for the data model.
+Further, we might want to be able to specify that the template should be pre-loaded. 
+Perhaps we should build a couple working examples using the code we have, then tease out a pattern.
 
 Turn modal creation into a service that controls the lifetime of modals. 
 It needs to be able to import modals and keep their content around if necessary.
 Perhaps we'd be looking at using a custom element:
 
-<jax-modal id='modal1' src='http://...' prefetch='true/false' destroy-on-close='true/false'></jax-modal>
+<jx-modal id='modal1' src='http://...' prefetch='true/false' destroy-on-close='true/false'></jx-modal>
+
+Or maybe a more generic approach:
+
+<a href="/resource.html" data-method="ajax-get" jx-cache="true/false/prefectch">Open Modal</a>
+
+
 
 So the modal could be opened multiple times, and optionally downloaded from the server every time.
 
@@ -31,14 +40,17 @@ Supported scenarios/patterns:
 - A non-empty data-model attribute on a parent element will set the values of the child inputs to the model by matching model properties to input names.
 - Change the url's hash to trigger an ajax-get request. Simple way to get cross-browser navigation history for ajax requests.
 - If input elements are inside an element with a data-model attribute, the change event writes the changes to the data model.
-- Use jax.in(callback) inside a data-jaxpanel to execute a function with context ('this' keyword) set to the containing data-jaxpanel.
+- Add a data-src attribute to a div to load content into the div asynchronously. This uses the same logic as data-jaxpanels, so you can use transitions, model binding, other data-src divs, etc.
+- Use lojax.in(callback) inside a data-jaxpanel, modal, or div[data-src] to execute a function with context ('this' keyword) set to the containing element.
+  This works only if the script is inside the element you want as the context.
+  The callback is invoked after model binding, but before loadAsyncContent. Callbacks are invoked only once.
 
 AJAX responses:
 
 - Parse response into a collection of nodes.
 - If there are no nodes, return.
 - Trigger the beforeInject event with the node list as an argument.
-- Check the request for a target. If found, inject the entire response into the target.
+- Check the request for a target. If found, inject all the nodes into the target.
 - Iterate through the nodes.
 - If there is not currently a modal being displayed and the node is a modal, instantiate a modal and show it. Continue.
 - If there is not currently a modal being displayed and the node contains a modal, instantiate a modal and show it.
@@ -49,9 +61,9 @@ AJAX responses:
 Modal Creation
 
 - Supports bootstrap and kendo
-- Passed-in content is appended to document body and a modal is instantiated and shown.
-- Optional: Call jax.closeModal() to close the modal.
-- Handle the modal's hidden/close event and null out the modal instance and remove the element.
+- Modal content is appended to document body and a modal is instantiated and shown.
+- Optional: Call lojax.closeModal() to close the modal.
+- Handle the modal's hidden/close event and null out the modal instance and remove the element from the DOM.
 
 Tip: Use a layout to create modals on the server.
 

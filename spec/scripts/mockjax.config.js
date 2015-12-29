@@ -9,10 +9,10 @@
         out.push( '            <h2>ModelTest</h2>' );
         out.push( '            <script>' );
         out.push( '                $(function () {' );
-        out.push( '                    $(document).on(jax.events.beforeModelSync, "[data-model]", function (evt, arg) {' );
+        out.push( '                    $(document).on(lojax.events.beforeModelSync, "[data-model]", function (evt, arg) {' );
         out.push( '                        console.log(arg.model[arg.name]);' );
         out.push( '                    });' );
-        out.push( '                    $(document).on(jax.events.afterModelSync, "[data-model]", function (evt, arg) {' );
+        out.push( '                    $(document).on(lojax.events.afterModelSync, "[data-model]", function (evt, arg) {' );
         out.push( '                        console.log(arg.model[arg.name]);' );
         out.push( '                    });' );
         out.push( '                });' );
@@ -69,10 +69,10 @@ $.mockjax( {
         out.push( '            <h2>ModelTest</h2>' );
         out.push( '            <script>' );
         out.push( '                $(function () {' );
-        out.push( '                    $(document).on(jax.events.beforeModelSync, "[data-model]", function (evt, arg) {' );
+        out.push( '                    $(document).on(lojax.events.beforeModelSync, "[data-model]", function (evt, arg) {' );
         out.push( '                        console.log(arg.model[arg.name]);' );
         out.push( '                    });' );
-        out.push( '                    $(document).on(jax.events.afterModelSync, "[data-model]", function (evt, arg) {' );
+        out.push( '                    $(document).on(lojax.events.afterModelSync, "[data-model]", function (evt, arg) {' );
         out.push( '                        console.log(arg.model[arg.name]);' );
         out.push( '                    });' );
         out.push( '                });' );
@@ -172,7 +172,7 @@ $.mockjax( {
         out.push( '<div data-jaxpanel="hidden-div">' );
         out.push( '    <input type="hidden" value="call-in-test" />' );
         out.push( '    <script>' );
-        out.push( '        jax.in(function () {' );
+        out.push( '        lojax.in(function () {' );
         out.push( '            val = $(this).find("input").val();' );
         out.push( '            window.callInTest(val);' );
         out.push( '        });' );
@@ -182,7 +182,7 @@ $.mockjax( {
         out.push( '    <div data-src="/LoadAsyncContent"></div>' );
         out.push( '    <input type="hidden" value="call-in-test2" />' );
         out.push( '    <script>' );
-        out.push( '        jax.in(function () {' );
+        out.push( '        lojax.in(function () {' );
         out.push( '            val = $(this).find("input").val();' );
         out.push( '            window.callInTest2(val);' );
         out.push( '        });' );
@@ -201,7 +201,7 @@ $.mockjax( {
         out.push( '<div>' );
         out.push( '    <input type="hidden" value="load async content" />' );
         out.push( '    <script>' );
-        out.push( '        jax.in(function () {' );
+        out.push( '        lojax.in(function () {' );
         out.push( '            val = $(this).find("input").val();' );
         out.push( '            window.loadAsyncContentTest(val);' );
         out.push( '        });' );
@@ -258,7 +258,7 @@ $.mockjax( {
         out.push( '    </div>' );
         out.push( '    <input type="hidden" value="call-in-test4" name="callintest" />' );
         out.push( '    <script>' );
-        out.push( '        jax.in(function () {' );
+        out.push( '        lojax.in(function () {' );
         out.push( '            val = $(this).find("input[name=callintest]").val();' );
         out.push( '            window.callInTest4(val, this);' );
         out.push( '        });' );

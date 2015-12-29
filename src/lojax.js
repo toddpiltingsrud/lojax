@@ -16,11 +16,11 @@ jquery
 */
 
 // namespace
-var jax = jax || {};
+var lojax = lojax || {};
 
 ( function ( $ ) {
 
-    jax.Gator = function () {
+    lojax.Gator = function () {
         var self = this;
         this.div = null;
         this.modal = null;
@@ -29,12 +29,11 @@ var jax = jax || {};
 
         $( function () {
             self.div = $( "<div style='display:none'></div>" ).appendTo( 'body' );
-            $( document ).on( 'click', '[data-request],[jx-request]', self.handleRequest );
-            $( document ).on( 'click', '[data-method]:not([data-trigger]),[jx-method]:not([jx-trigger])', self.handleRequest );
+            $( document ).on( 'click', '[data-request],[jx-request],[data-method]:not([data-trigger]),[jx-method]:not([jx-trigger])', self.handleRequest );
             $( document ).on( 'change', '[data-method][data-trigger*=change],[jx-method][jx-trigger*=change]', self.handleRequest );
             $( document ).on( 'keydown', '[data-method][data-trigger*=enter],[jx-method][jx-trigger*=enter]', self.handleEnterKey );
-            $( document ).on( 'submit', 'form[data-method]', self.handleRequest );
-            $( document ).on( 'change', '[data-model]', self.updateModel );
+            $( document ).on( 'submit', 'form[data-method],form[jx-method]', self.handleRequest );
+            $( document ).on( 'change', '[data-model],[jx-model]', self.updateModel );
 
             window.addEventListener( "hashchange", self.handleHash, false );
 
@@ -47,21 +46,15 @@ var jax = jax || {};
         } );
     };
 
-    jax.Gator.prototype = {
+    lojax.Gator.prototype = {
 
         handleRequest: function ( evt ) {
             // handles click, change, submit
             // 'this' will be the element that was clicked, changed, or submitted
-            var params, $this = $( this );
-            if ( $this.is( '[data-request]' ) ) {
-                params = JSON.parse( $this.data( 'request' ).replace( /'/g, '"' ) );
-            }
-            else {
-                params = $this.data();
-            }
-            params.source = this;
+            var params = priv.getConfig( this ),
+                $this = $( this );
 
-            jax.log( 'handleRequest: params: ' ).log( params );
+            lojax.log( 'handleRequest: params: ' ).log( params );
 
             instance.executeRequest( params );
 
@@ -71,9 +64,9 @@ var jax = jax || {};
         },
 
         executeRequest: function ( params ) {
-            var request = new jax.Request( params );
+            var request = new lojax.Request( params );
 
-            jax.log( 'executeRequest: request: ' ).log( request );
+            lojax.log( 'executeRequest: request: ' ).log( request );
 
             // no action? we're done here
             if ( request.action === null ) return;
@@ -118,7 +111,7 @@ var jax = jax || {};
 
             var handler, request, hash = window.location.hash;
 
-            jax.log( 'handleHash: hash:' ).log( hash );
+            lojax.log( 'handleHash: hash:' ).log( hash );
 
             if ( priv.hasHash() ) {
 
@@ -129,7 +122,7 @@ var jax = jax || {};
                 // or response (jx-panel) to be able to properly handle the response.
                 handler = $( 'a[name="' + hash.substr( 1 ) + '"]' );
                 if ( handler.size() === 0 ) {
-                    request = new jax.Request( {
+                    request = new lojax.Request( {
                         action: hash,
                         method: 'ajax-get',
                         transition: instance.currentTransition
@@ -158,7 +151,7 @@ var jax = jax || {};
             var model, $this, models = [];
             var dataModels = $( context ).find( '[data-model]' ).add( context ).filter( '[data-model]' );
 
-            jax.log( 'bindToModels: dataModels:' ).log( dataModels );
+            lojax.log( 'bindToModels: dataModels:' ).log( dataModels );
 
             // iterate over the data-models in context
             dataModels.each( function () {
@@ -175,7 +168,7 @@ var jax = jax || {};
                 // https://api.jquery.com/data/
                 $this.data( 'model', model );
                 models.push( model );
-                jax.log( 'bindToModels: model:' ).log( model );
+                lojax.log( 'bindToModels: model:' ).log( model );
             } );
             // for testing
             return models;
@@ -199,29 +192,29 @@ var jax = jax || {};
                 cancel: false
             };
 
-            jax.log( 'updateModel: o:' ).log( o );
+            lojax.log( 'updateModel: o:' ).log( o );
 
-            priv.triggerEvent( jax.events.beforeUpdateModel, o );
+            priv.triggerEvent( lojax.events.beforeUpdateModel, o );
             if ( o.cancel ) return;
 
-            jax.log( 'updateModel: o.model' ).log( o.model );
+            lojax.log( 'updateModel: o.model' ).log( o.model );
 
             priv.setModelProperty( $this, o.model, evt.target );
             // TODO: set an isDirty flag without corrupting the model
             // maybe use a wrapper class to observe the model
-            priv.triggerEvent( jax.events.afterUpdateModel, o );
+            priv.triggerEvent( lojax.events.afterUpdateModel, o );
         },
 
         injectContent: function ( request, response ) {
             var id, target, newModal, transition, $node, result;
             // create a list of nodes from the response
             var nodes = $.parseHTML( response, true );
-            jax.log( 'injectContent: nodes:' ).log( nodes );
+            lojax.log( 'injectContent: nodes:' ).log( nodes );
 
             // empty response?
             if ( nodes === null ) return;
 
-            priv.triggerEvent( jax.events.beforeInject, nodes );
+            priv.triggerEvent( lojax.events.beforeInject, nodes );
 
             var doPanel = function () {
                 var node = $( this );
@@ -230,18 +223,21 @@ var jax = jax || {};
                 target = request.target || $( '[data-jaxpanel="' + id + '"]' );
 
                 if ( target.size() > 0 ) {
-                    jax.log( 'injectContent: data-jaxpanel: ' + id );
+                    lojax.log( 'injectContent: data-jaxpanel: ' + id );
                     transition = priv.resolveTransition( request, node );
                     result = transition( target, node );
                     if ( priv.hasValue( request ) ) {
                         result.refresh = request.exec.bind( request );
                     }
-                    priv.triggerEvent( jax.events.afterInject, result );
+                    priv.triggerEvent( lojax.events.afterInject, result );
                     instance.bindToModels( result );
                     priv.callIn( result );
                     instance.loadAsyncContent( result );
                 }
             };
+
+            // ensure any loose calls to lojax.in are ignored
+            instance.in = null;
 
             for ( var i = 0; i < nodes.length; i++ ) {
                 $node = $( nodes[i] );
@@ -348,7 +344,7 @@ var jax = jax || {};
         },
 
         handleError: function ( response ) {
-            priv.triggerEvent( jax.events.ajaxError, response );
+            priv.triggerEvent( lojax.events.ajaxError, response );
             if ( response.handled ) return;
             var error = [];
             Object.getOwnPropertyNames( response ).forEach( function ( name ) {
@@ -356,11 +352,11 @@ var jax = jax || {};
                     error.push( response[name] );
                 }
             } );
-            jax.log( 'handleError: response: ' ).log( response );
+            lojax.log( 'handleError: response: ' ).log( response );
         }
     };
 
-    jax.Request = function ( params ) {
+    lojax.Request = function ( params ) {
         this.method = params.method.toLowerCase();
         this.form = priv.resolveForm( params );
         this.action = priv.resolveAction( params );
@@ -375,7 +371,7 @@ var jax = jax || {};
         this.error = null;
     };
 
-    jax.Request.prototype = {
+    lojax.Request.prototype = {
         getSearch: function () {
             // used for both form encoding and url query strings
             var inputs, queryString = '';
@@ -427,7 +423,7 @@ var jax = jax || {};
                 options.data = this.getSearch();
             }
 
-            jax.log( 'ajax: options: ' + options );
+            lojax.log( 'ajax: options: ' + options );
             $.ajax( options )
                 .done( self.done.bind( self ) )
                 .fail( self.fail.bind( self ) );
@@ -437,21 +433,21 @@ var jax = jax || {};
             if ( priv.hasValue( this.resolve ) ) {
                 this.resolve( response );
             }
-            priv.triggerEvent( jax.events.afterRequest, this );
+            priv.triggerEvent( lojax.events.afterRequest, this );
         },
         fail: function ( error ) {
             this.error = error;
             if ( priv.hasValue( this.reject ) ) {
                 this.reject( error );
             }
-            priv.triggerEvent( jax.events.afterRequest, this );
+            priv.triggerEvent( lojax.events.afterRequest, this );
         },
         methods: {
             get: function () {
                 var queryString = this.getSearch();
                 var url = priv.checkHash( this.action );
                 window.location = url + '?' + queryString;
-                priv.triggerEvent( jax.events.afterRequest, this );
+                priv.triggerEvent( lojax.events.afterRequest, this );
             },
             post: function () {
                 var self = this;
@@ -462,7 +458,7 @@ var jax = jax || {};
                 // so we still need to clean up after ourselves
                 setTimeout( function () {
                     form.remove();
-                    priv.triggerEvent( jax.events.afterRequest, self );
+                    priv.triggerEvent( lojax.events.afterRequest, self );
                 }, 0 );
             },
             'ajax-get': function () {
@@ -493,7 +489,7 @@ var jax = jax || {};
                     document.body.removeChild( s );
                     // we have no way of handling the response of JSONP
                     // but trigger the event anyway
-                    priv.triggerEvent( jax.events.afterRequest, self );
+                    priv.triggerEvent( lojax.events.afterRequest, self );
                 }, 10 );
             }
         },
@@ -507,7 +503,7 @@ var jax = jax || {};
             if ( !priv.hasValue( this.methods[this.method] ) ) throw 'Unsupported method: ' + this.method;
 
             if ( priv.hasValue( this.action ) && this.action !== '' ) {
-                priv.triggerEvent( jax.events.beforeRequest, this );
+                priv.triggerEvent( lojax.events.beforeRequest, this );
                 if ( !this.cancel ) {
                     // execute the method function
                     this.methods[this.method].bind( this )();
@@ -515,7 +511,7 @@ var jax = jax || {};
                 else {
                     // always trigger afterRequest even if there was no request
                     // it's typically used to turn off progress bars
-                    priv.triggerEvent( jax.events.afterRequest, this );
+                    priv.triggerEvent( lojax.events.afterRequest, this );
                 }
             }
             return this;
@@ -546,7 +542,7 @@ var jax = jax || {};
         }
     };
 
-    jax.Transitions = {
+    lojax.Transitions = {
         'replace': function ( oldPanel, newPanel ) {
             $( oldPanel ).replaceWith( newPanel );
             return newPanel;
@@ -621,6 +617,34 @@ var jax = jax || {};
         hasValue: function ( val ) {
             return val !== undefined && val !== null;
         },
+        attributes: 'method action transition target form model cache expire renew'.split( ' ' ),
+        getConfig: function ( elem ) {
+            var config, $this = $( elem );
+
+            if ( $this.is( '[data-request]' ) ) {
+                config = JSON.parse( $this.data( 'request' ).replace( /'/g, '"' ) );
+            }
+            else if ( $this.is( '[jx-request]' ) ) {
+                config = JSON.parse( $this.attr( 'jx-request' ).replace( /'/g, '"' ) );
+            }
+            else {
+                config = $this.data();
+
+                priv.attributes.forEach( function ( attr ) {
+                    var name = 'jx-' + attr;
+                    if ( !( attr in config ) ) {
+                        var val = $this.attr( name );
+                        if ( val !== undefined ) {
+                            config[attr] = val;
+                        }
+                    }
+                } );
+            }
+
+            config.source = $this;
+
+            return config;
+        },
         resolveAction: function ( params ) {
             // if there's an action in the params, return it
             if ( priv.hasValue( params.action ) && params.action.length ) {
@@ -668,7 +692,7 @@ var jax = jax || {};
             return null;
         },
         resolveModel: function ( params ) {
-            jax.log( 'resolveModel: params:' ).log( params );
+            lojax.log( 'resolveModel: params:' ).log( params );
             var closest;
             if ( priv.hasValue( params.source )
                 && priv.hasValue( $( params.source ).attr( 'data-model' ) ) ) {
@@ -681,7 +705,7 @@ var jax = jax || {};
             // only a submit button can submit an enclosing model
             if ( $( params.source ).is( '[type=submit]' ) ) {
                 closest = $( params.source ).closest( 'form,[data-model]' );
-                jax.log( 'resolveModel: closest:' ).log( closest );
+                lojax.log( 'resolveModel: closest:' ).log( closest );
                 if ( closest.is( '[data-model]' ) ) {
                     return closest.data('model');
                 }
@@ -706,11 +730,11 @@ var jax = jax || {};
         resolveTransition: function ( request, target ) {
             // check for a transition in the request first
             if ( request.transition ) {
-                return jax.Transitions[request.transition] || jax.Transitions['fade-in'];
+                return lojax.Transitions[request.transition] || lojax.Transitions['fade-in'];
             }
             else {
                 // check for a transition on the target
-                return jax.Transitions[$( target ).attr( 'data-transition' )] || jax.Transitions['fade-in'];
+                return lojax.Transitions[$( target ).attr( 'data-transition' )] || lojax.Transitions['fade-in'];
             }
         },
         buildForm: function ( forms, action, method ) {
@@ -766,7 +790,7 @@ var jax = jax || {};
                 } );
             }
 
-            jax.log( 'formFromModel: form: ' ).log( form );
+            lojax.log( 'formFromModel: form: ' ).log( form );
 
             return form;
         },
@@ -894,7 +918,7 @@ var jax = jax || {};
                 priv.setModelProperty( context, model, names[name] );
             } );
 
-            jax.log( 'buildModelFromElements: model:' ).log( model );
+            lojax.log( 'buildModelFromElements: model:' ).log( model );
 
             return model;
         },
@@ -902,7 +926,7 @@ var jax = jax || {};
             var value,
                 type,
                 $this = $( context );
-            jax.log( 'setELementsFromModel: model:' ).log( model );
+            lojax.log( 'setELementsFromModel: model:' ).log( model );
 
             // set the inputs to the model
             $this.find( '[name]' ).each( function () {
@@ -936,8 +960,8 @@ var jax = jax || {};
                 return obj;
             }
             catch ( err ) {
-                jax.log( 'Could not resolve object path: ' + path );
-                jax.log( err );
+                lojax.log( 'Could not resolve object path: ' + path );
+                lojax.log( err );
             }
         },
         getType: function ( a ) {
@@ -967,6 +991,7 @@ var jax = jax || {};
         },
         checkHash: function ( url ) {
             // return the hash portion if present
+            // else return url
             var index = url.indexOf( '#' );
             if ( index !== -1 ) {
                 return url.substring( index + 1 );
@@ -1000,9 +1025,10 @@ var jax = jax || {};
         callIn: function ( panel ) {
             if ( panel && instance.in ) {
                 instance.in.call( panel );
-                // ensure in is called only once
-                instance.in = null;
             }
+            // ensure in is called only once
+            // and that calls to lojax.in outside of a container are ignored
+            instance.in = null;
         },
         nonce: jQuery.now(),
         cacheProof: function ( url ) {
@@ -1040,27 +1066,27 @@ var jax = jax || {};
     };
 
     // handle an arbitrary event and execute a request
-    jax.on = function ( event, params ) {
+    lojax.on = function ( event, params ) {
         $( document ).on( event, function () {
             instance.executeRequest( params );
         } );
     };
 
-    jax.off = function ( event ) {
+    lojax.off = function ( event ) {
         $( document ).off( event );
     };
 
-    jax.get = function ( params ) {
+    lojax.get = function ( params ) {
         instance.executeRequest( params );
     };
 
-    jax.in = function ( callback ) {
+    lojax.in = function ( callback ) {
         instance.in = callback;
     };
 
     // this can be called explicitly when the server returns a success 
     // response from a form submission that came from a modal
-    jax.closeModal = function () {
+    lojax.closeModal = function () {
         if ( priv.hasValue( instance.modal ) ) {
             if ( $.fn.modal ) {
                 instance.modal.modal( 'hide' );
@@ -1071,7 +1097,7 @@ var jax = jax || {};
         }
     }
 
-    jax.events = {
+    lojax.events = {
         beforeRequest: 'beforeRequest',
         afterRequest: 'afterRequest',
         beforeUpdateModel: 'beforeUpdateModel',
@@ -1081,25 +1107,27 @@ var jax = jax || {};
         ajaxError: 'ajaxError'
     };
 
-    jax.logging = false;
+    lojax.logging = false;
 
-    jax.log = function ( arg ) {
+    lojax.log = function ( arg ) {
         try {
-            if ( jax.logging && console && console.log ) {
+            if ( lojax.logging && console && console.log ) {
                 console.log( arg );
             }
         }
         catch ( ex ) { }
-        return jax;
+        return lojax;
     };
 
     // for testing
-    jax.priv = priv;
+    lojax.priv = priv;
+
+    lojax.prefix = 'jx';
 
     // global
-    jax.instance = new jax.Gator();
+    lojax.instance = new lojax.Gator();
 
     // local
-    var instance = jax.instance;
+    var instance = lojax.instance;
 
 } )( jQuery );
