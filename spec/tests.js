@@ -2,6 +2,32 @@ var tests = tests || {};
 
 var div = null;
 
+var getForm = function () {
+    var out = [];
+
+    out.push( '<input type="number" name="number" value="5" />' );
+    out.push( '<input type="date" name="daterange[0]" value="2015-01-01" />' );
+    out.push( '<input type="date" name="daterange[1]" value="2015-12-31" />' );
+    out.push( '<input type="checkbox" name="bool" value="true" checked="checked" />' );
+    out.push( '<input type="checkbox" name="arrays.names" value="Todd" checked="checked" />' );
+    out.push( '<input type="checkbox" name="arrays.names" value="Kit" checked="checked" />' );
+    out.push( '<input type="checkbox" name="arrays.names" value="Anders" />' );
+    out.push( '<input type="checkbox" name="arrays.names" value="Kaleb" />' );
+    out.push( '<input type="text" name="no.value" />' );
+    out.push( '<select name="select">' );
+    out.push( '<option>Select one...</option> ' );
+    out.push( '<option value="a">A</option> ' );
+    out.push( '<option value="b" selected="selected">B</option> ' );
+    out.push( '<option value="c">C</option> ' );
+    out.push( '</select>' );
+    out.push( '<input type="radio" name="color" value="red" checked="checked" />' );
+    out.push( '<input type="radio" name="color" value="green" />' );
+    out.push( '<input type="radio" name="color" value="blue" />' );
+    out.push( '<input type="radio" name="color" value="cyan" />' );
+
+    return out.join( '' );
+};
+
 Object.defineProperty( tests, 'log', {
     get: function () {
 
@@ -162,15 +188,7 @@ QUnit.test( 'bindToModels2', function ( assert ) {
 
     var modelDiv = $( '<div data-model></div>' );
 
-    modelDiv.append( '<input type="number" name="number" value="1" />' );
-    modelDiv.append( '<input type="date" name="daterange[0]" value="2015-01-01" />' );
-    modelDiv.append( '<input type="date" name="daterange[1]" value="2015-12-31" />' );
-    modelDiv.append( '<input type="checkbox" name="bool" value="true" />' );
-    modelDiv.append( '<input type="checkbox" name="arrays.names" value="Todd" checked="checked" />' );
-    modelDiv.append( '<input type="checkbox" name="arrays.names" value="Kit" checked="checked" />' );
-    modelDiv.append( '<input type="checkbox" name="arrays.names" value="Anders" />' );
-    modelDiv.append( '<input type="checkbox" name="arrays.names" value="Kaleb" />' );
-    modelDiv.append( '<input type="text" name="no.value" />' );
+    modelDiv.append( getForm() );
 
     div.append( modelDiv );
 
@@ -180,19 +198,21 @@ QUnit.test( 'bindToModels2', function ( assert ) {
 
     var m = models[0];
 
-    assert.equal( m.number, 1, 'Should resolve numbers' );
+    assert.equal( m.number, 5, 'Should resolve numbers' );
 
     assert.equal( m.daterange[0], '2015-01-01', 'Should resolve dates' );
 
     assert.equal( m.daterange[1], '2015-12-31', 'Should resolve dates' );
 
-    assert.equal( m.bool, false, 'Should resolve bools' );
+    assert.strictEqual( m.bool, true, 'Should resolve bools' );
 
     assert.ok( Array.isArray( m.arrays.names ), 'Should resolve arrays' );
 
-    assert.equal( m.arrays.names.length, 2, 'Should populate arrays from checkboxes' );
+    assert.strictEqual( m.arrays.names.length, 2, 'Should populate arrays from checkboxes' );
 
-    assert.equal( m.no.value, null, 'Inputs with no value should be null' );
+    assert.strictEqual( m.color, 'red', 'Should resolve radio buttons' );
+
+    assert.strictEqual( m.no.value, null, 'Inputs with no value should be null' );
 
     var datamodel = modelDiv.data( 'model' );
 
@@ -206,29 +226,29 @@ QUnit.test( 'bindToModels2', function ( assert ) {
     modelDiv.find( '[name=bool]' ).prop( 'checked', true ).change();
     modelDiv.find( '[value=Kaleb]' ).prop( 'checked', true ).change();
 
-    assert.equal( m.daterange[0], '2015-11-13', 'Should resolve dates' );
-    assert.equal( m.daterange[1], '2015-11-15', 'Should resolve dates' );
-    assert.equal( m.bool, true, 'Should resolve bools' );
-    assert.equal( m.arrays.names[2], 'Kaleb', 'Should resolve arrays' );
-    assert.equal( m.arrays.names.length, 3 );
+    assert.strictEqual( m.daterange[0], '2015-11-13', 'Should resolve dates' );
+    assert.strictEqual( m.daterange[1], '2015-11-15', 'Should resolve dates' );
+    assert.strictEqual( m.bool, true, 'Should resolve bools' );
+    assert.strictEqual( m.arrays.names[2], 'Kaleb', 'Should resolve arrays' );
+    assert.strictEqual( m.arrays.names.length, 3 );
 
     modelDiv.find( '[value=Kaleb]' ).prop( 'checked', false ).change();
 
-    assert.equal( m.arrays.names.length, 2 );
+    assert.strictEqual( m.arrays.names.length, 2 );
 
     modelDiv.find( '[value=Todd]' ).prop( 'checked', false ).change();
 
-    assert.equal( m.arrays.names.length, 1 );
+    assert.strictEqual( m.arrays.names.length, 1 );
 
     var done = assert.async();
 
     $( document ).one( lojax.events.afterUpdateModel, function ( evt, obj ) {
         assert.ok( true, 'model change events are being handled' );
-        assert.equal( m.number, 5, 'Should resolve numbers' );
+        assert.equal( m.number, 1, 'Should resolve numbers' );
         done();
     } );
 
-    modelDiv.find( '[type=number]' ).val( 5 ).change();
+    modelDiv.find( '[type=number]' ).val( 1 ).change();
 
 } );
 
@@ -236,47 +256,33 @@ QUnit.test( 'bindToModels3', function ( assert ) {
 
     var modelDiv = $( '<div data-model></div>' );
 
-    var model = { number: 5, daterange: ['2015-11-13', '2015-11-15'], bool: true, arrays: { names: ['Kit', 'Todd'] } };
+    var model = { number: 3.14, daterange: ['2015-11-13', '2015-11-15'], bool: false, arrays: { names: ['Anders', 'Kaleb'] }, select:'a', color: 'green' };
 
     modelDiv.data( 'model', model );
 
-    modelDiv.append( '<input type="number" name="number" />' );
-    modelDiv.append( '<input type="date" name="daterange[0]" />' );
-    modelDiv.append( '<input type="date" name="daterange[1]" />' );
-    modelDiv.append( '<input type="checkbox" name="bool" value="true" />' );
-    modelDiv.append( '<input type="checkbox" name="arrays.names" value="Todd" />' );
-    modelDiv.append( '<input type="checkbox" name="arrays.names" value="Kit" />' );
-    modelDiv.append( '<input type="checkbox" name="arrays.names" value="Anders" />' );
-    modelDiv.append( '<input type="checkbox" name="arrays.names" value="Kaleb" />' );
-    modelDiv.append( '<input type="text" name="no.value" />' );
+    modelDiv.append( getForm() );
 
     div.append( modelDiv );
 
     lojax.logging = true;
 
-    assert.equal( modelDiv.find( '[name=number]' ).val(), '' );
-    assert.equal( modelDiv.find( '[name="daterange[0]"]' ).val(), '' );
-    assert.equal( modelDiv.find( '[name="daterange[1]"]' ).val(), '' );
+    lojax.instance.bindToModels();
+
+    assert.equal( modelDiv.find( '[name=number]' ).val(), '3.14' );
+    assert.equal( modelDiv.find( '[name="daterange[0]"]' ).val(), '2015-11-13' );
+    assert.equal( modelDiv.find( '[name="daterange[1]"]' ).val(), '2015-11-15' );
     assert.equal( modelDiv.find( '[name=bool]' ).prop( 'checked' ), false );
     assert.equal( modelDiv.find( '[value=Kit]' ).prop( 'checked' ), false );
     assert.equal( modelDiv.find( '[value=Todd]' ).prop( 'checked' ), false );
-    assert.equal( modelDiv.find( '[value=Anders]' ).prop( 'checked' ), false );
-    assert.equal( modelDiv.find( '[value=Kaleb]' ).prop( 'checked' ), false );
-
-    lojax.instance.bindToModels();
-
-    assert.equal( modelDiv.find( '[name=number]' ).val(), '5' );
-    assert.equal( modelDiv.find( '[name="daterange[0]"]' ).val(), '2015-11-13' );
-    assert.equal( modelDiv.find( '[name="daterange[1]"]' ).val(), '2015-11-15' );
-    assert.equal( modelDiv.find( '[name=bool]' ).prop( 'checked' ), true );
-    assert.equal( modelDiv.find( '[value=Kit]' ).prop( 'checked' ), true );
-    assert.equal( modelDiv.find( '[value=Todd]' ).prop( 'checked' ), true );
-    assert.equal( modelDiv.find( '[value=Anders]' ).prop( 'checked' ), false );
-    assert.equal( modelDiv.find( '[value=Kaleb]' ).prop( 'checked' ), false );
-
-    model.arrays.names.push( 'Kaleb' );
-    lojax.instance.bindToModels(modelDiv);
+    assert.equal( modelDiv.find( '[value=Anders]' ).prop( 'checked' ), true );
     assert.equal( modelDiv.find( '[value=Kaleb]' ).prop( 'checked' ), true );
+    assert.equal( modelDiv.find( '[value=green]' ).prop( 'checked' ), true );
+    assert.equal( modelDiv.find( '[value=red]' ).prop( 'checked' ), false );
+    assert.equal( modelDiv.find( 'select' ).val(), 'a' );
+
+    model.arrays.names.push( 'Todd' );
+    lojax.instance.bindToModels(modelDiv);
+    assert.equal( modelDiv.find( '[value=Todd]' ).prop( 'checked' ), true );
 
     lojax.logging = false;
 } );
@@ -432,16 +438,8 @@ QUnit.test( 'buildForm', function ( assert ) {
 
     //test form serialization
     var form = $( '<form></form>' ).appendTo( div );
-    form.append( '<select name="select1"><option value="1">One</option><option value="2" selected="selected">Two</option><option value="3">Three</option></select>' );
-    form.append( '<input type="number" name="number1" value="1" />' );
-    form.append( '<input type="date" name="daterange[0]" value="2015-01-01" />' );
-    form.append( '<input type="date" name="daterange[1]" value="2015-12-31" />' );
-    form.append( '<input type="checkbox" name="bool" value="true" />' );
-    form.append( '<input type="checkbox" name="arrays.names" value="Todd" checked="checked" />' );
-    form.append( '<input type="checkbox" name="arrays.names" value="Kit" checked="checked" />' );
-    form.append( '<input type="checkbox" name="arrays.names" value="Anders" />' );
-    form.append( '<input type="checkbox" name="arrays.names" value="Kaleb" />' );
-    form.append( '<input type="text" name="no.value" />' );
+
+    form.append( getForm() );
 
     //add inputs outside the form
     var div2 = $( '<div id="div2"></div>' ).appendTo( div );
@@ -461,9 +459,7 @@ QUnit.test( 'buildForm', function ( assert ) {
 
     var serialized = builtForm.serialize();
 
-    var shouldBe = 'select1=2&number1=1&daterange%5B0%5D=2015-01-01&daterange%5B1%5D=2015-12-31&arrays.names=Todd&arrays.names=Kit&no.value=&select2=3&number2=2&radio1=Kit';
-
-    assert.equal( builtForm.children().length, 10, 'Should have 10 input elements' );
+    var shouldBe = 'number=5&daterange%5B0%5D=2015-01-01&daterange%5B1%5D=2015-12-31&bool=true&arrays.names=Todd&arrays.names=Kit&no.value=&select=b&color=red&select2=3&number2=2&radio1=Kit';
 
     assert.equal( serialized, shouldBe, 'Should create a form' );
 
@@ -530,15 +526,7 @@ QUnit.test( 'posting models 2', function ( assert ) {
     modelDiv.append( submitBtn );
 
     // add some inputs
-    modelDiv.append( '<input type="number" name="number" />' );
-    modelDiv.append( '<input type="date" name="daterange[0]" />' );
-    modelDiv.append( '<input type="date" name="daterange[1]" />' );
-    modelDiv.append( '<input type="checkbox" name="bool" value="true" />' );
-    modelDiv.append( '<input type="checkbox" name="arrays.names" value="Todd" />' );
-    modelDiv.append( '<input type="checkbox" name="arrays.names" value="Kit" />' );
-    modelDiv.append( '<input type="checkbox" name="arrays.names" value="Anders" />' );
-    modelDiv.append( '<input type="checkbox" name="arrays.names" value="Kaleb" />' );
-    modelDiv.append( '<input type="text" name="no.value" />' );
+    modelDiv.append( getForm() );
 
     // bind the inputs to the model
     lojax.instance.bindToModels( modelDiv );
@@ -580,15 +568,7 @@ QUnit.test( 'posting forms 1', function ( assert ) {
     div.append( form );
 
     // add some inputs
-    form.append( '<input type="number" name="number" value="5" />' );
-    form.append( '<input type="date" name="daterange[0]" value="2015-01-01" />' );
-    form.append( '<input type="date" name="daterange[1]" value="2015-12-31" />' );
-    form.append( '<input type="checkbox" name="bool" value="true" checked="checked" />' );
-    form.append( '<input type="checkbox" name="arrays.names" value="Todd" checked="checked" />' );
-    form.append( '<input type="checkbox" name="arrays.names" value="Kit" checked="checked" />' );
-    form.append( '<input type="checkbox" name="arrays.names" value="Anders" />' );
-    form.append( '<input type="checkbox" name="arrays.names" value="Kaleb" />' );
-    form.append( '<input type="text" name="no.value" />' );
+    form.append( getForm() );
     form.append( submitBtn );
 
     var done1 = assert.async();
@@ -609,28 +589,6 @@ QUnit.test( 'posting forms 1', function ( assert ) {
 
 } );
 
-var getForm = function () {
-    var out = [];
-
-    out.push( '<input type="number" name="number" value="5" />' );
-    out.push( '<input type="date" name="daterange[0]" value="2015-01-01" />' );
-    out.push( '<input type="date" name="daterange[1]" value="2015-12-31" />' );
-    out.push( '<input type="checkbox" name="bool" value="true" checked="checked" />' );
-    out.push( '<input type="checkbox" name="arrays.names" value="Todd" checked="checked" />' );
-    out.push( '<input type="checkbox" name="arrays.names" value="Kit" checked="checked" />' );
-    out.push( '<input type="checkbox" name="arrays.names" value="Anders" />' );
-    out.push( '<input type="checkbox" name="arrays.names" value="Kaleb" />' );
-    out.push( '<input type="text" name="no.value" />' );
-    out.push( '<select name="select">' );
-    out.push( '<option>Select one...</option> ' );
-    out.push( '<option value="a">A</option> ' );
-    out.push( '<option value="b" selected="selected">B</option> ' );
-    out.push( '<option value="c">C</option> ' );
-    out.push( '</select>' );
-
-    return out.join( '' );
-};
-
 QUnit.test( 'posting forms 2', function ( assert ) {
 
     div.empty();
@@ -642,21 +600,7 @@ QUnit.test( 'posting forms 2', function ( assert ) {
     div.append( form );
 
     // add some inputs
-    form.append( '<input type="number" name="number" value="5" />' );
-    form.append( '<input type="date" name="daterange[0]" value="2015-01-01" />' );
-    form.append( '<input type="date" name="daterange[1]" value="2015-12-31" />' );
-    form.append( '<input type="checkbox" name="bool" value="true" checked="checked" />' );
-    form.append( '<input type="checkbox" name="arrays.names" value="Todd" checked="checked" />' );
-    form.append( '<input type="checkbox" name="arrays.names" value="Kit" checked="checked" />' );
-    form.append( '<input type="checkbox" name="arrays.names" value="Anders" />' );
-    form.append( '<input type="checkbox" name="arrays.names" value="Kaleb" />' );
-    form.append( '<input type="text" name="no.value" />' );
-    form.append( '<select name="select">' );
-    form.append( '<option>Select one...</option> ' );
-    form.append( '<option value="a">A</option> ' );
-    form.append( '<option value="b" selected="selected">B</option> ' );
-    form.append( '<option value="c">C</option> ' );
-    form.append( '</select>' );
+    form.append( getForm() );
     form.append( submitBtn );
 
     var done1 = assert.async();
@@ -745,6 +689,17 @@ QUnit.test( 'modals', function ( assert ) {
 
 } );
 
+QUnit.test('cache', function (assert) {
+
+    div.empty();
+
+    var form = getForm();
+
+
+
+    assert.equal(lojax.logging, false);
+
+});
 
 QUnit.test( 'make sure logging is turned off', function ( assert ) {
     div.empty();

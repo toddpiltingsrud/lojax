@@ -13,15 +13,8 @@ Perhaps we should build a couple working examples using the code we have, then t
 
 Turn modal creation into a service that controls the lifetime of modals. 
 It needs to be able to import modals and keep their content around if necessary.
-Perhaps we'd be looking at using a custom element:
 
-<jx-modal id='modal1' src='http://...' prefetch='true/false' destroy-on-close='true/false'></jx-modal>
-
-Or maybe a more generic approach:
-
-<a href="/resource.html" data-method="ajax-get" jx-cache="true/false/prefectch">Open Modal</a>
-
-
+<a href="/resource.html" data-method="ajax-get" jx-cache="true|false|prefectch" jx-expire="1200" jx-renew="sliding|auto">Open Modal</a>
 
 So the modal could be opened multiple times, and optionally downloaded from the server every time.
 

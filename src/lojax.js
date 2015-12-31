@@ -26,6 +26,7 @@ var lojax = lojax || {};
         this.modal = null;
         this.currentTransition = null;
         this.currentPanel = null;
+        this.cache = new lojax.Cache();
 
         $( function () {
             self.div = $( "<div style='display:none'></div>" ).appendTo( 'body' );
@@ -177,11 +178,13 @@ var lojax = lojax || {};
         updateModel: function ( evt ) {
             // model's change handler 
             // provides simple one-way binding from HTML elements to a model
+            // 'this' is the element with data-model|jx-model attribute
             var $this = $( this );
             var $target = $( evt.target );
             var model = $this.data( 'model' );
             var name = evt.target.name;
             if ( !priv.hasValue( name ) ) return;
+            var elems = $this.find( '[name="' + name + '"]' );
 
             var o = {
                 target: evt.target,
@@ -199,7 +202,7 @@ var lojax = lojax || {};
 
             lojax.log( 'updateModel: o.model' ).log( o.model );
 
-            priv.setModelProperty( $this, o.model, evt.target );
+            priv.setModelProperty( $this, o.model, elems );
             // TODO: set an isDirty flag without corrupting the model
             // maybe use a wrapper class to observe the model
             priv.triggerEvent( lojax.events.afterUpdateModel, o );
@@ -542,6 +545,64 @@ var lojax = lojax || {};
         }
     };
 
+    lojax.Cache = function () {
+        this.store = {};
+    };
+
+    lojax.Cache.prototype = {
+        add: function ( request ) {
+            this.remove( request.action );
+            this.store[request.action] = request;
+            if ( request.expire ) {
+                this.setTimeout( request );
+            }
+        },
+        remove: function ( url ) {
+            if ( url in this.store && this.store[url].timeout ) {
+                if ( this.store[url].timeout ) {
+                    clearTimeout( this.store[url].timeout );
+                }
+                delete this.store[url];
+            }
+        },
+        get: function ( url ) {
+            var self = this;
+            var request = this.store[url];
+            if ( request ) {
+                if ( request.renew === 'sliding' && request.timeout ) {
+                    this.setTimeout( requst );
+                }
+                return this.store[url].result;
+            }
+        },
+        setTimeout: function ( request ) {
+            var self = this;
+            if ( request.timeout ) {
+                clearTimeout( request.timeout );
+            }
+            request.timeout = setTimeout( function () {
+                self.expire( request );
+            }, request.expire * 1000 );
+        },
+        expire: function ( request ) {
+            var self = this;
+            if ( request.renew === 'auto' ) {
+                request.exec();
+                this.setTimeout( request );
+            }
+            else {
+                this.remove( request.url );
+            }
+        },
+        clear: function () {
+            var self = this;
+            var props = Object.getOwnPropertyNames( this );
+            props.forEach( function ( prop ) {
+                self.remove( prop );
+            } );
+        }
+    };
+
     lojax.Transitions = {
         'replace': function ( oldPanel, newPanel ) {
             $( oldPanel ).replaceWith( newPanel );
@@ -855,19 +916,14 @@ var lojax = lojax || {};
             var obj,
                 prop,
                 type,
-                val,
                 isArray,
                 segments;
-
-            if ( !Array.isArray( elem ) ) {
-                // find all the elements with this name
-                elem = $( context ).find( '[name="' + elem.name + '"]' ).toArray();
-            }
 
             // derive an object path from the input name
             segments = priv.getPathSegments( elem[0].name );
 
-            isArray = ( elem.length > 1 );
+            // if there's more than one checkbox with this name, assume an array
+            isArray = ( elem.length > 1 && elem[0].type === 'checkbox' );
 
             prop = priv.resolvePathSegment( segments[segments.length - 1] );
 
@@ -887,15 +943,15 @@ var lojax = lojax || {};
                 // clear out the array and repopulate it
                 // but preserve the object reference in case it's referenced elsewhere
                 obj.splice( 0, obj.length );
-                elem.forEach( function ( e ) {
-                    e = $( e )[0];
-                    if ( !( /radio|checkbox/.test( e.type ) ) || e.checked ) {
-                        obj.push( priv.convertElementValue( e, type ) );
-                    }
-                } );
+                $(elem).serializeArray().forEach(function(e){
+                    obj.push( priv.castValue( e.value, type ) );
+                });
             }
             else {
-                obj[prop] = priv.convertElementValue( elem[0], type );
+                // there should only be one element
+                $(elem).serializeArray().forEach(function(e){
+                    obj[prop] = priv.castValue( e.value, type );
+                });
             }
         },
         buildModelFromElements: function ( context ) {
@@ -907,11 +963,8 @@ var lojax = lojax || {};
             var elems = $( context ).find( '[name]' );
             elems.each( function () {
                 if ( !( this.name in names ) ) {
-                    names[this.name] = [];
+                    names[this.name] = $( context ).find( '[name="' + this.name + '"]' );
                 }
-                // push all elements, even if they're not checked
-                // that way setModelProperty will know whether to create arrays or not
-                names[this.name].push( this );
             } );
 
             Object.getOwnPropertyNames( names ).forEach( function ( name ) {
@@ -942,6 +995,9 @@ var lojax = lojax || {};
                 }
                 else if ( type === 'boolean' && this.type === 'checkbox' ) {
                     this.checked = value;
+                }
+                else if (this.type === 'radio') {
+                    this.checked = (this.value == value);
                 }
                 else {
                     $( this ).val( value );
@@ -1037,9 +1093,8 @@ var lojax = lojax || {};
             nocache = nocache + '_=' + ( priv.nonce++ );
             return nocache;
         },
-        convertElementValue( elem, type ) {
-            if ( !elem ) return elem;
-            var val = elem.value === '' ? null : elem.value;
+        castValue: function ( val, type ) {
+            if ( !priv.hasValue( val ) || val === '' ) return null;
             switch ( type ) {
                 case 'number':
                     if ( $.isNumeric( val ) ) {
@@ -1047,14 +1102,11 @@ var lojax = lojax || {};
                     }
                     return val;
                 case 'boolean':
-                    if ( elem.type === 'checkbox' ) {
-                        return elem.checked;
-                    }
-                    return elem.value.toLowerCase() === 'true';
+                    return val.toLowerCase() === 'true';
                 case null:
                 case undefined:
-                    if ( elem.type === 'checkbox' && ( val === null || val.toLowerCase() === 'true' ) ) {
-                        return elem.checked;
+                    if ( /true|false/g.test(val.toLowerCase())) {
+                        return val.toLowerCase() === 'true';
                     }
                     return val;
                 default:
