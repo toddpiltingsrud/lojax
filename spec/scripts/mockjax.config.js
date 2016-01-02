@@ -8,6 +8,7 @@
         out.push( '        <div class="box dark">' );
         out.push( '            <h2>ModelTest</h2>' );
         out.push( '            <script>' );
+        out.push( '                window.scriptExecuted = true;' );
         out.push( '                $(function () {' );
         out.push( '                    $(document).on(lojax.events.beforeModelSync, "[data-model]", function (evt, arg) {' );
         out.push( '                        console.log(arg.model[arg.name]);' );
@@ -16,7 +17,6 @@
         out.push( '                        console.log(arg.model[arg.name]);' );
         out.push( '                    });' );
         out.push( '                });' );
-        out.push( '                window.scriptExecuted = true;' );
         out.push( '            </script>' );
         out.push( '            <div data-model="{&quot;ProductID&quot;:1,&quot;Name&quot;:&quot;Adjustable Race&quot;,&quot;ProductNumber&quot;:&quot;AR-5381&quot;,&quot;MakeFlag&quot;:false,&quot;FinishedGoodsFlag&quot;:false,&quot;Color&quot;:null,&quot;SafetyStockLevel&quot;:1000,&quot;ReorderPoint&quot;:750,&quot;StandardCost&quot;:0.0,&quot;ListPrice&quot;:0.0,&quot;Size&quot;:null,&quot;SizeUnitMeasureCode&quot;:null,&quot;WeightUnitMeasureCode&quot;:null,&quot;Weight&quot;:null,&quot;DaysToManufacture&quot;:0,&quot;ProductLine&quot;:null,&quot;Class&quot;:null,&quot;Style&quot;:null,&quot;ProductSubcategoryID&quot;:null,&quot;ProductModelID&quot;:null,&quot;SellStartDate&quot;:&quot;2002-06-01T05:00:00Z&quot;,&quot;SellEndDate&quot;:null,&quot;DiscontinuedDate&quot;:null,&quot;rowguid&quot;:&quot;694215b7-08f7-4c0d-acb1-d734ba44c0c8&quot;,&quot;ModifiedDate&quot;:&quot;2008-03-11T15:01:36.827Z&quot;}">' );
         out.push( '                <div class="form-group">' );
@@ -35,17 +35,14 @@
         out.push( '                <div class="form-group">' );
         out.push( '                    <label>StandardCost</label>' );
         out.push( '                    <input class="form-control" name="StandardCost" type="number">' );
-        out.push( '' );
         out.push( '                </div>' );
         out.push( '                <div class="form-group">' );
         out.push( '                    <label>SellStartDate</label>' );
         out.push( '                    <input class="form-control" name="SellStartDate" type="date">' );
-        out.push( '' );
         out.push( '                </div>' );
         out.push( '                <div class="form-group">' );
         out.push( '                    <label>NofieldExists</label>' );
         out.push( '                    <input class="form-control" name="NofieldExists" type="text">' );
-        out.push( '' );
         out.push( '                </div>' );
         out.push( '                <button type="submit" data-method="ajax-post" data-action="/Home/ModelTest" class="btn btn-primary btn-xs" value="Update">' );
         out.push( '                    <span class="glyphicon glyphicon-save"></span>Save' );
@@ -95,17 +92,14 @@ $.mockjax( {
         out.push( '                <div class="form-group">' );
         out.push( '                    <label>StandardCost</label>' );
         out.push( '                    <input class="form-control" name="StandardCost" type="number">' );
-        out.push( '' );
         out.push( '                </div>' );
         out.push( '                <div class="form-group">' );
         out.push( '                    <label>SellStartDate</label>' );
         out.push( '                    <input class="form-control" name="SellStartDate" type="date">' );
-        out.push( '' );
         out.push( '                </div>' );
         out.push( '                <div class="form-group">' );
         out.push( '                    <label>NofieldExists</label>' );
         out.push( '                    <input class="form-control" name="NofieldExists" type="text">' );
-        out.push( '' );
         out.push( '                </div>' );
         out.push( '                <button type="submit" data-method="ajax-post" data-action="/Home/ModelTest" class="btn btn-primary btn-xs" value="Update">' );
         out.push( '                    <span class="glyphicon glyphicon-save"></span>Save' );
@@ -142,6 +136,7 @@ $.mockjax( {
         out.push( '<div data-jaxpanel="hidden-div">' );
         out.push( '    <div class="box-border">' );
         out.push( '        <div class="box dark">' );
+        out.push( '            <h4>/File/InjectTest</h4>' );
         out.push( '            <input id="testinput" type="text" value="1" />' );
         out.push( '        </div>' );
         out.push( '    </div>' );
@@ -264,6 +259,30 @@ $.mockjax( {
         out.push( '        });' );
         out.push( '    </script>' );
         out.push( '</div>' );
+
+        this.responseText = out.join( '' );
+    }
+} );
+
+$.mockjax( {
+    url: "/prefetch1",
+    response: function ( settings ) {
+        var out = [];
+
+        out.push( '<div data-jaxpanel="hidden-div">' );
+        out.push( '<a href="http://prefetch2/" data-method="ajax-get" jx-cache="prefetch">Cache This</a>' );
+        out.push( '</div>' );
+
+        this.responseText = out.join( '' );
+    }
+} );
+
+$.mockjax( {
+    url: "*prefetch2/",
+    response: function ( settings ) {
+        var out = [];
+
+        out.push( '<h4>Cache This</h4>' );
 
         this.responseText = out.join( '' );
     }

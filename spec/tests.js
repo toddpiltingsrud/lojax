@@ -47,7 +47,7 @@ QUnit.test( 'jQuery data function', function ( assert ) {
 
     var obj = button.data();
 
-    var attributes = 'method action transition target form model cache expire renew'.split(' ');
+    var attributes = 'method action transition target form model cache expire renew'.split( ' ' );
 
     attributes.forEach( function ( attr ) {
         var name = 'jx-' + attr;
@@ -256,7 +256,7 @@ QUnit.test( 'bindToModels3', function ( assert ) {
 
     var modelDiv = $( '<div data-model></div>' );
 
-    var model = { number: 3.14, daterange: ['2015-11-13', '2015-11-15'], bool: false, arrays: { names: ['Anders', 'Kaleb'] }, select:'a', color: 'green' };
+    var model = { number: 3.14, daterange: ['2015-11-13', '2015-11-15'], bool: false, arrays: { names: ['Anders', 'Kaleb'] }, select: 'a', color: 'green' };
 
     modelDiv.data( 'model', model );
 
@@ -281,13 +281,13 @@ QUnit.test( 'bindToModels3', function ( assert ) {
     assert.equal( modelDiv.find( 'select' ).val(), 'a' );
 
     model.arrays.names.push( 'Todd' );
-    lojax.instance.bindToModels(modelDiv);
+    lojax.instance.bindToModels( modelDiv );
     assert.equal( modelDiv.find( '[value=Todd]' ).prop( 'checked' ), true );
 
     lojax.logging = false;
 } );
 
-QUnit.test( 'loadAsyncContent', function ( assert ) {
+QUnit.test( 'loadDataSrcDivs', function ( assert ) {
     div.empty();
 
     var done = assert.async();
@@ -304,18 +304,24 @@ QUnit.test( 'loadAsyncContent', function ( assert ) {
 
     div.append( '<div data-src="/Home/ModelTest"></div>' );
 
-    lojax.instance.loadAsyncContent( div );
+    lojax.instance.loadDataSrcDivs( div );
 
 } );
 
 QUnit.test( 'injectContent1', function ( assert ) {
     div.empty();
 
+    var btn = $( '<button data-method="ajax-get" data-action="/Home/ModelTest"/>' );
+
+    div.append( btn );
+
+    lojax.logging = true;
+
     window.scriptExecuted = false;
 
     var done = assert.async();
 
-    $( document ).one( lojax.events.afterRequest, function () {
+    $( document ).on( lojax.events.afterRequest, function () {
         assert.ok( true, 'async content was loaded' );
 
         assert.ok( window.scriptExecuted === true, 'scripts should run' );
@@ -323,24 +329,31 @@ QUnit.test( 'injectContent1', function ( assert ) {
         done();
     } );
 
-    $( '<button data-method="ajax-get" data-action="/Home/ModelTest">' ).appendTo( div ).click().remove();
+
+
+    btn.click();
 
 } );
 
 QUnit.test( 'injectContent2', function ( assert ) {
     div.empty();
 
+    var btn = $( '<button data-method="ajax-get" data-action="/File/InjectTest">' ).appendTo( div );
+
     window.scriptExecuted = false;
 
     var done = assert.async();
 
-    $( document ).one( lojax.events.afterRequest, function () {
+    lojax.logging = true;
+
+    $( document ).on( lojax.events.afterRequest, function () {
         assert.equal( window.testvalue, '1', 'new content should be queried by new script' );
         assert.equal( window.testvalue2, true, 'loose scripts should run' );
         done();
+        lojax.logging = false;
     } );
 
-    $( '<button data-method="ajax-get" data-action="/File/InjectTest">' ).appendTo( div ).click().remove();
+    btn.click();
 
 } );
 
@@ -381,56 +394,6 @@ QUnit.test( 'injectContent3 empty response', function ( assert ) {
     } );
 
     $( '<button data-method="ajax-get" data-action="/EmptyResponse">' ).appendTo( div ).click().remove();
-} );
-
-QUnit.test( 'handleHash', function ( assert ) {
-    div.empty();
-
-    var done = assert.async();
-
-    $( document ).on( 'handleHashTest', function () {
-        assert.ok( true, 'hash change was handled' );
-        done();
-        window.location.hash = '';
-    } );
-
-    $( '<input type="text" data-method="ajax-get" data-action="#/raiseevent/handleHashTest">' ).appendTo( div ).click().remove();
-
-} );
-
-QUnit.test( 'callIn', function ( assert ) {
-
-    lojax.logging = true;
-
-    var div2 = $( '<div data-jaxpanel="hidden-div2" style="display:none"></div>' ).appendTo( 'body' );
-
-    var done = assert.async();
-    var done2 = assert.async();
-    var done3 = assert.async();
-
-    window.callInTest = function ( val ) {
-        assert.ok( true, 'lojax.in called' );
-        assert.equal( val, 'call-in-test', '' );
-        done();
-    };
-
-    window.callInTest2 = function ( val ) {
-        assert.ok( true, 'lojax.in called' );
-        assert.equal( val, 'call-in-test2', '' );
-        done2();
-        console.clear();
-    };
-
-    window.loadAsyncContentTest = function ( val ) {
-        assert.ok( true, 'lojax.in called' );
-        assert.equal( val, 'load async content', '' );
-        done3();
-    };
-
-    $( '<button data-method="ajax-get" data-action="/File/CallInTest">' ).appendTo( div ).click().remove();
-
-    lojax.logging = false;
-
 } );
 
 QUnit.test( 'buildForm', function ( assert ) {
@@ -573,7 +536,7 @@ QUnit.test( 'posting forms 1', function ( assert ) {
 
     var done1 = assert.async();
 
-    $( document ).one( lojax.events.afterRequest, function ( evt, arg ) {
+    $( document ).on( lojax.events.afterRequest, function ( evt, arg ) {
         assert.ok( arg != null );
         assert.equal( arg.contentType, 'application/x-www-form-urlencoded; charset=UTF-8' );
         assert.equal( arg.action, '/post#withhash' );
@@ -584,6 +547,55 @@ QUnit.test( 'posting forms 1', function ( assert ) {
     lojax.logging = true;
 
     submitBtn.click();
+
+    lojax.logging = false;
+
+} );
+
+QUnit.test( 'handleHash', function ( assert ) {
+    div.empty();
+
+    var done = assert.async();
+
+    $( document ).on( 'handleHashTest', function () {
+        assert.ok( true, 'hash change was handled' );
+        done();
+        window.location.hash = '';
+    } );
+
+    $( '<input type="text" data-method="ajax-get" data-action="#/raiseevent/handleHashTest">' ).appendTo( div ).click().remove();
+
+} );
+
+QUnit.test( 'callIn', function ( assert ) {
+
+    lojax.logging = true;
+
+    var div2 = $( '<div data-jaxpanel="hidden-div2" style="display:none"></div>' ).appendTo( 'body' );
+
+    var done = assert.async();
+    var done2 = assert.async();
+    var done3 = assert.async();
+
+    window.callInTest = function ( val ) {
+        assert.ok( true, 'lojax.in called' );
+        assert.equal( val, 'call-in-test', '' );
+        done();
+    };
+
+    window.callInTest2 = function ( val ) {
+        assert.ok( true, 'lojax.in called' );
+        assert.equal( val, 'call-in-test2', '' );
+        done2();
+    };
+
+    window.loadAsyncContentTest = function ( val ) {
+        assert.ok( true, 'lojax.in called' );
+        assert.equal( val, 'load async content', '' );
+        done3();
+    };
+
+    $( '<button data-method="ajax-get" data-action="/File/CallInTest">' ).appendTo( div ).click().remove();
 
     lojax.logging = false;
 
@@ -606,10 +618,11 @@ QUnit.test( 'posting forms 2', function ( assert ) {
     var done1 = assert.async();
 
     $( document ).one( lojax.events.afterRequest, function ( evt, arg ) {
+        console.log( arg );
         assert.ok( arg != null );
         assert.equal( arg.contentType, 'application/x-www-form-urlencoded; charset=UTF-8' );
-        assert.equal( arg.action, window.location.href );
-        $( document ).off( lojax.events.afterRequest );
+        assert.equal( arg.action, window.location.href, 'forms should use the current url if none is specified' );
+        $( form ).off( lojax.events.afterRequest );
         done1();
     } );
 
@@ -618,7 +631,7 @@ QUnit.test( 'posting forms 2', function ( assert ) {
     submitBtn.click();
 
     // test with default url (current page)
-    div.empty();
+    //div.empty();
 
 } );
 
@@ -689,17 +702,90 @@ QUnit.test( 'modals', function ( assert ) {
 
 } );
 
-QUnit.test('cache', function (assert) {
+QUnit.test( 'cache auto renew', function ( assert ) {
 
-    div.empty();
+    cache = new lojax.Cache();
 
-    var form = getForm();
+    var request = new lojax.Request( {
+        action: '/post',
+        method: 'ajax-get',
+        expire: .5,
+        renew: 'auto'
+    } );
 
+    var requestCount = 3;
 
+    var done = assert.async();
 
-    assert.equal(lojax.logging, false);
+    request.then( function () {
+        if ( requestCount-- === 0 ) {
+            assert.ok( true, 'auto renew works' );
+            cache.clear();
+            assert.equal( cache.get( request.action ), undefined );
+            done();
+        }
+    } );
 
-});
+    cache.add( request );
+
+    assert.equal( cache.get( request.action ), request );
+
+    console.log( cache );
+
+} );
+
+QUnit.test( 'cache sliding renew', function ( assert ) {
+
+    var done = assert.async();
+
+    cache = new lojax.Cache();
+
+    var request = new lojax.Request( {
+        action: '/post',
+        method: 'ajax-get',
+        expire: .5,
+        renew: 'sliding'
+    } );
+
+    var requestCount = 3;
+
+    var renew = function () {
+        if ( requestCount-- > 0 ) {
+            assert.notEqual( cache.get( request.action ), undefined );
+            setTimeout( renew, 250 );
+        }
+        else {
+            setTimeout( function () {
+                assert.equal( cache.get( request.action ), undefined );
+                done();
+            }, 750 );
+        }
+    };
+
+    cache.add( request );
+
+    renew();
+
+} );
+
+QUnit.test( 'prefetch1', function ( assert ) {
+
+    var done = assert.async();
+
+    $( '<button data-method="ajax-get" data-action="/prefetch1">' ).appendTo( div ).click();
+
+    $( document ).one( lojax.events.afterRequest, function ( evt, arg ) {
+        setTimeout( function () {
+            var request = lojax.instance.cache.store['http://prefetch2/'];
+            assert.ok( request != null, 'stuff should get cached' );
+            request.then( function ( response ) {
+                assert.equal( response, '<h4>Cache This</h4>' );
+                done();
+            } );
+        } );
+    } );
+
+} );
 
 QUnit.test( 'make sure logging is turned off', function ( assert ) {
     div.empty();

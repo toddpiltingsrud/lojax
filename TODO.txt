@@ -2,6 +2,8 @@ Better error handling. Currently if a request fails, afterRequest doesn't fire, 
 
 Figure out how to hook into client-side validation.
 
+Change up the logix so handleHash delegates to executeRequest instead of the other way round.
+
 Use an object proxy to provide two-way binding for data models.
 
 Use data-model to reuse chunks of HTML. Store a chunk of HTML using it's url as the key. Then just swap out its data-model.
@@ -14,11 +16,16 @@ Perhaps we should build a couple working examples using the code we have, then t
 Turn modal creation into a service that controls the lifetime of modals. 
 It needs to be able to import modals and keep their content around if necessary.
 
-<a href="/resource.html" data-method="ajax-get" jx-cache="true|false|prefectch" jx-expire="1200" jx-renew="sliding|auto">Open Modal</a>
+<a href="/resource.html" data-method="ajax-get" jx-cache="true|false|prefetch" jx-expire="1200" jx-renew="sliding|auto">Open Modal</a>
 
 So the modal could be opened multiple times, and optionally downloaded from the server every time.
 
+We may need to allow multiple callbacks per request because of caching.
+
 Do we need a different content type for JSONP?
+
+Consider replacing jquery's event triggering mechanism with my own. Need custom events that bubble. 
+Currently, all events must be triggered and handled on window.document. This doesn't follow the event pattern.
 
 Create a nuget package.
 
@@ -36,7 +43,7 @@ Supported scenarios/patterns:
 - Add a data-src attribute to a div to load content into the div asynchronously. This uses the same logic as data-jaxpanels, so you can use transitions, model binding, other data-src divs, etc.
 - Use lojax.in(callback) inside a data-jaxpanel, modal, or div[data-src] to execute a function with context ('this' keyword) set to the containing element.
   This works only if the script is inside the element you want as the context.
-  The callback is invoked after model binding, but before loadAsyncContent. Callbacks are invoked only once.
+  The callback is invoked after model binding, but before loadDataSrcDivs. Callbacks are invoked only once.
 
 AJAX responses:
 
