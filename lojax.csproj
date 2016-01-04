@@ -177,7 +177,6 @@
     <None Include="spec\scripts\data\Products.json" />
     <None Include="src\lojax.css.map" />
     <None Include="src\lojax.less" />
-    <None Include="src\styles.css.map" />
   </ItemGroup>
   <ItemGroup>
     <Content Include=".git\ms-persist.xml" />
@@ -199,6 +198,12 @@
     <Content Include="demo\table2.html" />
     <Content Include="demo\tables.html" />
     <Content Include="fonts\glyphicons-halflings-regular.svg" />
+    <Content Include="lojax.js">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>lojax.tt</DependentUpon>
+    </Content>
+    <Content Include="lojax.min.js" />
     <Content Include="spec\fonts\glyphicons-halflings-regular.svg" />
     <Content Include="spec\images\grey_wash_wall.png" />
     <Content Include="spec\CallInTest.html" />
@@ -227,11 +232,19 @@
     <Content Include="spec\scripts\modernizr-2.8.3.min.js" />
     <Content Include="spec\scripts\qunit-1.20.0.js" />
     <Content Include="spec\scripts\respond.js" />
+    <Content Include="src\controller.js" />
+    <Content Include="src\cache.js" />
+    <Content Include="src\api.js" />
+    <Content Include="lojax.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>lojax.js</LastGenOutput>
+    </Content>
+    <Content Include="src\priv.js" />
+    <Content Include="src\transitions.js" />
+    <Content Include="src\request.js" />
     <Content Include="TODO.txt" />
     <None Include="spec\scripts\data\stops.json" />
-    <Content Include="src\jquery.min.js" />
     <Content Include="src\lojax.css" />
-    <Content Include="src\lojax.js" />
     <Content Include="src\lojax.min.css" />
   </ItemGroup>
   <ItemGroup>

@@ -1,20 +1,20 @@
-<div data-jaxpanel="panel1" data-transition="flip-vertical">
+<div jx-panel="panel1" data-transition="flip-vertical">
 
-    <h4>injecting content with @data-jaxpanel</h4>
+    <h4>injecting content with @jx-panel</h4>
 
     <p>
-        When lojax handles a response from an AJAX request, it queries it for elements that have a data-jaxpanel attribute.
-        It iterates over what it finds and looks for data-jaxpanel elements already on the page with the same value.
+        When lojax handles a response from an AJAX request, it queries it for elements that have a jx-panel attribute.
+        It iterates over what it finds and looks for jx-panel elements already on the page with the same value.
         When it finds a match, it applies a transition function to replace the old content with the new content.
         There is no set limit to the number of panels that can be handled, so it's possible to update multiple regions on the page with a single request.
     </p>
 
-    <pre class="html4strict" style="font-family:monospace;"><span style="color: #009900;">&lt;<span style="color: #000000; font-weight: bold;">div</span> data-jaxpanel<span style="color: #66cc66;">=</span><span style="color: #ff0000;">&quot;panel1&quot;</span> data-transition<span style="color: #66cc66;">=</span><span style="color: #ff0000;">&quot;flip-vertical&quot;</span>&gt;</span>
+    <pre class="html4strict" style="font-family:monospace;"><span style="color: #009900;">&lt;<span style="color: #000000; font-weight: bold;">div</span> jx-panel<span style="color: #66cc66;">=</span><span style="color: #ff0000;">&quot;panel1&quot;</span> data-transition<span style="color: #66cc66;">=</span><span style="color: #ff0000;">&quot;flip-vertical&quot;</span>&gt;</span>
 &nbsp;
-    <span style="color: #009900;">&lt;<span style="color: #000000; font-weight: bold;">h4</span>&gt;</span>injecting content with @data-jaxpanel<span style="color: #009900;">&lt;<span style="color: #66cc66;">/</span><span style="color: #000000; font-weight: bold;">h4</span>&gt;</span>
+    <span style="color: #009900;">&lt;<span style="color: #000000; font-weight: bold;">h4</span>&gt;</span>injecting content with @jx-panel<span style="color: #009900;">&lt;<span style="color: #66cc66;">/</span><span style="color: #000000; font-weight: bold;">h4</span>&gt;</span>
 &nbsp;
     <span style="color: #009900;">&lt;<span style="color: #000000; font-weight: bold;">p</span>&gt;</span>
-        When lojax handles a response from an AJAX request, it queries it for elements that have a data-jaxpanel attribute...
+        When lojax handles a response from an AJAX request, it queries it for elements that have a jx-panel attribute...
     <span style="color: #009900;">&lt;<span style="color: #66cc66;">/</span><span style="color: #000000; font-weight: bold;">p</span>&gt;</span>
 &nbsp;
 <span style="color: #009900;">&lt;<span style="color: #66cc66;">/</span><span style="color: #000000; font-weight: bold;">div</span>&gt;</span></pre>
@@ -22,7 +22,7 @@
     <h4>@data-transition</h4>
 
     <p>
-        An incoming data-jaxpanel can also have a data-transition attribute that specifies what kind of transition to apply.
+        An incoming jx-panel can also have a data-transition attribute that specifies what kind of transition to apply.
         There are five:
     </p>
 

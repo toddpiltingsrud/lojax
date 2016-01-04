@@ -1,0 +1,61 @@
+﻿<#@ template debug="false" hostspecific="true" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.IO" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ import namespace="System.Text.RegularExpressions" #>
+<#@ output extension=".js" #>
+// namespace
+var lojax = lojax || {};
+
+(function($) { 
+<#
+var path = "";
+
+var stripLogging = false;
+
+if (Directory.Exists(@"C:\Users\kitntodd"))
+{
+    path = @"C:\Users\kitntodd\OneDrive\Documents\Code\Projects\lojax\src";
+}
+else if (Directory.Exists(@"C:\Users\tpiltingsrud"))
+{
+    path = @"C:\Users\tpiltingsrud\OneDrive\Documents\Code\Projects\lojax\src";
+}
+else
+{
+    path = @"C:\Users\Todd\OneDrive\Documents\Code\Projects\lojax\src";
+}
+
+var files = new DirectoryInfo(path).GetFiles("*.js", SearchOption.AllDirectories);
+
+foreach (var file in files)
+{
+	var lines = File.ReadAllLines(file.FullName);
+    foreach (var line in lines)
+    {
+        if (stripLogging && IsLogExpression(line)) continue;
+#>
+    <#= line #>
+<#  }
+}
+#>
+
+lojax.prefix = 'jx';
+
+// global
+lojax.instance = new lojax.Controller();
+
+// local
+var instance = lojax.instance;
+
+})(jQuery);
+
+<#+ 
+private bool IsLogExpression(string line)
+{
+    if (line.Trim().StartsWith("lojax.log")) return true;
+    return false;
+}
+#>

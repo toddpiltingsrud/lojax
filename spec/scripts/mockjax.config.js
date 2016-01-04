@@ -3,7 +3,7 @@
     response: function () {
         var out = [];
 
-        out.push( '<div data-jaxpanel="hidden-div">' );
+        out.push( '<div jx-panel="hidden-div">' );
         out.push( '    <div class="box-border">' );
         out.push( '        <div class="box dark">' );
         out.push( '            <h2>ModelTest</h2>' );
@@ -60,7 +60,7 @@ $.mockjax( {
     response: function () {
         var out = [];
 
-        out.push( '<div data-jaxpanel="hidden-div">' );
+        out.push( '<div jx-panel="hidden-div">' );
         out.push( '    <div class="box-border">' );
         out.push( '        <div class="box dark">' );
         out.push( '            <h2>ModelTest</h2>' );
@@ -133,7 +133,7 @@ $.mockjax( {
     response: function ( settings ) {
         var out = [];
 
-        out.push( '<div data-jaxpanel="hidden-div">' );
+        out.push( '<div jx-panel="hidden-div">' );
         out.push( '    <div class="box-border">' );
         out.push( '        <div class="box dark">' );
         out.push( '            <h4>/File/InjectTest</h4>' );
@@ -164,7 +164,7 @@ $.mockjax( {
     response: function ( settings ) {
         var out = [];
 
-        out.push( '<div data-jaxpanel="hidden-div">' );
+        out.push( '<div jx-panel="hidden-div">' );
         out.push( '    <input type="hidden" value="call-in-test" />' );
         out.push( '    <script>' );
         out.push( '        lojax.in(function () {' );
@@ -173,7 +173,7 @@ $.mockjax( {
         out.push( '        });' );
         out.push( '    </script>' );
         out.push( '</div>' );
-        out.push( '<div data-jaxpanel="hidden-div2">' );
+        out.push( '<div jx-panel="hidden-div2">' );
         out.push( '    <div data-src="/LoadAsyncContent"></div>' );
         out.push( '    <input type="hidden" value="call-in-test2" />' );
         out.push( '    <script>' );
@@ -237,16 +237,16 @@ $.mockjax( {
         out.push( '        <div class="modal-content">' );
         out.push( '            <div class="modal-header">' );
         out.push( '                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>' );
-        out.push( '                <h4 class="modal-title" data-jaxpanel="modalTitle">' );
+        out.push( '                <h4 class="modal-title" jx-panel="modalTitle">' );
         out.push( '                    Modal Test' );
         out.push( '                </h4>' );
         out.push( '            </div>' );
-        out.push( '            <div class="modal-body" data-jaxpanel="modalBody" data-model>' );
+        out.push( '            <div class="modal-body" jx-panel="modalBody" data-model>' );
         out.push( '                <p>Modal body</p> ' );
         out.push( getForm() );
         out.push( '                <div data-src="/LoadAsyncContent"></div>' );
         out.push( '            </div>' );
-        out.push( '            <div class="modal-footer" data-jaxpanel="modalFooter">' );
+        out.push( '            <div class="modal-footer" jx-panel="modalFooter">' );
         out.push( '                <button class="btn btn-default" data-dismiss="modal">Close</button> ' );
         out.push( '            </div>' );
         out.push( '        </div>' );
@@ -269,8 +269,8 @@ $.mockjax( {
     response: function ( settings ) {
         var out = [];
 
-        out.push( '<div data-jaxpanel="hidden-div">' );
-        out.push( '<a href="http://prefetch2/" data-method="ajax-get" jx-cache="prefetch">Cache This</a>' );
+        out.push( '<div jx-panel="hidden-div">' );
+        out.push( '<a href="prefetch2" data-method="ajax-get" jx-cache="prefetch">Cache This</a>' );
         out.push( '</div>' );
 
         this.responseText = out.join( '' );
@@ -278,7 +278,7 @@ $.mockjax( {
 } );
 
 $.mockjax( {
-    url: "*prefetch2/",
+    url: "*prefetch2",
     response: function ( settings ) {
         var out = [];
 

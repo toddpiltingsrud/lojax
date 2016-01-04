@@ -2,7 +2,27 @@ Better error handling. Currently if a request fails, afterRequest doesn't fire, 
 
 Figure out how to hook into client-side validation.
 
-Change up the logix so handleHash delegates to executeRequest instead of the other way round.
+Simplify form and model logic.
+Operations:
+- convert model to form
+- serialize form
+- append to URL
+- submit form
+- JSON.stringify model and change content-type to application/json
+
+Methods:
+- get: convert model to form, serialize form, append to URL
+- post: convert model to form, submit form
+- ajax-get: convert model to form, serialize form
+- ajax-post: serialize form, JSON.stringify model and change content-type to application/json
+- ajax-put: serialize form, JSON.stringify model and change content-type to application/json
+- ajax-delete: convert model to form, serialize form, append to URL
+- jsonp: serialize form, append to URL (no support for models)
+
+We might want to right a couple paragraphs about how ASP.NET MVC handles forms and models:
+- input names and/or url parameters must match object property names
+- conventional controllers are designed to handle form posts or url query strings
+- API controllers are designed to handle JSON models with application/json content type
 
 Use an object proxy to provide two-way binding for data models.
 
@@ -16,11 +36,7 @@ Perhaps we should build a couple working examples using the code we have, then t
 Turn modal creation into a service that controls the lifetime of modals. 
 It needs to be able to import modals and keep their content around if necessary.
 
-<a href="/resource.html" data-method="ajax-get" jx-cache="true|false|prefetch" jx-expire="1200" jx-renew="sliding|auto">Open Modal</a>
-
 So the modal could be opened multiple times, and optionally downloaded from the server every time.
-
-We may need to allow multiple callbacks per request because of caching.
 
 Do we need a different content type for JSONP?
 
@@ -41,9 +57,10 @@ Supported scenarios/patterns:
 - Change the url's hash to trigger an ajax-get request. Simple way to get cross-browser navigation history for ajax requests.
 - If input elements are inside an element with a data-model attribute, the change event writes the changes to the data model.
 - Add a data-src attribute to a div to load content into the div asynchronously. This uses the same logic as data-jaxpanels, so you can use transitions, model binding, other data-src divs, etc.
-- Use lojax.in(callback) inside a data-jaxpanel, modal, or div[data-src] to execute a function with context ('this' keyword) set to the containing element.
+- Use lojax.in(callback) inside a jx-panel, modal, or div[data-src] to execute a function with context ('this' keyword) set to the containing element.
   This works only if the script is inside the element you want as the context.
   The callback is invoked after model binding, but before loadDataSrcDivs. Callbacks are invoked only once.
+- Post a JSON model without ajax. This works by converting the model into a form and submitting it.
 
 AJAX responses:
 
@@ -54,7 +71,7 @@ AJAX responses:
 - Iterate through the nodes.
 - If there is not currently a modal being displayed and the node is a modal, instantiate a modal and show it. Continue.
 - If there is not currently a modal being displayed and the node contains a modal, instantiate a modal and show it.
-- If the node is a data-jaxpanel, inject it.
+- If the node is a jx-panel, inject it.
 - If the node contains data-jaxpanels, inject them.
 - Once we're done iterating through the nodes, check for any loose script and style nodes. Inject them into a hidden div at the bottom of the page.
 
