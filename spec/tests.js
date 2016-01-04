@@ -30,7 +30,7 @@ var getForm = function () {
 
 var model = {
     number: 3.14,
-    daterange: ['2015-11-13', new Date( '2016-01-01T00:00:00-0600' )],
+    daterange: ['2015-11-13', new Date( '2016-01-01T06:00:00Z' )],
     bool: false,
     no: { value: null },
     arrays: { names: ['Anders', 'Kaleb'] },
@@ -45,9 +45,11 @@ $( function () {
 
 QUnit.test( 'formFromModel', function ( assert ) {
 
+    lojax.logging = true;
+
     var form = lojax.priv.formFromModel( model );
 
-    console.log( form );
+    lojax.logging = false;
 
     assert.strictEqual( form.find( '[name=number]' ).val(), '3.14' );
     assert.strictEqual( form.find( '[name=daterange]:first' ).val(), '2015-11-13' );
@@ -198,13 +200,11 @@ QUnit.test( 'getObjectAtPath', function ( assert ) {
 
 QUnit.test( 'getModelValue', function ( assert ) {
 
-    var model = { number: 5, daterange: ['2015-11-13', '2015-11-15'], bool: true, arrays: { names: ['Kit', 'Todd'] } };
-
     var result = lojax.priv.getModelValue( model, 'number' );
-    assert.equal( result, 5 );
+    assert.equal( result, model.number );
 
     result = lojax.priv.getModelValue( model, 'daterange[1]' );
-    assert.equal( result, '2015-11-15' );
+    assert.equal( result, model.daterange[1] );
 
     result = lojax.priv.getModelValue( model, 'arrays.names' );
     assert.ok( Array.isArray( result ) );
@@ -315,10 +315,6 @@ QUnit.test( 'bindToModels2', function ( assert ) {
 QUnit.test( 'bindToModels3', function ( assert ) {
 
     var modelDiv = $( '<div data-model></div>' );
-
-    var date = new Date( '2016-01-01T00:00:00-0600' );
-
-    var model = { number: 3.14, daterange: ['2015-11-13', date], bool: false, arrays: { names: ['Anders', 'Kaleb'] }, select: 'a', color: 'green' };
 
     modelDiv.data( 'model', model );
 
@@ -434,27 +430,7 @@ QUnit.test( 'event order', function ( assert ) {
     $( '<button data-method="ajax-get" data-action="/File/InjectTest">' ).appendTo( div ).click().remove();
 } );
 
-QUnit.test( 'injectContent3 empty response', function ( assert ) {
-    div.empty();
-
-    var done = assert.async();
-
-    var beforeInjectFired = false;
-
-    $( document ).one( lojax.events.beforeInject, function ( evt, request ) {
-        beforeInjectFired = true;
-    } );
-
-    $( document ).one( lojax.events.afterRequest, function ( evt, request ) {
-        assert.ok( true, 'empty response should not throw an error' );
-        assert.equal( beforeInjectFired, false, 'empty response should return from injectContent early' );
-        done();
-    } );
-
-    $( '<button data-method="ajax-get" data-action="/EmptyResponse">' ).appendTo( div ).click().remove();
-} );
-
-QUnit.test( 'buildForm', function ( assert ) {
+QUnit.test( 'formFromInputs', function ( assert ) {
     div.empty();
 
     //test form serialization
@@ -476,7 +452,7 @@ QUnit.test( 'buildForm', function ( assert ) {
 
     var selector = $( '#div1 form,#div2 [name]' );
 
-    var builtForm = lojax.priv.buildForm( selector );
+    var builtForm = lojax.priv.formFromInputs( selector );
 
     var serialized = builtForm.serialize();
 
@@ -484,6 +460,27 @@ QUnit.test( 'buildForm', function ( assert ) {
 
     assert.equal( serialized, shouldBe, 'Should create a form' );
 
+} );
+
+
+QUnit.test( 'injectContent3 empty response', function ( assert ) {
+    div.empty();
+
+    var done = assert.async();
+
+    var beforeInjectFired = false;
+
+    $( document ).one( lojax.events.beforeInject, function ( evt, request ) {
+        beforeInjectFired = true;
+    } );
+
+    $( document ).one( lojax.events.afterRequest, function ( evt, request ) {
+        assert.ok( true, 'empty response should not throw an error' );
+        assert.equal( beforeInjectFired, false, 'empty response should return from injectContent early' );
+        done();
+    } );
+
+    $( '<button data-method="ajax-get" data-action="/EmptyResponse">' ).appendTo( div ).click().remove();
 } );
 
 QUnit.test( 'posting models 1', function ( assert ) {
@@ -537,7 +534,6 @@ QUnit.test( 'posting models 2', function ( assert ) {
     // create a data-model with a submit button
     var form = $( '<form></form>' );
     var modelDiv = $( '<div data-model></div>' );
-    var model = { number: 5, daterange: ['2015-01-01', '2015-12-31'], bool: false, arrays: { names: ['Kit', 'Todd'] } };
     modelDiv.data( 'model', model );
     var submitBtn = $( '<input type="submit" data-method="ajax-post" data-action="/post" />' );
 
@@ -552,28 +548,33 @@ QUnit.test( 'posting models 2', function ( assert ) {
     lojax.instance.bindToModels( modelDiv );
 
     // change some of the values
-    modelDiv.find( '[name="daterange[0]"]' ).val( '2015-11-13' ).change();
+    modelDiv.find( '[name="daterange[0]"]' ).val( '2015-11-01' ).change();
     modelDiv.find( '[name="daterange[1]"]' ).val( '2015-11-15' ).change();
     modelDiv.find( '[name=bool]' ).prop( 'checked', true ).change();
     modelDiv.find( '[value=Kaleb]' ).prop( 'checked', true ).change();
+
+    var model = modelDiv.data( 'model' );
+
+    assert.strictEqual( model.daterange[0], '2015-11-01' );
+    assert.strictEqual( model.daterange[1], '2015-11-15' );
+    assert.strictEqual( model.bool, true );
 
     var done = assert.async();
 
     $( document ).on( lojax.events.beforeRequest, function ( evt, arg ) {
         assert.ok( arg.model != null );
-        assert.equal( arg.model.daterange[0], '2015-11-13' );
+        assert.equal( arg.model.daterange[0], '2015-11-01' );
         assert.equal( arg.model.daterange[1], '2015-11-15' );
         assert.equal( arg.model.bool, true );
         assert.equal( arg.model.arrays.names.length, 3 );
         //arg.cancel = true;
         done();
-    } );
+        lojax.logging = false;
+    } ); 
 
     lojax.logging = true;
 
     submitBtn.click();
-
-    lojax.logging = false;
 
 } );
 
@@ -606,7 +607,8 @@ QUnit.test( 'posting models 3', function ( assert ) {
     var done = assert.async();
 
     $( document ).on( lojax.events.beforeRequest, function ( evt, arg ) {
-        assert.ok( arg.form != null, 'Since we are doing a conventional post, the model should be converted into a form.' );
+        console.log( arg );
+        assert.ok( arg.data.is( 'form' ), 'Since we are doing a conventional post, the model should be converted into a form.' );
         arg.cancel = true;
         done();
     } );
@@ -654,15 +656,18 @@ QUnit.test( 'posting forms 1', function ( assert ) {
 QUnit.test( 'handleHash', function ( assert ) {
     div.empty();
 
+    lojax.logging = true;
+
     var done = assert.async();
 
     $( document ).on( 'handleHashTest', function () {
         assert.ok( true, 'hash change was handled' );
         done();
         window.location.hash = '';
+        lojax.logging = false;
     } );
 
-    $( '<input type="text" data-method="ajax-get" data-action="#/raiseevent/handleHashTest">' ).appendTo( div ).click().remove();
+    $( '<input type="text" data-method="ajax-get" data-action="#/raiseevent/handleHashTest">' ).appendTo( div ).click();
 
 } );
 

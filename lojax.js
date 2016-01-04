@@ -170,7 +170,11 @@ var lojax = lojax || {};
             // delegate hashes to handleHash
             if ( priv.hasHash( request.action ) && params.method === 'ajax-get' ) {
     
-                var newHash = request.getHash();
+                var newHash = request.action.match( rexp.hash )[1];
+    
+                if ( request.data ) {
+                    newHash += '?' + request.data;
+                }
     
                 // store the request's transition so handleHash can pick it up
                 instance.currentTransition = request.transition;
@@ -511,7 +515,7 @@ var lojax = lojax || {};
         indexer: /\[\d+\]/,
         quoted: /'.+'|".+"/,
         search: /\?.+(?=#)|\?.+$/,
-        hash: /#(.*)?[a-z]{2}(.*)?/i
+        hash: /#((.*)?[a-z]{2}(.*)?)/i
     };
     
     var priv = {
@@ -578,7 +582,10 @@ var lojax = lojax || {};
             var closest;
             // use the jQuery selector if present
             if ( priv.hasValue( params.form ) ) {
-                return $( params.form );
+                // account for selectors that either select a top element with inputs inside (e.g. 'form')
+                // or that select specific input elements (e.g. '#div1 [name]')
+                // or both (e.g. 'form,#div1 [name]')
+                return $( params.form ).find( ':input' ).add( $( params.form ).filter( ':input' ) );
             }
             // only a submit button can submit an enclosing form
             if ( $( params.source ).is( '[type=submit]' ) ) {
@@ -621,63 +628,11 @@ var lojax = lojax || {};
             }
             return model;
         },
-        resolveContentType: function ( params ) {
-            return params.model ? 'application/json' : 'application/x-www-form-urlencoded; charset=UTF-8';
-        },
-        resolveData: function ( params ) {
-            var data;
-            switch ( params.method ) {
-                case 'get':
-                case 'ajax-get':
-                    //convert model to form, serialize form, append to URL
-                    if ( params.model ) {
-                        data = priv.formFromModel( params.model ).serialize();
-                    }
-                    else if ( params.form ) {
-                        data = priv.getForm().serialize();
-                    }
-                    break;
-                case 'post':
-                    //convert model to form, submit form
-                    if ( params.model ) {
-                        data = priv.formFromModel( params.model );
-                    }
-                    else if ( params.form ) {
-                        data = priv.getForm();
-                    }
-                    break;
-                case 'ajax-post':
-                case 'ajax-put':
-                    //serialize form, JSON.stringify model and change content-type to application/json
-                    if ( params.model ) {
-                        data = priv.formFromModel( params.model );
-                        data = JSON.stringify( data );
-                        params.contentType = 'application/json';
-                    }
-                    else if ( params.form ) {
-                        data = priv.getForm().serialize();
-                    }
-                    break;
-                case 'ajax-delete':
-                case 'jsonp':
-                    //serialize form, append to URL (no support for models)
-                    if ( params.form ) {
-                        data = priv.getForm().serialize();
-                    }
-                    break;
-            }
-        },
         resolveTarget: function ( params ) {
             if ( priv.hasValue( params.target ) ) {
                 return $( params.target );
             }
             return null;
-        },
-        resolveInputs: function ( form ) {
-            // account for selectors that either select a top element with inputs inside (e.g. 'form')
-            // or that select specific input elements (e.g. '#div1 [name]')
-            // or both (e.g. 'form,#div1 [name]')
-            return $( form ).find( ':input' ).add( $( form ).filter( ':input' ) );
         },
         resolveTransition: function ( request, target ) {
             // check for a transition in the request first
@@ -689,14 +644,15 @@ var lojax = lojax || {};
                 return lojax.Transitions[$( target ).attr( 'data-transition' )] || lojax.Transitions['fade-in'];
             }
         },
-        buildForm: function ( forms, action, method ) {
+        formFromInputs: function ( forms, action, method ) {
             // Trying to use jQuery's clone function here fails for select elements.
             // The clone function doesn't preserve select element values.
             // So copy everything manually instead.
             if ( $( forms ).length ) {
+                action = action || window.location.href;
                 method = method || 'POST';
                 var form = $( "<form method='" + method.toUpperCase() + "' action='" + action + "' style='display:none'></form>" );
-                var inputs = priv.resolveInputs( forms ).serializeArray();
+                var inputs = $( forms ).serializeArray();
                 inputs.forEach( function ( input ) {
                     $( "<input type='hidden' />" ).appendTo( form ).prop( 'name', input.name ).val( input.value );
                 } );
@@ -927,15 +883,6 @@ var lojax = lojax || {};
                 }
             }
         },
-        checkHash: function ( url ) {
-            // return the hash portion if present
-            // else return url
-            var index = url.indexOf( '#' );
-            if ( index !== -1 ) {
-                return url.substring( index + 1 );
-            }
-            return url;
-        },
         hasHash: function ( url ) {
             url = url || window.location.href;
             return rexp.hash.test( url );
@@ -1010,72 +957,74 @@ var lojax = lojax || {};
         this.form = priv.resolveForm( params );
         this.action = priv.resolveAction( params );
         this.model = priv.resolveModel( params );
-        this.contentType = priv.resolveContentType( params );
+        this.contentType = 'application/x-www-form-urlencoded; charset=UTF-8';
         this.transition = params.transition;
         this.target = priv.resolveTarget( params );
+        this.data = this.getData( params );
         this.source = params.source;
+        this.expire = params.expire;
+        this.renew = params.renew;
         this.cancel = false;
         this.resolve = [];
         this.reject = [];
         this.result = null;
         this.error = null;
-        this.expire = params.expire;
-        this.renew = params.renew;
     };
     
     lojax.Request.prototype = {
-        getSearch: function () {
-            // used for both form encoding and url query strings
-            var inputs, queryString = '';
-            if ( priv.hasValue( this.form ) ) {
-                inputs = priv.resolveInputs( this.form );
-                queryString = priv.buildForm( inputs ).serialize();
+    
+        getData: function () {
+            var data;
+            lojax.log( 'resolveData: method:' ).log( this.method );
+            switch ( this.method ) {
+                case 'get':
+                case 'ajax-get':
+                case 'ajax-delete':
+                case 'jsonp':
+                    // convert model to form, serialize form
+                    // currently the api doesn't provide a way to specify a model
+                    if ( this.model ) {
+                        data = priv.formFromModel( this.model ).serialize();
+                    }
+                    else if ( this.form ) {
+                        data = priv.formFromInputs( this.form, this.action, this.method ).serialize();
+                    }
+                    break;
+                case 'post':
+                    // convert model to form and submit
+                    if ( this.model ) {
+                        data = priv.formFromModel( this.model );
+                    }
+                    else if ( this.form ) {
+                        data = priv.formFromInputs( this.form, this.action, this.method );
+                    }
+                    else {
+                        // post requires a form, it's the only way we can do a post from JS
+                        data = $( "<form method='POST' action='" + this.action + "' style='display:none'></form>" );
+                    }
+                    break;
+                case 'ajax-post':
+                case 'ajax-put':
+                    //serialize form, JSON.stringify model and change content-type to application/json
+                    if ( this.model ) {
+                        data = JSON.stringify( this.model );
+                        this.contentType = 'application/json';
+                    }
+                    else if ( this.form ) {
+                        data = priv.formFromInputs( this.form, this.action, this.method ).serialize();
+                    }
+                    break;
             }
-            else if ( priv.hasValue( this.model ) ) {
-                queryString = $.param( this.model );
-            }
-            return queryString;
-        },
-        getForm: function ( method ) {
-            var form = null;
-            method = method || 'post';
-            if ( priv.hasValue( this.form ) ) {
-                form = priv.buildForm( this.form, this.action, method );
-            }
-            else if ( priv.hasValue( this.model ) ) {
-                // it's not possible to post json via javascript without ajax
-                // so we'll have to convert it to a form first
-                form = priv.formFromModel( this.model, method, this.action );
-            }
-            else {
-                // if there's neither a form nor a model, return a blank form
-                // it's the only way we can trigger a post from javascript
-                form = priv.formFromModel( null, method, this.action );
-            }
-            return form;
-        },
-        getHash: function () {
-            var hash = priv.checkHash( this.action );
-            if ( hash !== null ) {
-                var search = this.getSearch();
-                return hash + ( search !== '' ? '?' + search : '' );
-            }
-            return null;
+            return data;
         },
         ajax: function ( type ) {
             var self = this,
                 options = {
                     url: this.action,
-                    type: type.toUpperCase()
+                    type: type.toUpperCase(),
+                    data: this.data,
+                    contentType: this.contentType
                 };
-    
-            if ( /POST|PUT/.test( options.type ) && this.model ) {
-                options.data = JSON.stringify( this.model );
-                options.contentType = 'application/json';
-            }
-            else {
-                options.data = this.getSearch();
-            }
     
             lojax.log( 'ajax: options: ' + options );
             $.ajax( options )
@@ -1094,14 +1043,12 @@ var lojax = lojax || {};
         },
         methods: {
             get: function () {
-                var queryString = this.getSearch();
-                var url = priv.checkHash( this.action );
-                window.location = url + '?' + queryString;
+                window.location = this.action + ( this.data ? '?' + this.data : '' );
                 priv.triggerEvent( lojax.events.afterRequest, this, this.source );
             },
             post: function () {
                 var self = this;
-                var form = this.getForm( type );
+                var form = this.data;
                 form.appendTo( 'body' );
                 form[0].submit();
                 // in the case of downloading a file, the page is not refreshed
@@ -1112,9 +1059,7 @@ var lojax = lojax || {};
                 }, 0 );
             },
             'ajax-get': function () {
-                var url = priv.checkHash( this.action );
-                var search = this.getSearch();
-                $.get( url, search )
+                $.get( this.action, this.data )
                     .done( this.done.bind( this ) )
                     .fail( this.fail.bind( this ) );
             },
@@ -1129,11 +1074,9 @@ var lojax = lojax || {};
             },
             jsonp: function () {
                 var self = this;
-                var queryString = this.getSearch();
-                var url = priv.checkHash( this.action );
                 var s = document.createElement( 'script' );
                 s.type = 'text/javascript';
-                s.src = url + '?' + queryString;
+                s.src = this.action + ( this.data ? '?' + this.data : '' );
                 document.body.appendChild( s );
                 setTimeout( function () {
                     document.body.removeChild( s );

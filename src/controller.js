@@ -45,7 +45,11 @@ lojax.Controller.prototype = {
         // delegate hashes to handleHash
         if ( priv.hasHash( request.action ) && params.method === 'ajax-get' ) {
 
-            var newHash = request.getHash();
+            var newHash = request.action.match( rexp.hash )[1];
+
+            if ( request.data ) {
+                newHash += '?' + request.data;
+            }
 
             // store the request's transition so handleHash can pick it up
             instance.currentTransition = request.transition;

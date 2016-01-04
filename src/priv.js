@@ -8,7 +8,7 @@ var rexp = {
     indexer: /\[\d+\]/,
     quoted: /'.+'|".+"/,
     search: /\?.+(?=#)|\?.+$/,
-    hash: /#(.*)?[a-z]{2}(.*)?/i
+    hash: /#((.*)?[a-z]{2}(.*)?)/i
 };
 
 var priv = {
@@ -75,7 +75,10 @@ var priv = {
         var closest;
         // use the jQuery selector if present
         if ( priv.hasValue( params.form ) ) {
-            return $( params.form );
+            // account for selectors that either select a top element with inputs inside (e.g. 'form')
+            // or that select specific input elements (e.g. '#div1 [name]')
+            // or both (e.g. 'form,#div1 [name]')
+            return $( params.form ).find( ':input' ).add( $( params.form ).filter( ':input' ) );
         }
         // only a submit button can submit an enclosing form
         if ( $( params.source ).is( '[type=submit]' ) ) {
@@ -118,64 +121,11 @@ var priv = {
         }
         return model;
     },
-    resolveContentType: function ( params ) {
-        return params.model ? 'application/json' : 'application/x-www-form-urlencoded; charset=UTF-8';
-    },
-    resolveData: function ( params ) {
-        var data;
-        if ( !priv.hasValue( params.model )
-            && !priv.hasValue( params.form ) ) {
-            return null;
-        }
-        switch ( params.method ) {
-            case 'get':
-            case 'ajax-get':
-            case 'ajax-delete':
-            case 'jsonp':
-                // convert model to form, serialize form
-                // currently the api doesn't provide a way to specify a model
-                if ( params.model ) {
-                    data = priv.formFromModel( params.model ).serialize();
-                }
-                else {
-                    data = priv.getForm().serialize();
-                }
-                break;
-            case 'post':
-                //convert model to form
-                if ( params.model ) {
-                    data = priv.formFromModel( params.model );
-                }
-                else {
-                    data = priv.getForm();
-                }
-                break;
-            case 'ajax-post':
-            case 'ajax-put':
-                //serialize form, JSON.stringify model and change content-type to application/json
-                if ( params.model ) {
-                    data = priv.formFromModel( params.model );
-                    data = JSON.stringify( data );
-                    params.contentType = 'application/json';
-                }
-                else {
-                    data = priv.getForm().serialize();
-                }
-                break;
-        }
-        return data;
-    },
     resolveTarget: function ( params ) {
         if ( priv.hasValue( params.target ) ) {
             return $( params.target );
         }
         return null;
-    },
-    resolveInputs: function ( form ) {
-        // account for selectors that either select a top element with inputs inside (e.g. 'form')
-        // or that select specific input elements (e.g. '#div1 [name]')
-        // or both (e.g. 'form,#div1 [name]')
-        return $( form ).find( ':input' ).add( $( form ).filter( ':input' ) );
     },
     resolveTransition: function ( request, target ) {
         // check for a transition in the request first
@@ -187,14 +137,15 @@ var priv = {
             return lojax.Transitions[$( target ).attr( 'data-transition' )] || lojax.Transitions['fade-in'];
         }
     },
-    buildForm: function ( forms, action, method ) {
+    formFromInputs: function ( forms, action, method ) {
         // Trying to use jQuery's clone function here fails for select elements.
         // The clone function doesn't preserve select element values.
         // So copy everything manually instead.
         if ( $( forms ).length ) {
+            action = action || window.location.href;
             method = method || 'POST';
             var form = $( "<form method='" + method.toUpperCase() + "' action='" + action + "' style='display:none'></form>" );
-            var inputs = priv.resolveInputs( forms ).serializeArray();
+            var inputs = $( forms ).serializeArray();
             inputs.forEach( function ( input ) {
                 $( "<input type='hidden' />" ).appendTo( form ).prop( 'name', input.name ).val( input.value );
             } );
@@ -424,15 +375,6 @@ var priv = {
                 console.log( ex );
             }
         }
-    },
-    checkHash: function ( url ) {
-        // return the hash portion if present
-        // else return url
-        var index = url.indexOf( '#' );
-        if ( index !== -1 ) {
-            return url.substring( index + 1 );
-        }
-        return url;
     },
     hasHash: function ( url ) {
         url = url || window.location.href;

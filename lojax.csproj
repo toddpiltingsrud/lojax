@@ -203,7 +203,6 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>lojax.tt</DependentUpon>
     </Content>
-    <Content Include="lojax.min.js" />
     <Content Include="spec\fonts\glyphicons-halflings-regular.svg" />
     <Content Include="spec\images\grey_wash_wall.png" />
     <Content Include="spec\CallInTest.html" />
