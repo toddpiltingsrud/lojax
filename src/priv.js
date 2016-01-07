@@ -18,15 +18,15 @@ var priv = {
     attr: function(elem, name) {
         return $( elem ).attr( 'data-' + name ) || $( elem ).attr( lojax.config.prefix + name );
     },
+    attrSelector: function ( name ) {
+        return '[data-' + name + '],[' + lojax.config.prefix + name + ']';
+    },
     attributes: 'method action transition target form model cache expire renew'.split( ' ' ),
     getConfig: function ( elem ) {
         var name, config, $this = $( elem );
 
-        if ( $this.is( '[data-request]' ) ) {
-            config = JSON.parse( $this.attr( 'data-request' ).replace( /'/g, '"' ) );
-        }
-        else if ( $this.is( '[jx-request]' ) ) {
-            config = JSON.parse( $this.attr( 'jx-request' ).replace( /'/g, '"' ) );
+        if ( $this.is( priv.attrSelector('request') ) ) {
+            config = JSON.parse( priv.attr( 'request' ).replace( /'/g, '"' ) );
         }
         else {
             // don't use the data() function to retrieve request configurations
@@ -34,7 +34,7 @@ var priv = {
             config = {};
 
             priv.attributes.forEach( function ( attr ) {
-                var val = $this.attr( 'data-' + attr ) || $this.attr( 'jx-' + attr );
+                var val = priv.attr( $this, attr );
                 if ( val !== undefined ) {
                     config[attr] = val;
                 }
@@ -116,11 +116,12 @@ var priv = {
     },
     getModel: function ( elem ) {
         var model = $( elem ).data( 'model' );
-        if ( model === undefined ) {
-            model = JSON.parse( $( elem ).attr( 'jx-model' ) || 'null' );
-            // convert jx-model to data-model
+        if ( model === undefined && $( elem ).is( '[jx-model]' ) ) {
+            model = JSON.parse( $( elem ).attr( 'jx-model' ) );
+            // add model to jQuery's data object
             $( elem ).data( 'model', model );
         }
+        console.log( model );
         return model;
     },
     resolveTarget: function ( params ) {
@@ -132,11 +133,11 @@ var priv = {
     resolveTransition: function ( request, target ) {
         // check for a transition in the request first
         if ( request.transition ) {
-            return lojax.Transitions[request.transition] || lojax.Transitions['fade-in'];
+            return lojax.Transitions[request.transition] || lojax.Transitions[lojax.config.transition];
         }
         else {
             // check for a transition on the target
-            return lojax.Transitions[$( target ).attr( 'data-transition' )] || lojax.Transitions['fade-in'];
+            return lojax.Transitions[priv.attr(target, 'transition')] || lojax.Transitions[lojax.config.transition];
         }
     },
     formFromInputs: function ( forms, action, method ) {

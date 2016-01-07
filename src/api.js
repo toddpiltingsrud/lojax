@@ -56,4 +56,3 @@ lojax.log = function ( arg ) {
     catch ( ex ) { }
     return lojax;
 };
-

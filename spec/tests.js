@@ -169,7 +169,7 @@ QUnit.test( 'getModel', function ( assert ) {
 
     obj = fn( button );
 
-    assert.strictEqual( obj, null );
+    assert.strictEqual( obj, undefined );
 
 } );
 
@@ -532,7 +532,7 @@ QUnit.test( 'injectContent3 empty response', function ( assert ) {
         done();
     } );
 
-    $( '<button data-method="ajax-get" data-action="/EmptyResponse">' ).appendTo( div ).click().remove();
+    $( '<button data-method="ajax-get" data-action="/EmptyResponse.html">' ).appendTo( div ).click().remove();
 } );
 
 QUnit.test( 'posting models 1', function ( assert ) {
