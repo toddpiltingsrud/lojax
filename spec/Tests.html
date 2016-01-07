@@ -1,5 +1,4 @@
 ﻿<!DOCTYPE html>
-<!-- saved from url=(0037)http://localhost:58069/Home/ModelTest -->
 <html class=" js ">
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -7,16 +6,13 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>lojax tests</title>
-    <link href="styles/bootstrap.min.css" rel="stylesheet">
     <link href="styles/styles.css" rel="stylesheet">
     <link href="../src/lojax.min.css" rel="stylesheet">
-    <link href="styles/qunit-1.20.0.css" rel="stylesheet" />
-    <script src="scripts/jquery-2.1.4.min.js"></script>
-    <script src="scripts/jquery.mockjax.min.js"></script>
-    <script src="scripts/mockjax.config.js"></script>
-    <script src="scripts/qunit-1.20.0.js"></script>
+    <link href="https://code.jquery.com/qunit/qunit-1.20.0.css" rel="stylesheet" />
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+    <script src="https://code.jquery.com/qunit/qunit-1.20.0.js"></script>
     <script src="../lojax.js"></script>
-    <script src="scripts/bootstrap.js"></script>
     <script src="scripts/respond.js"></script>
     <script src="tests.js"></script>
 </head>
@@ -30,17 +26,31 @@
                     <span class="icon-bar"></span>
                 </button>
             </div>
-            <div class="navbar-collapse collapse" jx-panel="navbar">
+            <div class="navbar-collapse collapse" data-jaxpanel="navbar">
                 <ul class="nav navbar-nav">
-                    <li><a href="Tests.html">lojax</a></li>
+                    <li>
+                        <label class="btn">
+                            <input type="radio" name="selectedTab" value="tests" />
+                            Tests
+                        </label>
+                    </li>
+                    <li>
+                        <label class="btn">
+                            <input type="radio" name="selectedTab" value="coverage" />
+                            Coverage
+                        </label>
+                    </li>
                 </ul>
             </div>
         </div>
     </div>
-    <div class="container-fluid" id="top-container">
-        <div id="qunit"></div>
-        <div id="qunit-fixture"></div>
-        <div jx-panel="main"></div>
+
+    <div class="box-border dark">
+        <div class="box dark">
+            <div id="qunit"></div>
+            <div id="qunit-fixture"></div>
+            <div jx-panel="main"></div>
+        </div>
     </div>
 
     <div id="background"></div>
@@ -59,9 +69,20 @@
                     requestCount == 0;
                     $('.progress').fadeOut();
                 }
-            });
+            } );
 
-        });
+            var swapTabs = function () {
+                var selectedTab = $( '[name=selectedTab]:checked' ).val();
+                selectedTab = selectedTab || 'tests';
+                $( '.tab:visible' ).hide();
+                $( '#' + selectedTab ).show();
+            };
+
+            $( '[name=selectedTab]' ).change( swapTabs );
+
+            swapTabs();
+
+        } );
     </script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
 </body>

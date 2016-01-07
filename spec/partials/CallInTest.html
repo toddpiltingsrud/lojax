@@ -1,0 +1,19 @@
+﻿<div jx-panel="hidden-div">
+    <input type="hidden" value="call-in-test" />
+    <script>
+        lojax.in( function () {
+            val = $( this ).find( "input" ).val();
+            window.callInTest( val );
+        } );
+    </script>
+</div>
+<div jx-panel="hidden-div2">
+    <input type="hidden" value="call-in-test2" />
+    <script>
+        lojax.in( function () {
+            val = $( this ).find( "input" ).val();
+            window.callInTest2( val );
+        } );
+    </script>
+    <div data-src="partials/LoadAsyncContent.html"></div>
+</div>

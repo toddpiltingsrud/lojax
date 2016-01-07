@@ -1,17 +1,17 @@
-﻿<div jx-panel="top-container">
+﻿<div jx-panel="hidden-div">
     <div class="box-border">
         <div class="box dark">
             <h2>ModelTest</h2>
             <script>
-                $(function () {
-                    $(document).on(lojax.events.beforeModelSync, "[data-model]", function (evt, arg) {
-                        console.log(arg.model[arg.name]);
-                    });
-                    $(document).on(lojax.events.afterModelSync, "[data-model]", function (evt, arg) {
-                        console.log(arg.model[arg.name]);
-                    });
-                });
                 window.scriptExecuted = true;
+                $( function () {
+                    $( document ).on( lojax.events.beforeModelSync, "[data-model]", function ( evt, arg ) {
+                        console.log( arg.model[arg.name] );
+                    } );
+                    $( document ).on( lojax.events.afterModelSync, "[data-model]", function ( evt, arg ) {
+                        console.log( arg.model[arg.name] );
+                    } );
+                } );
             </script>
             <div data-model="{&quot;ProductID&quot;:1,&quot;Name&quot;:&quot;Adjustable Race&quot;,&quot;ProductNumber&quot;:&quot;AR-5381&quot;,&quot;MakeFlag&quot;:false,&quot;FinishedGoodsFlag&quot;:false,&quot;Color&quot;:null,&quot;SafetyStockLevel&quot;:1000,&quot;ReorderPoint&quot;:750,&quot;StandardCost&quot;:0.0,&quot;ListPrice&quot;:0.0,&quot;Size&quot;:null,&quot;SizeUnitMeasureCode&quot;:null,&quot;WeightUnitMeasureCode&quot;:null,&quot;Weight&quot;:null,&quot;DaysToManufacture&quot;:0,&quot;ProductLine&quot;:null,&quot;Class&quot;:null,&quot;Style&quot;:null,&quot;ProductSubcategoryID&quot;:null,&quot;ProductModelID&quot;:null,&quot;SellStartDate&quot;:&quot;2002-06-01T05:00:00Z&quot;,&quot;SellEndDate&quot;:null,&quot;DiscontinuedDate&quot;:null,&quot;rowguid&quot;:&quot;694215b7-08f7-4c0d-acb1-d734ba44c0c8&quot;,&quot;ModifiedDate&quot;:&quot;2008-03-11T15:01:36.827Z&quot;}">
                 <div class="form-group">
@@ -30,17 +30,14 @@
                 <div class="form-group">
                     <label>StandardCost</label>
                     <input class="form-control" name="StandardCost" type="number">
-
                 </div>
                 <div class="form-group">
                     <label>SellStartDate</label>
                     <input class="form-control" name="SellStartDate" type="date">
-
                 </div>
                 <div class="form-group">
                     <label>NofieldExists</label>
                     <input class="form-control" name="NofieldExists" type="text">
-
                 </div>
                 <button type="submit" data-method="ajax-post" data-action="/Home/ModelTest" class="btn btn-primary btn-xs" value="Update">
                     <span class="glyphicon glyphicon-save"></span>Save

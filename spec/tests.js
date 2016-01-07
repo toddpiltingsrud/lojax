@@ -43,6 +43,55 @@ $( function () {
     div = $( '<div id="div1" jx-panel="hidden-div" style="display:none"></div>' ).appendTo( 'body' );
 } );
 
+QUnit.test( 'methods1', function ( assert ) {
+
+    //lojax.logging = true;
+
+    var methods = 'ajax-get ajax-post ajax-put ajax-delete jsonp'.split( ' ' );
+
+    var link = $( '<a href="partials/EmptyResponse.html" jx-form="#div1 [name=number]"></a>' );
+
+    div.append( getForm() );
+
+    div.append( link );
+
+    var done = assert.async();
+
+    var i = 0;
+
+    var usedMethods = {};
+
+    $( document ).on( 'beforeRequest', function ( evt, arg ) {
+        assert.ok( usedMethods[arg.method] == undefined );
+        usedMethods[arg.method] = arg;
+        assert.equal( arg.data, 'number=5' );
+
+        switch ( arg.method ) {
+            case 'ajax-get':
+                break;
+            case 'ajax-post':
+                break;
+            case 'ajax-put':
+                break;
+            case 'ajax-delete':
+                break;
+            case 'jsonp':
+                break;
+        }
+        // mongoose doesn't support put or delete :(
+        if ( /ajax-put|ajax-delete/.test( arg.method ) ) arg.cancel = true;
+        done();
+        if ( ++i < methods.length ) {
+            done = assert.async();
+            link.attr( 'data-method', methods[i] ).click();
+        }
+    } );
+
+    link.attr( 'data-method', methods[i] ).click();
+
+} );
+
+
 QUnit.test( 'formFromModel', function ( assert ) {
 
     lojax.logging = true;
@@ -127,33 +176,37 @@ QUnit.test( 'getModel', function ( assert ) {
 QUnit.test( 'click event handler', function ( assert ) {
 
     var done = assert.async();
-    $( document ).on( 'clicktest', function () {
 
+    $( document ).off( 'customEvent' );
+
+    $( document ).on( 'customEvent', function () {
         assert.ok( true, 'click was handled by lojax' );
         done();
     } );
 
     //click should be handled
-    $( '<button data-method="ajax-get" data-action="/raiseevent/clicktest">' ).appendTo( div ).click().remove();
+    $( '<button data-method="ajax-get" data-action="partials/raiseevent.html">' ).appendTo( div ).click().remove();
 
-    //click should not be handled
-    $( '<button data-method="ajax-get" data-action="/raiseevent/clicktest" data-trigger="change">' ).appendTo( div ).click().remove();
+    //click should not be handled because trigger of 'change' is specified instead of click
+    $( '<button data-method="ajax-get" data-action="partials/raiseevent.html" data-trigger="change">' ).appendTo( div ).click().remove();
 } );
 
 QUnit.test( 'change event handler', function ( assert ) {
 
     var done1 = assert.async();
 
-    $( document ).on( 'changetest', function () {
+    $( document ).off( 'customEvent' );
+
+    $( document ).on( 'customEvent', function () {
         assert.ok( true, 'change was handled by lojax' );
         done1();
     } );
 
     //change should be handled
-    $( '<input type="text" data-method="ajax-get" data-action="/raiseevent/changetest" data-trigger="change">' ).appendTo( div ).change().remove();
+    $( '<input type="text" data-method="ajax-get" data-action="partials/raiseevent.html" data-trigger="change">' ).appendTo( div ).change().remove();
 
     //change should not be handled because no data-method attribute
-    $( '<input type="text" data-action="/raiseevent" data-trigger="change">' ).appendTo( div ).change().remove();
+    $( '<input type="text" data-action="partials/raiseevent.html" data-trigger="change">' ).appendTo( div ).change().remove();
 } );
 
 QUnit.test( 'getObjectAtPath', function ( assert ) {
@@ -358,7 +411,7 @@ QUnit.test( 'loadDataSrcDivs', function ( assert ) {
         done();
     } );
 
-    div.append( '<div data-src="/Home/ModelTest"></div>' );
+    div.append( '<div data-src="partials/ModelTest.html"></div>' );
 
     lojax.instance.loadDataSrcDivs( div );
 
@@ -367,7 +420,7 @@ QUnit.test( 'loadDataSrcDivs', function ( assert ) {
 QUnit.test( 'injectContent1', function ( assert ) {
     div.empty();
 
-    var btn = $( '<button data-method="ajax-get" data-action="/Home/ModelTest"/>' );
+    var btn = $( '<button data-method="ajax-get" data-action="partials/ModelTest.html"/>' );
 
     div.append( btn );
 
@@ -392,7 +445,7 @@ QUnit.test( 'injectContent1', function ( assert ) {
 QUnit.test( 'injectContent2', function ( assert ) {
     div.empty();
 
-    var btn = $( '<button data-method="ajax-get" data-action="/File/InjectTest">' ).appendTo( div );
+    var btn = $( '<button data-method="ajax-get" data-action="partials/InjectTest.html">' ).appendTo( div );
 
     window.scriptExecuted = false;
 
@@ -427,7 +480,7 @@ QUnit.test( 'event order', function ( assert ) {
         done();
     } );
 
-    $( '<button data-method="ajax-get" data-action="/File/InjectTest">' ).appendTo( div ).click().remove();
+    $( '<button data-method="ajax-get" data-action="partials/InjectTest.html">' ).appendTo( div ).click().remove();
 } );
 
 QUnit.test( 'formFromInputs', function ( assert ) {
@@ -462,7 +515,6 @@ QUnit.test( 'formFromInputs', function ( assert ) {
 
 } );
 
-
 QUnit.test( 'injectContent3 empty response', function ( assert ) {
     div.empty();
 
@@ -490,7 +542,7 @@ QUnit.test( 'posting models 1', function ( assert ) {
     var form = $( '<form></form>' );
     var modelDiv = $( '<div data-model></div>' );
     modelDiv.data( 'model', model );
-    var submitBtn = $( '<input type="submit" data-method="ajax-post" data-action="/post" />' );
+    var submitBtn = $( '<input type="submit" data-method="ajax-post" data-action="partials/EmptyResponse.html" />' );
 
     modelDiv.append( submitBtn );
     form.append( modelDiv );
@@ -535,7 +587,7 @@ QUnit.test( 'posting models 2', function ( assert ) {
     var form = $( '<form></form>' );
     var modelDiv = $( '<div data-model></div>' );
     modelDiv.data( 'model', model );
-    var submitBtn = $( '<input type="submit" data-method="ajax-post" data-action="/post" />' );
+    var submitBtn = $( '<input type="submit" data-method="ajax-post" data-action="partials/EmptyResponse.html" />' );
 
     div.append( form );
     form.append( modelDiv );
@@ -586,7 +638,7 @@ QUnit.test( 'posting models 3', function ( assert ) {
     var form = $( '<form></form>' );
     var modelDiv = $( '<div data-model></div>' );
     modelDiv.data( 'model', model );
-    var submitBtn = $( '<input type="submit" data-method="post" data-action="/post" />' );
+    var submitBtn = $( '<input type="submit" data-method="post" data-action="partials/EmptyResponse.html" />' );
 
     div.append( form );
     form.append( modelDiv );
@@ -627,7 +679,7 @@ QUnit.test( 'posting forms 1', function ( assert ) {
 
     // create a form with a submit button
     var form = $( '<form></form>' );
-    var submitBtn = $( '<input type="submit" data-method="ajax-post" data-action="/post#withhash" />' );
+    var submitBtn = $( '<input type="submit" data-method="ajax-post" data-action="partials/EmptyResponse.html#withhash" />' );
 
     div.append( form );
 
@@ -640,7 +692,7 @@ QUnit.test( 'posting forms 1', function ( assert ) {
     $( document ).on( lojax.events.afterRequest, function ( evt, arg ) {
         assert.ok( arg != null );
         assert.equal( arg.contentType, 'application/x-www-form-urlencoded; charset=UTF-8' );
-        assert.equal( arg.action, '/post#withhash' );
+        assert.equal( arg.action, 'partials/EmptyResponse.html#withhash' );
         $( document ).off( lojax.events.afterRequest );
         done1();
     } );
@@ -653,23 +705,25 @@ QUnit.test( 'posting forms 1', function ( assert ) {
 
 } );
 
-QUnit.test( 'handleHash', function ( assert ) {
-    div.empty();
+//QUnit.test( 'handleHash', function ( assert ) {
+//    div.empty();
 
-    lojax.logging = true;
+//    lojax.logging = true;
 
-    var done = assert.async();
+//    var done = assert.async();
 
-    $( document ).on( 'handleHashTest', function () {
-        assert.ok( true, 'hash change was handled' );
-        done();
-        window.location.hash = '';
-        lojax.logging = false;
-    } );
+//    $( document ).off( 'customEvent' );
 
-    $( '<input type="text" data-method="ajax-get" data-action="#/raiseevent/handleHashTest">' ).appendTo( div ).click();
+//    $( document ).on( 'customEvent', function () {
+//        assert.ok( true, 'hash change was handled' );
+//        done();
+//        window.location.hash = '';
+//        lojax.logging = false;
+//    } );
 
-} );
+//    $( '<input type="text" data-method="ajax-get" data-action="#partials/raiseevent.html">' ).appendTo( div ).click();
+
+//} );
 
 QUnit.test( 'callIn', function ( assert ) {
 
@@ -699,7 +753,7 @@ QUnit.test( 'callIn', function ( assert ) {
         done3();
     };
 
-    $( '<button data-method="ajax-get" data-action="/File/CallInTest">' ).appendTo( div ).click().remove();
+    $( '<button data-method="ajax-get" data-action="partials/CallInTest.html?v=2">' ).appendTo( div ).click().remove();
 
     lojax.logging = false;
 
@@ -721,11 +775,14 @@ QUnit.test( 'posting forms 2', function ( assert ) {
 
     var done1 = assert.async();
 
-    $( document ).one( lojax.events.afterRequest, function ( evt, arg ) {
+    $( document ).off( lojax.events.beforeRequest );
+
+    $( document ).one( lojax.events.beforeRequest, function ( evt, arg ) {
+        arg.cancel = true;
         assert.ok( arg != null );
         assert.equal( arg.contentType, 'application/x-www-form-urlencoded; charset=UTF-8' );
         assert.equal( arg.action, window.location.href, 'forms should use the current url if none is specified' );
-        $( form ).off( lojax.events.afterRequest );
+        $( document ).off( lojax.events.beforeRequest );
         done1();
     } );
 
@@ -733,8 +790,7 @@ QUnit.test( 'posting forms 2', function ( assert ) {
 
     submitBtn.click();
 
-    // test with default url (current page)
-    //div.empty();
+   //div.empty();
 
 } );
 
@@ -743,7 +799,7 @@ QUnit.test( 'posting forms 3', function ( assert ) {
     div.empty();
 
     // create a form with a submit button
-    var form = $( '<form data-method="ajax-get"></form>' );
+    var form = $( '<form data-method="ajax-get" action="partials/EmptyResponse.html"></form>' );
     var submitBtn = $( '<input type="submit" />' );
 
     div.append( form );
@@ -801,7 +857,7 @@ QUnit.test( 'modals', function ( assert ) {
         lojax.closeModal();
     };
 
-    $( '<button data-method="ajax-get" data-action="/modal">' ).appendTo( div ).click().remove();
+    $( '<button data-method="ajax-get" data-action="partials/modal.html?_=1">' ).appendTo( div ).click().remove();
 
 } );
 
@@ -810,7 +866,7 @@ QUnit.test( 'cache auto renew', function ( assert ) {
     cache = new lojax.Cache();
 
     var request = new lojax.Request( {
-        action: '/post',
+        action: 'partials/Modal.html',
         method: 'ajax-get',
         expire: .5,
         renew: 'auto'
@@ -842,7 +898,7 @@ QUnit.test( 'cache sliding renew', function ( assert ) {
     cache = new lojax.Cache();
 
     var request = new lojax.Request( {
-        action: '/post',
+        action: 'partials/Modal.html',
         method: 'ajax-get',
         expire: .5,
         renew: 'sliding'
@@ -873,7 +929,7 @@ QUnit.test( 'prefetch1', function ( assert ) {
 
     var done = assert.async();
 
-    $( '<button data-method="ajax-get" data-action="/prefetch1">' ).appendTo( div ).click();
+    $( '<button data-method="ajax-get" data-action="partials/prefetch1.html">' ).appendTo( div ).click();
 
     $( document ).one( lojax.events.afterRequest, function ( evt, arg ) {
         setTimeout( function () {

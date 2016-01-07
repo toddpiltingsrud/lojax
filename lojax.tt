@@ -9,7 +9,7 @@
 // namespace
 var lojax = lojax || {};
 
-(function($) { 
+(function($, lojax) { 
 <#
 var path = "";
 
@@ -42,15 +42,19 @@ foreach (var file in files)
 }
 #>
 
-lojax.prefix = 'jx';
+    lojax.config = {
+        prefix: 'jx-',
+		transition: 'fade-in',
+		hash: true
+    };
 
-// global
-lojax.instance = new lojax.Controller();
+	// global
+	lojax.instance = new lojax.Controller();
 
-// local
-var instance = lojax.instance;
+	// local
+	var instance = lojax.instance;
 
-})(jQuery);
+})(jQuery, lojax);
 
 <#+ 
 private bool IsLogExpression(string line)

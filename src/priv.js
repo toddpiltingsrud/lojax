@@ -15,26 +15,28 @@ var priv = {
     hasValue: function ( val ) {
         return val !== undefined && val !== null;
     },
+    attr: function(elem, name) {
+        return $( elem ).attr( 'data-' + name ) || $( elem ).attr( lojax.config.prefix + name );
+    },
     attributes: 'method action transition target form model cache expire renew'.split( ' ' ),
     getConfig: function ( elem ) {
-        var config, $this = $( elem );
+        var name, config, $this = $( elem );
 
         if ( $this.is( '[data-request]' ) ) {
-            config = JSON.parse( $this.data( 'request' ).replace( /'/g, '"' ) );
+            config = JSON.parse( $this.attr( 'data-request' ).replace( /'/g, '"' ) );
         }
         else if ( $this.is( '[jx-request]' ) ) {
             config = JSON.parse( $this.attr( 'jx-request' ).replace( /'/g, '"' ) );
         }
         else {
-            config = $this.data();
+            // don't use the data() function to retrieve request configurations
+            // if attributes are changed, the data function won't pick it up
+            config = {};
 
             priv.attributes.forEach( function ( attr ) {
-                var name = 'jx-' + attr;
-                if ( !( attr in config ) ) {
-                    var val = $this.attr( name );
-                    if ( val !== undefined ) {
-                        config[attr] = val;
-                    }
+                var val = $this.attr( 'data-' + attr ) || $this.attr( 'jx-' + attr );
+                if ( val !== undefined ) {
+                    config[attr] = val;
                 }
             } );
         }

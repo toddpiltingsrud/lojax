@@ -637,3 +637,7 @@ td.commands-cell {
 .tp-table-searchbox {
   max-width: 220px;
 }
+
+label.btn > input[type=radio] {
+    display:none;
+}

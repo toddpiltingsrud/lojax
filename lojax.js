@@ -1,7 +1,8 @@
 ﻿// namespace
 var lojax = lojax || {};
 
-(function($) { 
+(function($, lojax) { 
+    
     /***********\
         API
     \***********/
@@ -59,6 +60,7 @@ var lojax = lojax || {};
         catch ( ex ) { }
         return lojax;
     };
+    
     
     /***********\
        Cache
@@ -123,6 +125,7 @@ var lojax = lojax || {};
             return ( action in this.store );
         }
     };
+    
     /***********\
      Controller
     \***********/
@@ -143,7 +146,9 @@ var lojax = lojax || {};
             $( document ).on( 'submit', 'form[data-method],form[jx-method]', self.handleRequest );
             $( document ).on( 'change', '[data-model],[jx-model]', self.updateModel );
     
-            window.addEventListener( "hashchange", self.handleHash, false );
+            if ( lojax.config.hash ) {
+                window.addEventListener( "hashchange", self.handleHash, false );
+            }
     
             self.loadDataSrcDivs();
             self.bindToModels();
@@ -199,6 +204,8 @@ var lojax = lojax || {};
         },
     
         handleHash: function () {
+            if ( !lojax.config.hash ) return;
+    
             // grab the current hash and request it with ajax-get
     
             var handler, request, hash = window.location.hash;
@@ -336,20 +343,17 @@ var lojax = lojax || {};
     
         injectContent: function ( request, response ) {
             var id, target, newModal, transition, $node, result;
-            // create a list of nodes from the response
-            var nodes = $.parseHTML( response, true );
-            lojax.log( 'injectContent: nodes:' ).log( nodes );
     
             // empty response?
-            if ( nodes === null ) return;
+            if ( !priv.hasValue(response) ) return;
     
             var doPanel = function () {
                 var node = $( this );
                 // match up with panels on the page
                 id = node.attr( 'jx-panel' );
-                target = request.target || $( '[jx-panel="' + id + '"]' );
+                target = request.target || $( '[jx-panel="' + id + '"],[data-panel="' + id + '"]' ).first();
     
-                if ( target.size() > 0 ) {
+                if ( target.length ) {
                     lojax.log( 'injectContent: jx-panel: ' + id );
                     transition = priv.resolveTransition( request, node );
                     result = transition( target, node );
@@ -367,36 +371,50 @@ var lojax = lojax || {};
             // ensure any loose calls to lojax.in are ignored
             instance.in = null;
     
-            for ( var i = 0; i < nodes.length; i++ ) {
-                $node = $( nodes[i] );
+            if ( request.target ) {
+                // inject the entire response into the specified target
+                doPanel.call( $( response ) );
+            }
+            else {
+                // create a list of nodes from the response
+                var nodes = $.parseHTML( response, true );
     
-                priv.triggerEvent( lojax.events.beforeInject, nodes, $node );
+                if ( !nodes ) return;
     
-                // don't create more than one modal at a time
-                if ( instance.modal === null ) {
-                    // check if the node is a modal
-                    if ( $node.is( '.modal' ) ) {
-                        instance.createModal( $node );
-                        continue;
-                    }
-                    else {
-                        // check if the node contains a modal
-                        newModal = $node.find( '.modal' );
-                        if ( newModal.length ) {
-                            instance.createModal( newModal );
+                lojax.log( 'injectContent: nodes:' ).log( nodes );
+    
+                for ( var i = 0; i < nodes.length; i++ ) {
+                    $node = $( nodes[i] );
+    
+                    priv.triggerEvent( lojax.events.beforeInject, nodes, $node );
+    
+                    // don't create more than one modal at a time
+                    if ( instance.modal === null ) {
+                        // check if the node is a modal
+                        if ( $node.is( '.modal' ) ) {
+                            instance.createModal( $node );
+                            continue;
+                        }
+                        else {
+                            // check if the node contains a modal
+                            newModal = $node.find( '.modal' );
+                            if ( newModal.length ) {
+                                instance.createModal( newModal );
+                            }
                         }
                     }
-                }
     
-                // find all the panels in the new content
-                if ( request.target || $node.is( '[jx-panel]' ) ) {
-                    doPanel.call( $node );
-                }
-                else {
-                    // iterate through the panels
-                    $( nodes[i] ).find( '[jx-panel]' ).each( doPanel );
+                    // find all the panels in the new content
+                    if ( request.target || $node.is( '[jx-panel],[data-panel]' ) ) {
+                        doPanel.call( $node );
+                    }
+                    else {
+                        // iterate through the panels
+                        $( nodes[i] ).find( '[jx-panel],[data-panel]' ).each( doPanel );
+                    }
                 }
             }
+    
     
             // process any loose script or style nodes
             instance.div.empty();
@@ -460,15 +478,15 @@ var lojax = lojax || {};
         // an AJAX alternative to iframes
         loadDataSrcDivs: function ( root ) {
             root = root || document;
-            $( root ).find( 'div[data-src]' ).each( function () {
+            $( root ).find( 'div[data-src],div[jx-src]' ).each( function () {
                 var $this = $( this );
-                var url = $this.data( 'src' );
+                var url = priv.attr( $this, 'src' );
                 instance.executeRequest( {
                     action: priv.cacheProof( url ),
                     method: 'ajax-get',
                     target: $this,
                     source: $this,
-                    transition: $this.data('transition') || 'append'
+                    transition: priv.attr($this, 'transition') || 'append'
                 } );
             } );
         },
@@ -522,26 +540,28 @@ var lojax = lojax || {};
         hasValue: function ( val ) {
             return val !== undefined && val !== null;
         },
+        attr: function(elem, name) {
+            return $( elem ).attr( 'data-' + name ) || $( elem ).attr( lojax.config.prefix + name );
+        },
         attributes: 'method action transition target form model cache expire renew'.split( ' ' ),
         getConfig: function ( elem ) {
-            var config, $this = $( elem );
+            var name, config, $this = $( elem );
     
             if ( $this.is( '[data-request]' ) ) {
-                config = JSON.parse( $this.data( 'request' ).replace( /'/g, '"' ) );
+                config = JSON.parse( $this.attr( 'data-request' ).replace( /'/g, '"' ) );
             }
             else if ( $this.is( '[jx-request]' ) ) {
                 config = JSON.parse( $this.attr( 'jx-request' ).replace( /'/g, '"' ) );
             }
             else {
-                config = $this.data();
+                // don't use the data() function to retrieve request configurations
+                // if attributes are changed, the data function won't pick it up
+                config = {};
     
                 priv.attributes.forEach( function ( attr ) {
-                    var name = 'jx-' + attr;
-                    if ( !( attr in config ) ) {
-                        var val = $this.attr( name );
-                        if ( val !== undefined ) {
-                            config[attr] = val;
-                        }
+                    var val = $this.attr( 'data-' + attr ) || $this.attr( 'jx-' + attr );
+                    if ( val !== undefined ) {
+                        config[attr] = val;
                     }
                 } );
             }
@@ -948,6 +968,7 @@ var lojax = lojax || {};
     
     // for testing
     lojax.priv = priv;
+    
     /***********\
        Request
     \***********/
@@ -1142,6 +1163,7 @@ var lojax = lojax || {};
         }
     };
     
+    
     /***********\
      Transitions
     \***********/
@@ -1209,13 +1231,17 @@ var lojax = lojax || {};
     };
     
 
-lojax.prefix = 'jx';
+    lojax.config = {
+        prefix: 'jx-',
+		transition: 'fade-in',
+		hash: true
+    };
 
-// global
-lojax.instance = new lojax.Controller();
+	// global
+	lojax.instance = new lojax.Controller();
 
-// local
-var instance = lojax.instance;
+	// local
+	var instance = lojax.instance;
 
-})(jQuery);
+})(jQuery, lojax);
 

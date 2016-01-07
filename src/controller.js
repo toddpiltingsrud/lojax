@@ -1,4 +1,5 @@
-﻿/***********\
+﻿
+/***********\
  Controller
 \***********/
 
@@ -18,7 +19,9 @@ lojax.Controller = function () {
         $( document ).on( 'submit', 'form[data-method],form[jx-method]', self.handleRequest );
         $( document ).on( 'change', '[data-model],[jx-model]', self.updateModel );
 
-        window.addEventListener( "hashchange", self.handleHash, false );
+        if ( lojax.config.hash ) {
+            window.addEventListener( "hashchange", self.handleHash, false );
+        }
 
         self.loadDataSrcDivs();
         self.bindToModels();
@@ -74,6 +77,8 @@ lojax.Controller.prototype = {
     },
 
     handleHash: function () {
+        if ( !lojax.config.hash ) return;
+
         // grab the current hash and request it with ajax-get
 
         var handler, request, hash = window.location.hash;
@@ -211,20 +216,17 @@ lojax.Controller.prototype = {
 
     injectContent: function ( request, response ) {
         var id, target, newModal, transition, $node, result;
-        // create a list of nodes from the response
-        var nodes = $.parseHTML( response, true );
-        lojax.log( 'injectContent: nodes:' ).log( nodes );
 
         // empty response?
-        if ( nodes === null ) return;
+        if ( !priv.hasValue(response) ) return;
 
         var doPanel = function () {
             var node = $( this );
             // match up with panels on the page
             id = node.attr( 'jx-panel' );
-            target = request.target || $( '[jx-panel="' + id + '"]' );
+            target = request.target || $( '[jx-panel="' + id + '"],[data-panel="' + id + '"]' ).first();
 
-            if ( target.size() > 0 ) {
+            if ( target.length ) {
                 lojax.log( 'injectContent: jx-panel: ' + id );
                 transition = priv.resolveTransition( request, node );
                 result = transition( target, node );
@@ -242,36 +244,50 @@ lojax.Controller.prototype = {
         // ensure any loose calls to lojax.in are ignored
         instance.in = null;
 
-        for ( var i = 0; i < nodes.length; i++ ) {
-            $node = $( nodes[i] );
+        if ( request.target ) {
+            // inject the entire response into the specified target
+            doPanel.call( $( response ) );
+        }
+        else {
+            // create a list of nodes from the response
+            var nodes = $.parseHTML( response, true );
 
-            priv.triggerEvent( lojax.events.beforeInject, nodes, $node );
+            if ( !nodes ) return;
 
-            // don't create more than one modal at a time
-            if ( instance.modal === null ) {
-                // check if the node is a modal
-                if ( $node.is( '.modal' ) ) {
-                    instance.createModal( $node );
-                    continue;
-                }
-                else {
-                    // check if the node contains a modal
-                    newModal = $node.find( '.modal' );
-                    if ( newModal.length ) {
-                        instance.createModal( newModal );
+            lojax.log( 'injectContent: nodes:' ).log( nodes );
+
+            for ( var i = 0; i < nodes.length; i++ ) {
+                $node = $( nodes[i] );
+
+                priv.triggerEvent( lojax.events.beforeInject, nodes, $node );
+
+                // don't create more than one modal at a time
+                if ( instance.modal === null ) {
+                    // check if the node is a modal
+                    if ( $node.is( '.modal' ) ) {
+                        instance.createModal( $node );
+                        continue;
+                    }
+                    else {
+                        // check if the node contains a modal
+                        newModal = $node.find( '.modal' );
+                        if ( newModal.length ) {
+                            instance.createModal( newModal );
+                        }
                     }
                 }
-            }
 
-            // find all the panels in the new content
-            if ( request.target || $node.is( '[jx-panel]' ) ) {
-                doPanel.call( $node );
-            }
-            else {
-                // iterate through the panels
-                $( nodes[i] ).find( '[jx-panel]' ).each( doPanel );
+                // find all the panels in the new content
+                if ( request.target || $node.is( '[jx-panel],[data-panel]' ) ) {
+                    doPanel.call( $node );
+                }
+                else {
+                    // iterate through the panels
+                    $( nodes[i] ).find( '[jx-panel],[data-panel]' ).each( doPanel );
+                }
             }
         }
+
 
         // process any loose script or style nodes
         instance.div.empty();
@@ -335,15 +351,15 @@ lojax.Controller.prototype = {
     // an AJAX alternative to iframes
     loadDataSrcDivs: function ( root ) {
         root = root || document;
-        $( root ).find( 'div[data-src]' ).each( function () {
+        $( root ).find( 'div[data-src],div[jx-src]' ).each( function () {
             var $this = $( this );
-            var url = $this.data( 'src' );
+            var url = priv.attr( $this, 'src' );
             instance.executeRequest( {
                 action: priv.cacheProof( url ),
                 method: 'ajax-get',
                 target: $this,
                 source: $this,
-                transition: $this.data('transition') || 'append'
+                transition: priv.attr($this, 'transition') || 'append'
             } );
         } );
     },
