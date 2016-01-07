@@ -345,7 +345,10 @@ var lojax = lojax || {};
             var id, target, newModal, transition, $node, result;
     
             // empty response?
-            if ( !priv.hasValue(response) ) return;
+            if ( !priv.hasValue( response ) ) return;
+    
+            // ensure any loose calls to lojax.in are ignored
+            instance.in = null;
     
             var doPanel = function () {
                 var node = $( this );
@@ -368,18 +371,16 @@ var lojax = lojax || {};
                 }
             };
     
-            // ensure any loose calls to lojax.in are ignored
-            instance.in = null;
+            // create a list of nodes from the response
+            var nodes = $.parseHTML( response, true );
+    
+            if ( !nodes ) return;
     
             if ( request.target ) {
                 // inject the entire response into the specified target
                 doPanel.call( $( response ) );
             }
             else {
-                // create a list of nodes from the response
-                var nodes = $.parseHTML( response, true );
-    
-                if ( !nodes ) return;
     
                 lojax.log( 'injectContent: nodes:' ).log( nodes );
     
