@@ -12,6 +12,7 @@ var rexp = {
 };
 
 var priv = {
+    noop: function () { },
     hasValue: function ( val ) {
         return val !== undefined && val !== null;
     },
@@ -60,7 +61,7 @@ var priv = {
         }
         // if this is a submit button check for a form
         if ( $( params.source ).is( '[type=submit]' ) ) {
-            var closest = $( params.source ).closest( 'form,[data-model],[jx-model]' );
+            var closest = $( params.source ).closest( 'form,' + priv.attrSelector('model') );
             // is submit button inside a form?
             if ( closest.is( 'form' ) ) {
                 // post to form.action or current page
@@ -84,7 +85,7 @@ var priv = {
         }
         // only a submit button can submit an enclosing form
         if ( $( params.source ).is( '[type=submit]' ) ) {
-            closest = $( params.source ).closest( 'form,[data-model],[jx-model]' );
+            closest = $( params.source ).closest( 'form,' + priv.attrSelector('model') );
             if ( closest.is( 'form' ) ) {
                 return closest;
             }
@@ -107,8 +108,8 @@ var priv = {
         // only a submit button can submit an enclosing model
         if ( $( params.source ).is( '[type=submit]' ) ) {
             // don't return anything if closest is form
-            closest = $( params.source ).closest( 'form,[data-model],[jx-model]' );
-            if ( closest.is( '[data-model],[jx-model]' ) ) {
+            closest = $( params.source ).closest( 'form,' + priv.attrSelector('model') );
+            if ( closest.is( priv.attrSelector( 'model' ) ) ) {
                 return priv.getModel( closest );
             }
         }
@@ -118,10 +119,10 @@ var priv = {
         var model = $( elem ).data( 'model' );
         if ( model === undefined && $( elem ).is( '[jx-model]' ) ) {
             model = JSON.parse( $( elem ).attr( 'jx-model' ) );
-            // add model to jQuery's data object
+            // store model in jQuery's data object
+            // reference it there from now on
             $( elem ).data( 'model', model );
         }
-        console.log( model );
         return model;
     },
     resolveTarget: function ( params ) {

@@ -47,7 +47,7 @@ QUnit.test( 'methods1', function ( assert ) {
 
     //lojax.logging = true;
 
-    var methods = 'ajax-get ajax-post ajax-put ajax-delete jsonp'.split( ' ' );
+    var methods = 'get post ajax-get ajax-post ajax-put ajax-delete jsonp'.split( ' ' );
 
     var link = $( '<a href="partials/EmptyResponse.html" jx-form="#div1 [name=number]"></a>' );
 
@@ -61,36 +61,33 @@ QUnit.test( 'methods1', function ( assert ) {
 
     var usedMethods = {};
 
-    $( document ).on( 'beforeRequest', function ( evt, arg ) {
-        assert.ok( usedMethods[arg.method] == undefined );
+    $( document ).on( lojax.events.beforeRequest, function ( evt, arg ) {
+        assert.ok( usedMethods[arg.method] == undefined, 'each method should be used once' );
         usedMethods[arg.method] = arg;
-        assert.equal( arg.data, 'number=5' );
 
-        switch ( arg.method ) {
-            case 'ajax-get':
+        switch (arg.method) {
+            case 'post':
+                assert.ok( arg.data.is( 'form' ), 'non-ajax post should use a form' );
                 break;
-            case 'ajax-post':
-                break;
-            case 'ajax-put':
-                break;
-            case 'ajax-delete':
-                break;
-            case 'jsonp':
+            default:
+                assert.equal( arg.data, 'number=5' );
                 break;
         }
         // mongoose doesn't support put or delete :(
-        if ( /ajax-put|ajax-delete/.test( arg.method ) ) arg.cancel = true;
+        if ( /get|post|ajax-put|ajax-delete/.test( arg.method ) ) arg.cancel = true;
         done();
         if ( ++i < methods.length ) {
             done = assert.async();
             link.attr( 'data-method', methods[i] ).click();
+        }
+        else {
+            $( document ).off( lojax.events.beforeRequest );
         }
     } );
 
     link.attr( 'data-method', methods[i] ).click();
 
 } );
-
 
 QUnit.test( 'formFromModel', function ( assert ) {
 
@@ -403,7 +400,7 @@ QUnit.test( 'loadDataSrcDivs', function ( assert ) {
 
     var done = assert.async();
 
-    $( document ).one( lojax.events.afterRequest, function () {
+    $( document ).one( lojax.events.afterInject, function () {
         assert.ok( true, 'async content was loaded' );
 
         var datamodel = div.find( '[data-model]' ).data( 'model' );

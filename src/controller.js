@@ -17,7 +17,7 @@ lojax.Controller = function () {
         $( document ).on( 'change', '[data-method][data-trigger*=change],[jx-method][jx-trigger*=change]', self.handleRequest );
         $( document ).on( 'keydown', '[data-method][data-trigger*=enter],[jx-method][jx-trigger*=enter]', self.handleEnterKey );
         $( document ).on( 'submit', 'form[data-method],form[jx-method]', self.handleRequest );
-        $( document ).on( 'change', '[data-model],[jx-model]', self.updateModel );
+        $( document ).on( 'change', priv.attrSelector('model'), self.updateModel );
 
         if ( lojax.config.hash ) {
             window.addEventListener( "hashchange", self.handleHash, false );
@@ -40,6 +40,9 @@ lojax.Controller.prototype = {
         // 'this' will be the element that was clicked, changed, or submitted
         var params = priv.getConfig( this ),
             $this = $( this );
+        // beforeRequest and afterRequest events are triggered in response to user action
+        params.beforeRequest = instance.beforeRequest;
+        params.afterRequest = instance.afterRequest;
 
         lojax.log( 'handleRequest: params: ' ).log( params );
 
@@ -153,7 +156,7 @@ lojax.Controller.prototype = {
     bindToModels: function ( context ) {
         context = context || document;
         var model, $this, models = [];
-        var dataModels = $( context ).find( '[data-model],[jx-model]' ).add( context ).filter( '[data-model],[jx-model]' );
+        var dataModels = $( context ).find( priv.attrSelector('model') ).add( context ).filter( priv.attrSelector('model') );
 
         lojax.log( 'bindToModels: dataModels:' ).log( dataModels );
 
@@ -226,7 +229,7 @@ lojax.Controller.prototype = {
         var doPanel = function () {
             var node = $( this );
             // match up with panels on the page
-            id = node.attr( 'jx-panel' );
+            id = priv.attr( node, 'panel' );
             target = request.target || $( '[jx-panel="' + id + '"],[data-panel="' + id + '"]' ).first();
 
             if ( target.length ) {
@@ -279,12 +282,12 @@ lojax.Controller.prototype = {
                 }
 
                 // find all the panels in the new content
-                if ( request.target || $node.is( '[jx-panel],[data-panel]' ) ) {
+                if ( request.target || $node.is( priv.attrSelector('panel') ) ) {
                     doPanel.call( $node );
                 }
                 else {
                     // iterate through the panels
-                    $( nodes[i] ).find( '[jx-panel],[data-panel]' ).each( doPanel );
+                    $( nodes[i] ).find( priv.attrSelector('panel') ).each( doPanel );
                 }
             }
         }
@@ -394,6 +397,13 @@ lojax.Controller.prototype = {
             }
         } );
         lojax.log( 'handleError: response: ' ).log( response );
+    },
+
+    beforeRequest: function ( request ) {
+        priv.triggerEvent( lojax.events.beforeRequest, request, request.source );
+    },
+    afterRequest: function ( request ) {
+        priv.triggerEvent( lojax.events.afterRequest, request, request.source );
     }
 };
 

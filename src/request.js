@@ -15,6 +15,8 @@ lojax.Request = function ( params ) {
     this.source = params.source;
     this.expire = params.expire;
     this.renew = params.renew;
+    this.beforeRequest = params.beforeRequest || priv.noop;
+    this.afterRequest = params.afterRequest || priv.noop;
     this.cancel = false;
     this.resolve = [];
     this.reject = [];
@@ -85,17 +87,17 @@ lojax.Request.prototype = {
     done: function ( response ) {
         this.result = response;
         this.resolve.forEach( function ( fn ) { fn( response ); } );
-        priv.triggerEvent( lojax.events.afterRequest, this, this.source );
+        this.afterRequest( this );
     },
     fail: function ( error ) {
         this.error = error;
         this.reject.forEach( function ( fn ) { fn( error ); } );
-        priv.triggerEvent( lojax.events.afterRequest, this, this.source );
+        this.afterRequest( this );
     },
     methods: {
         get: function () {
             window.location = this.action + ( this.data ? '?' + this.data : '' );
-            priv.triggerEvent( lojax.events.afterRequest, this, this.source );
+            this.afterRequest( this );
         },
         post: function () {
             var self = this;
@@ -106,7 +108,7 @@ lojax.Request.prototype = {
             // so we still need to clean up after ourselves
             setTimeout( function () {
                 form.remove();
-                priv.triggerEvent( lojax.events.afterRequest, self, form );
+                self.afterRequest( self );
             }, 0 );
         },
         'ajax-get': function () {
@@ -133,7 +135,7 @@ lojax.Request.prototype = {
                 document.body.removeChild( s );
                 // we have no way of handling the response of JSONP
                 // but trigger the event anyway
-                priv.triggerEvent( lojax.events.afterRequest, self, self.source );
+                self.afterRequest( self );
             }, 10 );
         }
     },
@@ -147,7 +149,7 @@ lojax.Request.prototype = {
         if ( !priv.hasValue( this.methods[this.method] ) ) throw 'Unsupported method: ' + this.method;
 
         if ( priv.hasValue( this.action ) && this.action !== '' ) {
-            priv.triggerEvent( lojax.events.beforeRequest, this, this.source );
+            this.beforeRequest( this );
             if ( !this.cancel ) {
                 // execute the method function
                 this.methods[this.method].bind( this )();
@@ -155,7 +157,7 @@ lojax.Request.prototype = {
             else {
                 // always trigger afterRequest even if there was no request
                 // it's typically used to turn off progress bars
-                priv.triggerEvent( lojax.events.afterRequest, this, this.source );
+                this.afterRequest( this );
             }
         }
         return this;

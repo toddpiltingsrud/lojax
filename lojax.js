@@ -143,7 +143,7 @@ var lojax = lojax || {};
             $( document ).on( 'change', '[data-method][data-trigger*=change],[jx-method][jx-trigger*=change]', self.handleRequest );
             $( document ).on( 'keydown', '[data-method][data-trigger*=enter],[jx-method][jx-trigger*=enter]', self.handleEnterKey );
             $( document ).on( 'submit', 'form[data-method],form[jx-method]', self.handleRequest );
-            $( document ).on( 'change', '[data-model],[jx-model]', self.updateModel );
+            $( document ).on( 'change', priv.attrSelector('model'), self.updateModel );
     
             if ( lojax.config.hash ) {
                 window.addEventListener( "hashchange", self.handleHash, false );
@@ -166,6 +166,8 @@ var lojax = lojax || {};
             // 'this' will be the element that was clicked, changed, or submitted
             var params = priv.getConfig( this ),
                 $this = $( this );
+            params.beforeRequest = instance.beforeRequest;
+            params.afterRequest = instance.afterRequest;
     
             lojax.log( 'handleRequest: params: ' ).log( params );
     
@@ -279,7 +281,7 @@ var lojax = lojax || {};
         bindToModels: function ( context ) {
             context = context || document;
             var model, $this, models = [];
-            var dataModels = $( context ).find( '[data-model],[jx-model]' ).add( context ).filter( '[data-model],[jx-model]' );
+            var dataModels = $( context ).find( priv.attrSelector('model') ).add( context ).filter( priv.attrSelector('model') );
     
             lojax.log( 'bindToModels: dataModels:' ).log( dataModels );
     
@@ -352,7 +354,7 @@ var lojax = lojax || {};
             var doPanel = function () {
                 var node = $( this );
                 // match up with panels on the page
-                id = node.attr( 'jx-panel' );
+                id = priv.attr( node, 'panel' );
                 target = request.target || $( '[jx-panel="' + id + '"],[data-panel="' + id + '"]' ).first();
     
                 if ( target.length ) {
@@ -405,12 +407,12 @@ var lojax = lojax || {};
                     }
     
                     // find all the panels in the new content
-                    if ( request.target || $node.is( '[jx-panel],[data-panel]' ) ) {
+                    if ( request.target || $node.is( priv.attrSelector('panel') ) ) {
                         doPanel.call( $node );
                     }
                     else {
                         // iterate through the panels
-                        $( nodes[i] ).find( '[jx-panel],[data-panel]' ).each( doPanel );
+                        $( nodes[i] ).find( priv.attrSelector('panel') ).each( doPanel );
                     }
                 }
             }
@@ -520,6 +522,13 @@ var lojax = lojax || {};
                 }
             } );
             lojax.log( 'handleError: response: ' ).log( response );
+        },
+    
+        beforeRequest: function ( request ) {
+            priv.triggerEvent( lojax.events.beforeRequest, request, request.source );
+        },
+        afterRequest: function ( request ) {
+            priv.triggerEvent( lojax.events.afterRequest, request, request.source );
         }
     };
     
@@ -537,6 +546,7 @@ var lojax = lojax || {};
     };
     
     var priv = {
+        noop: function () { },
         hasValue: function ( val ) {
             return val !== undefined && val !== null;
         },
@@ -585,7 +595,7 @@ var lojax = lojax || {};
             }
             // if this is a submit button check for a form
             if ( $( params.source ).is( '[type=submit]' ) ) {
-                var closest = $( params.source ).closest( 'form,[data-model],[jx-model]' );
+                var closest = $( params.source ).closest( 'form,' + priv.attrSelector('model') );
                 // is submit button inside a form?
                 if ( closest.is( 'form' ) ) {
                     // post to form.action or current page
@@ -609,7 +619,7 @@ var lojax = lojax || {};
             }
             // only a submit button can submit an enclosing form
             if ( $( params.source ).is( '[type=submit]' ) ) {
-                closest = $( params.source ).closest( 'form,[data-model],[jx-model]' );
+                closest = $( params.source ).closest( 'form,' + priv.attrSelector('model') );
                 if ( closest.is( 'form' ) ) {
                     return closest;
                 }
@@ -632,8 +642,8 @@ var lojax = lojax || {};
             // only a submit button can submit an enclosing model
             if ( $( params.source ).is( '[type=submit]' ) ) {
                 // don't return anything if closest is form
-                closest = $( params.source ).closest( 'form,[data-model],[jx-model]' );
-                if ( closest.is( '[data-model],[jx-model]' ) ) {
+                closest = $( params.source ).closest( 'form,' + priv.attrSelector('model') );
+                if ( closest.is( priv.attrSelector( 'model' ) ) ) {
                     return priv.getModel( closest );
                 }
             }
@@ -641,12 +651,12 @@ var lojax = lojax || {};
         },
         getModel: function ( elem ) {
             var model = $( elem ).data( 'model' );
-            if ( model === undefined && $(elem).is('[jx-model]') ) {
+            if ( model === undefined && $( elem ).is( '[jx-model]' ) ) {
                 model = JSON.parse( $( elem ).attr( 'jx-model' ) );
-                // add model to jQuery's data object
+                // store model in jQuery's data object
+                // reference it there from now on
                 $( elem ).data( 'model', model );
             }
-            console.log( model );
             return model;
         },
         resolveTarget: function ( params ) {
@@ -986,6 +996,8 @@ var lojax = lojax || {};
         this.source = params.source;
         this.expire = params.expire;
         this.renew = params.renew;
+        this.beforeRequest = params.beforeRequest || priv.noop;
+        this.afterRequest = params.afterRequest || priv.noop;
         this.cancel = false;
         this.resolve = [];
         this.reject = [];
@@ -1056,17 +1068,17 @@ var lojax = lojax || {};
         done: function ( response ) {
             this.result = response;
             this.resolve.forEach( function ( fn ) { fn( response ); } );
-            priv.triggerEvent( lojax.events.afterRequest, this, this.source );
+            this.afterRequest( this );
         },
         fail: function ( error ) {
             this.error = error;
             this.reject.forEach( function ( fn ) { fn( error ); } );
-            priv.triggerEvent( lojax.events.afterRequest, this, this.source );
+            this.afterRequest( this );
         },
         methods: {
             get: function () {
                 window.location = this.action + ( this.data ? '?' + this.data : '' );
-                priv.triggerEvent( lojax.events.afterRequest, this, this.source );
+                this.afterRequest( this );
             },
             post: function () {
                 var self = this;
@@ -1077,7 +1089,7 @@ var lojax = lojax || {};
                 // so we still need to clean up after ourselves
                 setTimeout( function () {
                     form.remove();
-                    priv.triggerEvent( lojax.events.afterRequest, self, form );
+                    self.afterRequest( self );
                 }, 0 );
             },
             'ajax-get': function () {
@@ -1104,7 +1116,7 @@ var lojax = lojax || {};
                     document.body.removeChild( s );
                     // we have no way of handling the response of JSONP
                     // but trigger the event anyway
-                    priv.triggerEvent( lojax.events.afterRequest, self, self.source );
+                    self.afterRequest( self );
                 }, 10 );
             }
         },
@@ -1118,7 +1130,7 @@ var lojax = lojax || {};
             if ( !priv.hasValue( this.methods[this.method] ) ) throw 'Unsupported method: ' + this.method;
     
             if ( priv.hasValue( this.action ) && this.action !== '' ) {
-                priv.triggerEvent( lojax.events.beforeRequest, this, this.source );
+                this.beforeRequest( this );
                 if ( !this.cancel ) {
                     // execute the method function
                     this.methods[this.method].bind( this )();
@@ -1126,7 +1138,7 @@ var lojax = lojax || {};
                 else {
                     // always trigger afterRequest even if there was no request
                     // it's typically used to turn off progress bars
-                    priv.triggerEvent( lojax.events.afterRequest, this, this.source );
+                    this.afterRequest( this );
                 }
             }
             return this;
