@@ -15,9 +15,11 @@ lojax.Controller = function () {
         self.div = $( "<div style='display:none'></div>" ).appendTo( 'body' );
         $( document ).on( 'click', '[data-request],[jx-request],[data-method]:not([data-trigger]),[jx-method]:not([jx-trigger])', self.handleRequest );
         $( document ).on( 'change', '[data-method][data-trigger*=change],[jx-method][jx-trigger*=change]', self.handleRequest );
-        $( document ).on( 'keydown', '[data-method][data-trigger*=enter],[jx-method][jx-trigger*=enter]', self.handleEnterKey );
+        // allows executing a request on a single input element without wrapping it in a form (e.g. data-trigger="change enter")
+        // also submits an element with a model attribute if enter key is pressed
+        $( document ).on( 'keydown', '[data-method][data-trigger*=enter],[jx-method][jx-trigger*=enter],' + priv.attrSelector( 'model' ), self.handleEnterKey );
         $( document ).on( 'submit', 'form[data-method],form[jx-method]', self.handleRequest );
-        $( document ).on( 'change', priv.attrSelector('model'), self.updateModel );
+        $( document ).on( 'change', priv.attrSelector( 'model' ), self.updateModel );
 
         if ( lojax.config.hash ) {
             window.addEventListener( "hashchange", self.handleHash, false );
@@ -36,8 +38,8 @@ lojax.Controller = function () {
 lojax.Controller.prototype = {
 
     handleRequest: function ( evt ) {
-        // handles click, change, submit
-        // 'this' will be the element that was clicked, changed, or submitted
+        // handles click, change, submit, keydown (enter)
+        // 'this' will be the element that was clicked, changed, submitted or keydowned
         var params = priv.getConfig( this ),
             $this = $( this );
         // beforeRequest and afterRequest events are triggered in response to user action
@@ -77,6 +79,12 @@ lojax.Controller.prototype = {
         evt.stopPropagation();
 
         evt.preventDefault();
+    },
+
+    handleEnterKey: function ( evt ) {
+        if ( evt.which === 13 ) {
+            instance.handleRequest.call( this, evt );
+        }
     },
 
     handleHash: function () {
@@ -131,26 +139,20 @@ lojax.Controller.prototype = {
         if ( request.cache ) {
             if ( this.cache.contains( request.action ) ) {
                 request = this.cache.get( request.action );
+                lojax.log( 'executeRequest: retrieved from cache' );
             }
             else {
                 this.cache.add( request );
-                request.exec();
+                lojax.log( 'executeRequest: added to cache' );
             }
         }
-        else {
-            request.exec();
-        }
+
         request
+            .exec()
             .then( function ( response ) {
                 instance.injectContent( request, response );
             } )
             .catch( instance.handleError );
-    },
-
-    handleEnterKey: function ( evt ) {
-        if ( evt.which === 13 ) {
-            instance.handleRequest.call( this, evt );
-        }
     },
 
     bindToModels: function ( context ) {
@@ -165,14 +167,7 @@ lojax.Controller.prototype = {
             $this = $( this );
             // grab the data-model
             model = priv.getModel( $this );
-            if ( !priv.hasValue( model ) || model === '' ) {
-                // empty model, so create one from its inputs
-                model = priv.buildModelFromElements( $this );
-            }
-            else {
-                priv.setElementsFromModel( $this, model );
-            }
-            $this.data( 'model', model );
+            model = lojax.bind( $this, model );
             models.push( model );
             lojax.log( 'bindToModels: model:' ).log( model );
         } );
@@ -223,8 +218,8 @@ lojax.Controller.prototype = {
         // empty response?
         if ( !priv.hasValue( response ) ) return;
 
-        // ensure any loose calls to lojax.in are ignored
-        instance.in = null;
+        // ensure any loose calls to lojax.onLoad are ignored
+        instance.onLoad = null;
 
         var doPanel = function () {
             var node = $( this );
@@ -241,7 +236,7 @@ lojax.Controller.prototype = {
                 }
                 priv.triggerEvent( lojax.events.afterInject, result, node );
                 instance.bindToModels( result );
-                priv.callIn( result );
+                priv.callOnLoad( result );
                 instance.loadDataSrcDivs( result );
                 instance.prefetchAsync( result );
             }
@@ -346,7 +341,7 @@ lojax.Controller.prototype = {
         }
         if ( instance.modal ) {
             instance.bindToModels( instance.modal );
-            priv.callIn( instance.modal );
+            priv.callOnLoad( instance.modal );
             instance.loadDataSrcDivs( instance.modal );
             instance.prefetchAsync( instance.modal );
         }
@@ -359,7 +354,7 @@ lojax.Controller.prototype = {
             var $this = $( this );
             var url = priv.attr( $this, 'src' );
             instance.executeRequest( {
-                action: priv.cacheProof( url ),
+                action: priv.noCache( url ),
                 method: 'ajax-get',
                 target: $this,
                 source: $this,

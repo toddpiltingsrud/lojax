@@ -13,13 +13,14 @@ lojax.Request = function ( params ) {
     this.target = priv.resolveTarget( params );
     this.data = this.getData( params );
     this.source = params.source;
+    this.cache = params.cache;
     this.expire = params.expire;
     this.renew = params.renew;
     this.beforeRequest = params.beforeRequest || priv.noop;
     this.afterRequest = params.afterRequest || priv.noop;
     this.cancel = false;
-    this.resolve = [];
-    this.reject = [];
+    this.resolve = null;
+    this.reject = null;
     this.result = null;
     this.error = null;
 };
@@ -86,12 +87,12 @@ lojax.Request.prototype = {
     },
     done: function ( response ) {
         this.result = response;
-        this.resolve.forEach( function ( fn ) { fn( response ); } );
+        if ( this.resolve ) this.resolve( response );
         this.afterRequest( this );
     },
     fail: function ( error ) {
         this.error = error;
-        this.reject.forEach( function ( fn ) { fn( error ); } );
+        if ( this.reject ) this.reject( error );
         this.afterRequest( this );
     },
     methods: {
@@ -141,18 +142,25 @@ lojax.Request.prototype = {
     },
 
     exec: function () {
-        // reset 
-        this.result = null;
-        this.error = null;
-        this.cancel = false;
+        this.reset();
 
         if ( !priv.hasValue( this.methods[this.method] ) ) throw 'Unsupported method: ' + this.method;
 
         if ( priv.hasValue( this.action ) && this.action !== '' ) {
             this.beforeRequest( this );
             if ( !this.cancel ) {
-                // execute the method function
-                this.methods[this.method].bind( this )();
+                if ( this.cache && ( this.result || this.error ) ) {
+                    lojax.log( 'request.exec: cached' );
+                    // don't execute the AJAX request, just call the handlers
+                    if ( this.result ) this.done( this.result );
+                    if ( this.error ) this.fail( this.error );
+                    this.afterRequest( this );
+                }
+                else {
+                    // execute the method function
+                    this.methods[this.method].bind( this )();
+                    lojax.log( 'request.exec: executed' );
+                }
             }
             else {
                 // always trigger afterRequest even if there was no request
@@ -166,15 +174,15 @@ lojax.Request.prototype = {
     // fake promise
     then: function ( resolve, reject ) {
         var self = this;
-        if ( typeof resolve === 'function' && this.resolve.indexOf( resolve ) === -1 ) {
-            this.resolve.push( resolve );
+        if ( typeof resolve === 'function' ) {
+            this.resolve = resolve;
             if ( this.result !== null ) {
                 // the response came before calling this function
                 resolve( self.result );
             }
         }
-        if ( typeof reject === 'function' && this.reject.indexOf( reject === -1 ) ) {
-            this.reject.push( reject );
+        if ( typeof reject === 'function' ) {
+            this.reject = reject;
             if ( this.error !== null ) {
                 // the response came before calling this function
                 reject( self.error );
@@ -184,14 +192,18 @@ lojax.Request.prototype = {
     },
 
     // fake promise
-    catch: function ( reject ) {
+    'catch': function ( reject ) {
         return this.then( undefined, reject );
     },
 
-    clear: function () {
-        // remove all handlers
-        this.resolve.splice( 0, this.resolve.length );
-        this.reject.splice( 0, this.reject.length );
+    reset: function () {
+        if ( !this.cache ) {
+            this.result = null;
+            this.error = null;
+        }
+        this.cancel = false;
+        this.resolve = null;
+        this.reject = null;
     }
 };
 

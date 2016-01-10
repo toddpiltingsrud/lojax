@@ -1,7 +1,7 @@
 ﻿<div>
     <input type="hidden" value="load async content" />
     <script>
-        lojax.in( function () {
+        lojax.onLoad( function () {
             val = $( this ).find( "input" ).val();
             window.loadAsyncContentTest( val );
         } );

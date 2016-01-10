@@ -198,10 +198,15 @@
     <Content Include="demo\tables.html" />
     <Content Include="fonts\glyphicons-halflings-regular.svg" />
     <Content Include="lojax.js">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
       <DependentUpon>lojax.tt</DependentUpon>
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
     </Content>
+    <Content Include="lojax.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>lojax.js</LastGenOutput>
+    </Content>
+    <Content Include="spec\partials\Modal2.html" />
     <Content Include="spec\partials\Prefetch1.html" />
     <Content Include="spec\partials\Prefetch2.html" />
     <Content Include="spec\partials\Modal.html" />
@@ -220,17 +225,13 @@
     <Content Include="spec\styles\Styles.css" />
     <Content Include="spec\scripts\jquery.mockjax.min.js" />
     <Content Include="spec\partials\ModelTest.html" />
-    <Content Include="spec\Tests.html" />
+    <Content Include="spec\SpecRunner.html" />
     <Content Include="spec\scripts\mockjax.config.js" />
     <Content Include="spec\scripts\qunit-1.20.0.js" />
     <Content Include="spec\scripts\respond.js" />
     <Content Include="src\controller.js" />
     <Content Include="src\cache.js" />
     <Content Include="src\api.js" />
-    <Content Include="lojax.tt">
-      <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>lojax.js</LastGenOutput>
-    </Content>
     <Content Include="src\priv.js" />
     <Content Include="src\transitions.js" />
     <Content Include="src\request.js" />

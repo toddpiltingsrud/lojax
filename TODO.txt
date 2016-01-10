@@ -1,6 +1,7 @@
 Better error handling. Currently if a request fails, afterRequest doesn't fire, leaving everybody hanging.
 
-Try blanket.js to make test writing quicker.
+Enter key should submit div[data-model]. That also means the action needs to be defined on the div.
+What if the enter key is pressed in a form or div[data-model] and the action is defined on the submit button or anchor tag?
 
 Figure out how to hook into client-side validation. Can we copy validation attributes when we create dynamic forms?
 "To parse new HTML, you can call the jQuery.validator.unobtrusive.parse() method, passing it a selector for the HTML that you would like to be parsed. 
@@ -13,21 +14,12 @@ Use an object proxy to provide two-way binding for data models.
 
 Support callback parameters for JSONP.
 
+Allow arbitrary elements to be bound to a model (e.g. div.text()). Give any element a name attribute and lojax will figure out how to bind to it.
+This means we'll have to query forms with ':input' instead of [name].
+
 For caching, set a default expiration. Add the ability to expire a cached item after it's requested the first time.
 
-Use data-model to reuse chunks of HTML. Store a chunk of HTML using it's url as the key. Then just swap out its data-model.
-How can we use familiar patterns to do this? We could load a resource and specify that we want it cached.
-Then use the same click handling logic to load that resource with a data model.
-But the data-model needs its own URL. We're looking at specifying 2 url's: one for the template, the other for the data model.
-Further, we might want to be able to specify that the template should be pre-loaded. 
-Perhaps we should build a couple working examples using the code we have, then tease out a pattern.
-
-Turn modal creation into a service that controls the lifetime of modals. 
-It needs to be able to import modals and keep their content around if necessary.
-
 Allow the attribute prefix (jx) to be changed.
-
-So the modal could be opened multiple times, and optionally downloaded from the server every time.
 
 Consider replacing jquery's event triggering mechanism with my own. Need custom events that bubble. 
 Currently, all events must be triggered and handled on window.document. This doesn't follow the event pattern.
@@ -46,7 +38,7 @@ Supported scenarios/patterns:
 - Change the url's hash to trigger an ajax-get request. Simple way to get cross-browser navigation history for ajax requests.
 - If input elements are inside an element with a data-model attribute, the change event writes the changes to the data model.
 - Add a data-src attribute to a div to load content into the div asynchronously. This uses the same logic as data-jaxpanels, so you can use transitions, model binding, other data-src divs, etc.
-- Use lojax.in(callback) inside a jx-panel, modal, or div[data-src] to execute a function with context ('this' keyword) set to the containing element.
+- Use lojax.onLoad(callback) inside a jx-panel, modal, or div[data-src] to execute a function with context ('this' keyword) set to the containing element.
   This works only if the script is inside the element you want as the context.
   The callback is invoked after model binding, but before loadDataSrcDivs. Callbacks are invoked only once.
 - Post a JSON model without ajax. This works by converting the model into a form and submitting it.
@@ -73,7 +65,7 @@ Modal Creation
 
 Tips: 
 - Use a layout to create modals on the server.
-- Use cache="prefetch" for modals to retrieve them before they are requested. Then bind them to a model.
+- Use cache="prefetch" for modals to retrieve them before they are requested. Then bind them to a model with lojax.bind(elem, model).
 - Use a publish/subscribe pattern instead of a callback URL query parameter to receive JSONP responses.
   Use an attenuated version of the URL as the event name (app/controller/action).
   This is also useful for letting the client know when something important has happened on the server (e.g. app/customer/update).

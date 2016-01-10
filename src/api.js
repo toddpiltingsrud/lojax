@@ -10,20 +10,22 @@ lojax.on = function ( event, params ) {
     } );
 };
 
+// remove event handler
 lojax.off = function ( event ) {
     $( document ).off( event );
 };
 
+// execute a request
 lojax.get = function ( params ) {
     instance.executeRequest( params );
 };
 
-lojax.in = function ( callback ) {
-    instance.in = callback;
+// call this from a script that is located inside a jx-panel or div[data-src]
+// executes a callback with the context set to the injected content
+lojax.onLoad = function ( callback ) {
+    instance.onLoad = callback;
 };
 
-// this can be called explicitly when the server returns a success 
-// response from a form submission that came from a modal
 lojax.closeModal = function () {
     if ( priv.hasValue( instance.modal ) ) {
         if ( $.fn.modal ) {
@@ -33,7 +35,21 @@ lojax.closeModal = function () {
             instance.modal.data( 'kendoWindow' ).close();
         }
     }
-}
+};
+
+// bind an element to a JSON model
+lojax.bind = function ( elem, model ) {
+    var $elem = $( elem );
+    if ( !priv.hasValue( model ) || model === '' ) {
+        // empty model, so create one from its inputs
+        model = priv.buildModelFromElements( $elem );
+    }
+    else {
+        priv.setElementsFromModel( $elem, model );
+    }
+    $elem.data( 'model', model );
+    return model;
+};
 
 lojax.events = {
     beforeRequest: 'beforeRequest',
@@ -51,8 +67,12 @@ lojax.log = function ( arg ) {
     try {
         if ( lojax.logging && console && console.log ) {
             console.log( arg );
+            return console;
         }
     }
     catch ( ex ) { }
-    return lojax;
+    return {
+        log: priv.noop
+    };
 };
+

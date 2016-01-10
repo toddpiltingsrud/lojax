@@ -1,4 +1,5 @@
-﻿// namespace
+﻿
+// namespace
 var lojax = lojax || {};
 
 (function($, lojax) { 
@@ -14,20 +15,22 @@ var lojax = lojax || {};
         } );
     };
     
+    // remove event handler
     lojax.off = function ( event ) {
         $( document ).off( event );
     };
     
+    // execute a request
     lojax.get = function ( params ) {
         instance.executeRequest( params );
     };
     
-    lojax.in = function ( callback ) {
-        instance.in = callback;
+    // call this from a script that is located inside a jx-panel or div[data-src]
+    // executes a callback with the context set to the injected content
+    lojax.onLoad = function ( callback ) {
+        instance.onLoad = callback;
     };
     
-    // this can be called explicitly when the server returns a success 
-    // response from a form submission that came from a modal
     lojax.closeModal = function () {
         if ( priv.hasValue( instance.modal ) ) {
             if ( $.fn.modal ) {
@@ -37,7 +40,21 @@ var lojax = lojax || {};
                 instance.modal.data( 'kendoWindow' ).close();
             }
         }
-    }
+    };
+    
+    // bind an element to a JSON model
+    lojax.bind = function ( elem, model ) {
+        var $elem = $( elem );
+        if ( !priv.hasValue( model ) || model === '' ) {
+            // empty model, so create one from its inputs
+            model = priv.buildModelFromElements( $elem );
+        }
+        else {
+            priv.setElementsFromModel( $elem, model );
+        }
+        $elem.data( 'model', model );
+        return model;
+    };
     
     lojax.events = {
         beforeRequest: 'beforeRequest',
@@ -55,11 +72,15 @@ var lojax = lojax || {};
         try {
             if ( lojax.logging && console && console.log ) {
                 console.log( arg );
+                return console;
             }
         }
         catch ( ex ) { }
-        return lojax;
+        return {
+            log: priv.noop
+        };
     };
+    
     
     /***********\
        Cache
@@ -141,9 +162,11 @@ var lojax = lojax || {};
             self.div = $( "<div style='display:none'></div>" ).appendTo( 'body' );
             $( document ).on( 'click', '[data-request],[jx-request],[data-method]:not([data-trigger]),[jx-method]:not([jx-trigger])', self.handleRequest );
             $( document ).on( 'change', '[data-method][data-trigger*=change],[jx-method][jx-trigger*=change]', self.handleRequest );
-            $( document ).on( 'keydown', '[data-method][data-trigger*=enter],[jx-method][jx-trigger*=enter]', self.handleEnterKey );
+            // allows executing a request on a single input element without wrapping it in a form (e.g. data-trigger="change enter")
+            // also submits an element with a model attribute if enter key is pressed
+            $( document ).on( 'keydown', '[data-method][data-trigger*=enter],[jx-method][jx-trigger*=enter],' + priv.attrSelector( 'model' ), self.handleEnterKey );
             $( document ).on( 'submit', 'form[data-method],form[jx-method]', self.handleRequest );
-            $( document ).on( 'change', priv.attrSelector('model'), self.updateModel );
+            $( document ).on( 'change', priv.attrSelector( 'model' ), self.updateModel );
     
             if ( lojax.config.hash ) {
                 window.addEventListener( "hashchange", self.handleHash, false );
@@ -162,10 +185,11 @@ var lojax = lojax || {};
     lojax.Controller.prototype = {
     
         handleRequest: function ( evt ) {
-            // handles click, change, submit
-            // 'this' will be the element that was clicked, changed, or submitted
+            // handles click, change, submit, keydown (enter)
+            // 'this' will be the element that was clicked, changed, submitted or keydowned
             var params = priv.getConfig( this ),
                 $this = $( this );
+            // beforeRequest and afterRequest events are triggered in response to user action
             params.beforeRequest = instance.beforeRequest;
             params.afterRequest = instance.afterRequest;
     
@@ -202,6 +226,12 @@ var lojax = lojax || {};
             evt.stopPropagation();
     
             evt.preventDefault();
+        },
+    
+        handleEnterKey: function ( evt ) {
+            if ( evt.which === 13 ) {
+                instance.handleRequest.call( this, evt );
+            }
         },
     
         handleHash: function () {
@@ -256,26 +286,20 @@ var lojax = lojax || {};
             if ( request.cache ) {
                 if ( this.cache.contains( request.action ) ) {
                     request = this.cache.get( request.action );
+                    lojax.log( 'executeRequest: retrieved from cache' );
                 }
                 else {
                     this.cache.add( request );
-                    request.exec();
+                    lojax.log( 'executeRequest: added to cache' );
                 }
             }
-            else {
-                request.exec();
-            }
+    
             request
+                .exec()
                 .then( function ( response ) {
                     instance.injectContent( request, response );
                 } )
                 .catch( instance.handleError );
-        },
-    
-        handleEnterKey: function ( evt ) {
-            if ( evt.which === 13 ) {
-                instance.handleRequest.call( this, evt );
-            }
         },
     
         bindToModels: function ( context ) {
@@ -290,14 +314,7 @@ var lojax = lojax || {};
                 $this = $( this );
                 // grab the data-model
                 model = priv.getModel( $this );
-                if ( !priv.hasValue( model ) || model === '' ) {
-                    // empty model, so create one from its inputs
-                    model = priv.buildModelFromElements( $this );
-                }
-                else {
-                    priv.setElementsFromModel( $this, model );
-                }
-                $this.data( 'model', model );
+                model = lojax.bind( $this, model );
                 models.push( model );
                 lojax.log( 'bindToModels: model:' ).log( model );
             } );
@@ -348,8 +365,8 @@ var lojax = lojax || {};
             // empty response?
             if ( !priv.hasValue( response ) ) return;
     
-            // ensure any loose calls to lojax.in are ignored
-            instance.in = null;
+            // ensure any loose calls to lojax.onLoad are ignored
+            instance.onLoad = null;
     
             var doPanel = function () {
                 var node = $( this );
@@ -366,7 +383,7 @@ var lojax = lojax || {};
                     }
                     priv.triggerEvent( lojax.events.afterInject, result, node );
                     instance.bindToModels( result );
-                    priv.callIn( result );
+                    priv.callOnLoad( result );
                     instance.loadDataSrcDivs( result );
                     instance.prefetchAsync( result );
                 }
@@ -471,7 +488,7 @@ var lojax = lojax || {};
             }
             if ( instance.modal ) {
                 instance.bindToModels( instance.modal );
-                priv.callIn( instance.modal );
+                priv.callOnLoad( instance.modal );
                 instance.loadDataSrcDivs( instance.modal );
                 instance.prefetchAsync( instance.modal );
             }
@@ -484,7 +501,7 @@ var lojax = lojax || {};
                 var $this = $( this );
                 var url = priv.attr( $this, 'src' );
                 instance.executeRequest( {
-                    action: priv.cacheProof( url ),
+                    action: priv.noCache( url ),
                     method: 'ajax-get',
                     target: $this,
                     source: $this,
@@ -538,7 +555,7 @@ var lojax = lojax || {};
     \***************/
     
     var rexp = {
-        segments: /'.+'|".+"|[\w\$]+|\[\d+\]/g,
+        segments: /[^\[\]\.\s]+|\[\d+\]/g,
         indexer: /\[\d+\]/,
         quoted: /'.+'|".+"/,
         search: /\?.+(?=#)|\?.+$/,
@@ -561,7 +578,7 @@ var lojax = lojax || {};
             var name, config, $this = $( elem );
     
             if ( $this.is( priv.attrSelector('request') ) ) {
-                config = JSON.parse( priv.attr( 'request' ).replace( /'/g, '"' ) );
+                config = JSON.parse( priv.attr( $this, 'request' ).replace( /'/g, '"' ) );
             }
             else {
                 // don't use the data() function to retrieve request configurations
@@ -738,9 +755,6 @@ var lojax = lojax || {};
             if ( rexp.indexer.test( segment ) ) {
                 return parseInt( /\d+/.exec( segment ) );
             }
-            else if ( rexp.quoted.test( segment ) ) {
-                return segment.slice( 1, -1 );
-            }
             return segment;
         },
         getObjectAtPath: function ( root, path, forceArray ) {
@@ -855,10 +869,6 @@ var lojax = lojax || {};
                 type,
                 $this = $( context );
     
-            if ( typeof model === 'string' ) {
-                model = JSON.parse( model );
-            }
-    
             lojax.log( 'setELementsFromModel: model:' ).log( model );
     
             // set the inputs to the model
@@ -896,21 +906,22 @@ var lojax = lojax || {};
                 return obj;
             }
             catch ( err ) {
-                lojax.log( 'Could not resolve object path: ' + path );
-                lojax.log( err );
+                if ( console && console.error ) {
+                    console.error( 'Could not resolve object path: ' + path );
+                    console.error( err );
+                }
             }
         },
         triggerEvent: function ( name, arg, src ) {
             try {
-                lojax.log( 'triggerEvent: name:' ).log( name );
-                lojax.log( 'triggerEvent: src:' ).log( src );
                 $.event.trigger( {
                     type: name,
-                    source: arg
+                    source: src || arg
                 }, arg );
-            } catch ( ex ) {
-                if ( console && console.log ) {
-                    console.log( ex );
+            }
+            catch ( ex ) {
+                if ( console && console.error ) {
+                    console.error( ex );
                 }
             }
         },
@@ -938,20 +949,19 @@ var lojax = lojax || {};
             out.push( d );
             return out.join( '' );
         },
-        callIn: function ( panel ) {
-            if ( panel && instance.in ) {
-                instance.in.call( panel );
+        callOnLoad: function ( panel ) {
+            if ( panel && instance.onLoad ) {
+                instance.onLoad.call( panel );
             }
             // ensure in is called only once
-            // and that calls to lojax.in outside of a container are ignored
-            instance.in = null;
+            // and that calls to lojax.onLoad outside of a container are ignored
+            instance.onLoad = null;
         },
         nonce: jQuery.now(),
-        cacheProof: function ( url ) {
-            var nocache = url;
-            nocache += ( url.indexOf( '?' ) === -1 ) ? '?' : '&';
-            nocache = nocache + '_=' + ( priv.nonce++ );
-            return nocache;
+        noCache: function ( url ) {
+            var a = ( url.indexOf( '?' ) != -1 ? '&_=' : '?_=' ) + priv.nonce++;
+            var s = url.match( /\?.+(?=#)|\?.+$|.+(?=#)|.+/ );
+            return url.replace( s, s + a );
         },
         castValue: function ( val, type ) {
             if ( !priv.hasValue( val ) || val === '' ) return null;
@@ -994,13 +1004,14 @@ var lojax = lojax || {};
         this.target = priv.resolveTarget( params );
         this.data = this.getData( params );
         this.source = params.source;
+        this.cache = params.cache;
         this.expire = params.expire;
         this.renew = params.renew;
         this.beforeRequest = params.beforeRequest || priv.noop;
         this.afterRequest = params.afterRequest || priv.noop;
         this.cancel = false;
-        this.resolve = [];
-        this.reject = [];
+        this.resolve = null;
+        this.reject = null;
         this.result = null;
         this.error = null;
     };
@@ -1067,12 +1078,12 @@ var lojax = lojax || {};
         },
         done: function ( response ) {
             this.result = response;
-            this.resolve.forEach( function ( fn ) { fn( response ); } );
+            if ( this.resolve ) this.resolve( response );
             this.afterRequest( this );
         },
         fail: function ( error ) {
             this.error = error;
-            this.reject.forEach( function ( fn ) { fn( error ); } );
+            if ( this.reject ) this.reject( error );
             this.afterRequest( this );
         },
         methods: {
@@ -1122,18 +1133,25 @@ var lojax = lojax || {};
         },
     
         exec: function () {
-            // reset 
-            this.result = null;
-            this.error = null;
-            this.cancel = false;
+            this.reset();
     
             if ( !priv.hasValue( this.methods[this.method] ) ) throw 'Unsupported method: ' + this.method;
     
             if ( priv.hasValue( this.action ) && this.action !== '' ) {
                 this.beforeRequest( this );
                 if ( !this.cancel ) {
-                    // execute the method function
-                    this.methods[this.method].bind( this )();
+                    if ( this.cache && ( this.result || this.error ) ) {
+                        lojax.log( 'request.exec: cached' );
+                        // don't execute the AJAX request, just call the handlers
+                        if ( this.result ) this.done( this.result );
+                        if ( this.error ) this.fail( this.error );
+                        this.afterRequest( this );
+                    }
+                    else {
+                        // execute the method function
+                        this.methods[this.method].bind( this )();
+                        lojax.log( 'request.exec: executed' );
+                    }
                 }
                 else {
                     // always trigger afterRequest even if there was no request
@@ -1147,15 +1165,15 @@ var lojax = lojax || {};
         // fake promise
         then: function ( resolve, reject ) {
             var self = this;
-            if ( typeof resolve === 'function' && this.resolve.indexOf( resolve ) === -1 ) {
-                this.resolve.push( resolve );
+            if ( typeof resolve === 'function' ) {
+                this.resolve = resolve;
                 if ( this.result !== null ) {
                     // the response came before calling this function
                     resolve( self.result );
                 }
             }
-            if ( typeof reject === 'function' && this.reject.indexOf( reject === -1 ) ) {
-                this.reject.push( reject );
+            if ( typeof reject === 'function' ) {
+                this.reject = reject;
                 if ( this.error !== null ) {
                     // the response came before calling this function
                     reject( self.error );
@@ -1165,14 +1183,18 @@ var lojax = lojax || {};
         },
     
         // fake promise
-        catch: function ( reject ) {
+        'catch': function ( reject ) {
             return this.then( undefined, reject );
         },
     
-        clear: function () {
-            // remove all handlers
-            this.resolve.splice( 0, this.resolve.length );
-            this.reject.splice( 0, this.reject.length );
+        reset: function () {
+            if ( !this.cache ) {
+                this.result = null;
+                this.error = null;
+            }
+            this.cancel = false;
+            this.resolve = null;
+            this.reject = null;
         }
     };
     
@@ -1182,64 +1204,78 @@ var lojax = lojax || {};
     \***********/
     
     lojax.Transitions = {
-        'replace': function ( oldPanel, newPanel ) {
-            $( oldPanel ).replaceWith( newPanel );
-            return newPanel;
+        'replace': function ( oldNode, newNode ) {
+            var $old = $( oldNode ),
+                $new = $( newNode );
+            $old.replaceWith( $new );
+            return $new;
         },
-        'fade-in': function ( oldPanel, newPanel ) {
-            oldPanel.fadeOut( 0 ).empty().append( $( newPanel ).contents() ).fadeIn();
-            return oldPanel;
+        'fade-in': function ( oldNode, newNode ) {
+            var $old = $( oldNode ),
+                $new = $( newNode );
+            $old.fadeOut( 0 ).empty().append( $new.contents() ).fadeIn();
+            return $old;
         },
-        'flip-horizontal': function ( oldPanel, newPanel ) {
-            var parent = $( oldPanel ).parent().addClass( 'flip-horizontal' ).css( 'position', 'relative' );
-            $( oldPanel ).addClass( 'front' );
-            $( newPanel ).addClass( 'back' ).width( oldPanel.width() ).appendTo( parent );
+        'flip-horizontal': function ( oldNode, newNode ) {
+            var $old = $( oldNode ),
+                $new = $( newNode );
+            var parent = $old.parent().addClass( 'flip-horizontal' ).css( 'position', 'relative' );
+            $old.addClass( 'front' );
+            $new.addClass( 'back' ).width( $old.width() ).appendTo( parent );
             setTimeout( function () {
                 parent.addClass( 'flip' );
             }, 100 );
             setTimeout( function () {
-                $( oldPanel ).remove();
+                $old.remove();
                 parent.removeClass( 'flip' ).removeClass( 'flip-horizontal' );
-                $( newPanel ).removeClass( 'back' ).css( 'width', '' );
+                $new.removeClass( 'back' ).css( 'width', '' );
             }, 1000 );
-            return newPanel;
+            return $new;
         },
-        'flip-vertical': function ( oldPanel, newPanel ) {
-            var parent = $( oldPanel ).parent().addClass( 'flip-vertical' ).css( 'position', 'relative' );
-            oldPanel.addClass( 'front' );
-            $( newPanel ).addClass( 'back' ).css( 'width', oldPanel.width() ).appendTo( parent );
+        'flip-vertical': function ( oldNode, newNode ) {
+            var $old = $( oldNode ),
+                $new = $( newNode );
+            var parent = $old.parent().addClass( 'flip-vertical' ).css( 'position', 'relative' );
+            $old.addClass( 'front' );
+            $new.addClass( 'back' ).css( 'width', $old.width() ).appendTo( parent );
             setTimeout( function () {
                 parent.addClass( 'flip' );
             }, 100 );
             setTimeout( function () {
-                oldPanel.remove();
+                $old.remove();
                 parent.removeClass( 'flip' ).removeClass( 'flip-vertical' );
-                $( newPanel ).removeClass( 'back' ).css( 'width', '' );
+                $new.removeClass( 'back' ).css( 'width', '' );
             }, 1000 );
-            return newPanel;
+            return $new;
         },
-        'slide-left': function ( oldPanel, newPanel ) {
-            var parent = oldPanel.parent().addClass( 'slide-left' ).css( 'position', 'relative' );
-            $( oldPanel ).addClass( 'left' );
-            $( newPanel ).addClass( 'right' ).appendTo( parent );
+        'slide-left': function ( oldNode, newNode ) {
+            var $old = $( oldNode ),
+                $new = $( newNode );
+            var parent = $old.parent().addClass( 'slide-left' ).css( 'position', 'relative' );
+            $old.addClass( 'left' );
+            $new.addClass( 'right' ).appendTo( parent );
             setTimeout( function () {
                 parent.addClass( 'slide' );
             }, 100 );
             setTimeout( function () {
-                oldPanel.remove();
+                $old.remove();
                 parent.removeClass( 'slide' ).removeClass( 'slide-left' );
-                $( newPanel ).removeClass( 'right' );
+                $new.removeClass( 'right' );
             }, 800 );
-            return newPanel;
+            return $new;
         },
-        'append': function ( oldPanel, newPanel ) {
+        'append': function ( oldNode, newNode ) {
             // useful for paging
-            $( oldPanel ).append( newPanel );
-            return newPanel;
+            var $old = $( oldNode ),
+                $new = $( newNode );
+            $old.append( $new );
+            return $new;
         },
-        'prepend': function ( oldPanel, newPanel ) {
-            $( oldPanel ).prepend( newPanel );
-            return newPanel;
+        'prepend': function ( oldNode, newNode ) {
+            var $old = $( oldNode ),
+                $new = $( newNode );
+            $old.prepend( $new );
+            return $new;
         }
     };
     

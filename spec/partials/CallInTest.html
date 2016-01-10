@@ -1,7 +1,7 @@
 ﻿<div jx-panel="hidden-div">
     <input type="hidden" value="call-in-test" />
     <script>
-        lojax.in( function () {
+        lojax.onLoad( function () {
             val = $( this ).find( "input" ).val();
             window.callInTest( val );
         } );
@@ -10,7 +10,7 @@
 <div jx-panel="hidden-div2">
     <input type="hidden" value="call-in-test2" />
     <script>
-        lojax.in( function () {
+        lojax.onLoad( function () {
             val = $( this ).find( "input" ).val();
             window.callInTest2( val );
         } );

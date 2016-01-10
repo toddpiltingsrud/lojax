@@ -4,7 +4,7 @@ private functions
 \***************/
 
 var rexp = {
-    segments: /'.+'|".+"|[\w\$]+|\[\d+\]/g,
+    segments: /[^\[\]\.\s]+|\[\d+\]/g,
     indexer: /\[\d+\]/,
     quoted: /'.+'|".+"/,
     search: /\?.+(?=#)|\?.+$/,
@@ -27,7 +27,7 @@ var priv = {
         var name, config, $this = $( elem );
 
         if ( $this.is( priv.attrSelector('request') ) ) {
-            config = JSON.parse( priv.attr( 'request' ).replace( /'/g, '"' ) );
+            config = JSON.parse( priv.attr( $this, 'request' ).replace( /'/g, '"' ) );
         }
         else {
             // don't use the data() function to retrieve request configurations
@@ -204,9 +204,6 @@ var priv = {
         if ( rexp.indexer.test( segment ) ) {
             return parseInt( /\d+/.exec( segment ) );
         }
-        else if ( rexp.quoted.test( segment ) ) {
-            return segment.slice( 1, -1 );
-        }
         return segment;
     },
     getObjectAtPath: function ( root, path, forceArray ) {
@@ -321,10 +318,6 @@ var priv = {
             type,
             $this = $( context );
 
-        if ( typeof model === 'string' ) {
-            model = JSON.parse( model );
-        }
-
         lojax.log( 'setELementsFromModel: model:' ).log( model );
 
         // set the inputs to the model
@@ -362,21 +355,22 @@ var priv = {
             return obj;
         }
         catch ( err ) {
-            lojax.log( 'Could not resolve object path: ' + path );
-            lojax.log( err );
+            if ( console && console.error ) {
+                console.error( 'Could not resolve object path: ' + path );
+                console.error( err );
+            }
         }
     },
     triggerEvent: function ( name, arg, src ) {
         try {
-            lojax.log( 'triggerEvent: name:' ).log( name );
-            lojax.log( 'triggerEvent: src:' ).log( src );
             $.event.trigger( {
                 type: name,
-                source: arg
+                source: src || arg
             }, arg );
-        } catch ( ex ) {
-            if ( console && console.log ) {
-                console.log( ex );
+        }
+        catch ( ex ) {
+            if ( console && console.error ) {
+                console.error( ex );
             }
         }
     },
@@ -404,20 +398,19 @@ var priv = {
         out.push( d );
         return out.join( '' );
     },
-    callIn: function ( panel ) {
-        if ( panel && instance.in ) {
-            instance.in.call( panel );
+    callOnLoad: function ( panel ) {
+        if ( panel && instance.onLoad ) {
+            instance.onLoad.call( panel );
         }
         // ensure in is called only once
-        // and that calls to lojax.in outside of a container are ignored
-        instance.in = null;
+        // and that calls to lojax.onLoad outside of a container are ignored
+        instance.onLoad = null;
     },
     nonce: jQuery.now(),
-    cacheProof: function ( url ) {
-        var nocache = url;
-        nocache += ( url.indexOf( '?' ) === -1 ) ? '?' : '&';
-        nocache = nocache + '_=' + ( priv.nonce++ );
-        return nocache;
+    noCache: function ( url ) {
+        var a = ( url.indexOf( '?' ) != -1 ? '&_=' : '?_=' ) + priv.nonce++;
+        var s = url.match( /\?.+(?=#)|\?.+$|.+(?=#)|.+/ );
+        return url.replace( s, s + a );
     },
     castValue: function ( val, type ) {
         if ( !priv.hasValue( val ) || val === '' ) return null;

@@ -4,64 +4,78 @@
 \***********/
 
 lojax.Transitions = {
-    'replace': function ( oldPanel, newPanel ) {
-        $( oldPanel ).replaceWith( newPanel );
-        return newPanel;
+    'replace': function ( oldNode, newNode ) {
+        var $old = $( oldNode ),
+            $new = $( newNode );
+        $old.replaceWith( $new );
+        return $new;
     },
-    'fade-in': function ( oldPanel, newPanel ) {
-        oldPanel.fadeOut( 0 ).empty().append( $( newPanel ).contents() ).fadeIn();
-        return oldPanel;
+    'fade-in': function ( oldNode, newNode ) {
+        var $old = $( oldNode ),
+            $new = $( newNode );
+        $old.fadeOut( 0 ).empty().append( $new.contents() ).fadeIn();
+        return $old;
     },
-    'flip-horizontal': function ( oldPanel, newPanel ) {
-        var parent = $( oldPanel ).parent().addClass( 'flip-horizontal' ).css( 'position', 'relative' );
-        $( oldPanel ).addClass( 'front' );
-        $( newPanel ).addClass( 'back' ).width( oldPanel.width() ).appendTo( parent );
+    'flip-horizontal': function ( oldNode, newNode ) {
+        var $old = $( oldNode ),
+            $new = $( newNode );
+        var parent = $old.parent().addClass( 'flip-horizontal' ).css( 'position', 'relative' );
+        $old.addClass( 'front' );
+        $new.addClass( 'back' ).width( $old.width() ).appendTo( parent );
         setTimeout( function () {
             parent.addClass( 'flip' );
         }, 100 );
         setTimeout( function () {
-            $( oldPanel ).remove();
+            $old.remove();
             parent.removeClass( 'flip' ).removeClass( 'flip-horizontal' );
-            $( newPanel ).removeClass( 'back' ).css( 'width', '' );
+            $new.removeClass( 'back' ).css( 'width', '' );
         }, 1000 );
-        return newPanel;
+        return $new;
     },
-    'flip-vertical': function ( oldPanel, newPanel ) {
-        var parent = $( oldPanel ).parent().addClass( 'flip-vertical' ).css( 'position', 'relative' );
-        oldPanel.addClass( 'front' );
-        $( newPanel ).addClass( 'back' ).css( 'width', oldPanel.width() ).appendTo( parent );
+    'flip-vertical': function ( oldNode, newNode ) {
+        var $old = $( oldNode ),
+            $new = $( newNode );
+        var parent = $old.parent().addClass( 'flip-vertical' ).css( 'position', 'relative' );
+        $old.addClass( 'front' );
+        $new.addClass( 'back' ).css( 'width', $old.width() ).appendTo( parent );
         setTimeout( function () {
             parent.addClass( 'flip' );
         }, 100 );
         setTimeout( function () {
-            oldPanel.remove();
+            $old.remove();
             parent.removeClass( 'flip' ).removeClass( 'flip-vertical' );
-            $( newPanel ).removeClass( 'back' ).css( 'width', '' );
+            $new.removeClass( 'back' ).css( 'width', '' );
         }, 1000 );
-        return newPanel;
+        return $new;
     },
-    'slide-left': function ( oldPanel, newPanel ) {
-        var parent = oldPanel.parent().addClass( 'slide-left' ).css( 'position', 'relative' );
-        $( oldPanel ).addClass( 'left' );
-        $( newPanel ).addClass( 'right' ).appendTo( parent );
+    'slide-left': function ( oldNode, newNode ) {
+        var $old = $( oldNode ),
+            $new = $( newNode );
+        var parent = $old.parent().addClass( 'slide-left' ).css( 'position', 'relative' );
+        $old.addClass( 'left' );
+        $new.addClass( 'right' ).appendTo( parent );
         setTimeout( function () {
             parent.addClass( 'slide' );
         }, 100 );
         setTimeout( function () {
-            oldPanel.remove();
+            $old.remove();
             parent.removeClass( 'slide' ).removeClass( 'slide-left' );
-            $( newPanel ).removeClass( 'right' );
+            $new.removeClass( 'right' );
         }, 800 );
-        return newPanel;
+        return $new;
     },
-    'append': function ( oldPanel, newPanel ) {
+    'append': function ( oldNode, newNode ) {
         // useful for paging
-        $( oldPanel ).append( newPanel );
-        return newPanel;
+        var $old = $( oldNode ),
+            $new = $( newNode );
+        $old.append( $new );
+        return $new;
     },
-    'prepend': function ( oldPanel, newPanel ) {
-        $( oldPanel ).prepend( newPanel );
-        return newPanel;
+    'prepend': function ( oldNode, newNode ) {
+        var $old = $( oldNode ),
+            $new = $( newNode );
+        $old.prepend( $new );
+        return $new;
     }
 };
 

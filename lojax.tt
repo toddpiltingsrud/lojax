@@ -6,15 +6,28 @@
 <#@ import namespace="System.Collections.Generic" #>
 <#@ import namespace="System.Text.RegularExpressions" #>
 <#@ output extension=".js" #>
+<#
+var path = "";
+var stripLogging = false;
+var coverage = false;
+#>
+
 // namespace
 var lojax = lojax || {};
+<#
+if (coverage)
+{
+#>
+lojax.covered = [];
+lojax.cover = function(index) {
+	lojax.covered[index] = true;
+};
+<#
+}
+#>
 
 (function($, lojax) { 
 <#
-var path = "";
-
-var stripLogging = false;
-
 if (Directory.Exists(@"C:\Users\kitntodd"))
 {
     path = @"C:\Users\kitntodd\OneDrive\Documents\Code\Projects\lojax\src";
@@ -38,7 +51,12 @@ foreach (var file in files)
         if (stripLogging && IsLogExpression(line)) continue;
 #>
     <#= line #>
-<#  }
+<#  
+		if (coverage) {
+#>
+<#= OutputCoverage(line) #><#  
+		}
+	}
 }
 #>
 
@@ -61,5 +79,25 @@ private bool IsLogExpression(string line)
 {
     if (line.Trim().StartsWith("lojax.log")) return true;
     return false;
+}
+
+int coverageIndex = 0;
+System.Text.RegularExpressions.Regex function = new System.Text.RegularExpressions.Regex(@"function.+\{$");
+System.Text.RegularExpressions.Regex lineEnd = new System.Text.RegularExpressions.Regex(@"\{$|;$");
+bool inQualifyingStatement = false;
+
+private string OutputCoverage(string line)
+{
+	if (function.IsMatch(line) || line.Trim().StartsWith("if ") || line.Trim().StartsWith("else "))
+	{
+		inQualifyingStatement = true;
+	}
+	if (inQualifyingStatement && lineEnd.IsMatch(line))
+	{
+		inQualifyingStatement = false;
+		return "lojax.cover("+ (coverageIndex++).ToString() + ");\r\n";
+	}
+
+	return "";
 }
 #>

@@ -167,7 +167,7 @@ $.mockjax( {
         out.push( '<div jx-panel="hidden-div">' );
         out.push( '    <input type="hidden" value="call-in-test" />' );
         out.push( '    <script>' );
-        out.push( '        lojax.in(function () {' );
+        out.push( '        lojax.onLoad(function () {' );
         out.push( '            val = $(this).find("input").val();' );
         out.push( '            window.callInTest(val);' );
         out.push( '        });' );
@@ -177,7 +177,7 @@ $.mockjax( {
         out.push( '    <div data-src="/LoadAsyncContent"></div>' );
         out.push( '    <input type="hidden" value="call-in-test2" />' );
         out.push( '    <script>' );
-        out.push( '        lojax.in(function () {' );
+        out.push( '        lojax.onLoad(function () {' );
         out.push( '            val = $(this).find("input").val();' );
         out.push( '            window.callInTest2(val);' );
         out.push( '        });' );
@@ -196,7 +196,7 @@ $.mockjax( {
         out.push( '<div>' );
         out.push( '    <input type="hidden" value="load async content" />' );
         out.push( '    <script>' );
-        out.push( '        lojax.in(function () {' );
+        out.push( '        lojax.onLoad(function () {' );
         out.push( '            val = $(this).find("input").val();' );
         out.push( '            window.loadAsyncContentTest(val);' );
         out.push( '        });' );
@@ -253,7 +253,7 @@ $.mockjax( {
         out.push( '    </div>' );
         out.push( '    <input type="hidden" value="call-in-test4" name="callintest" />' );
         out.push( '    <script>' );
-        out.push( '        lojax.in(function () {' );
+        out.push( '        lojax.onLoad(function () {' );
         out.push( '            val = $(this).find("input[name=callintest]").val();' );
         out.push( '            window.callInTest4(val, this);' );
         out.push( '        });' );
