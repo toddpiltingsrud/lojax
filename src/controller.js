@@ -13,13 +13,13 @@ lojax.Controller = function () {
 
     $( function () {
         self.div = $( "<div style='display:none'></div>" ).appendTo( 'body' );
-        $( document ).on( 'click', '[data-request],[jx-request],[data-method]:not([data-trigger]),[jx-method]:not([jx-trigger])', self.handleRequest );
-        $( document ).on( 'change', '[data-method][data-trigger*=change],[jx-method][jx-trigger*=change]', self.handleRequest );
+        $( document ).on( 'click', lojax.select.methodOrRequest, self.handleRequest );
+        $( document ).on( 'change', lojax.select.methodWithChange, self.handleRequest );
         // allows executing a request on a single input element without wrapping it in a form (e.g. data-trigger="change enter")
         // also submits an element with a model attribute if enter key is pressed
-        $( document ).on( 'keydown', '[data-method][data-trigger*=enter],[jx-method][jx-trigger*=enter],' + priv.attrSelector( 'model' ), self.handleEnterKey );
-        $( document ).on( 'submit', 'form[data-method],form[jx-method]', self.handleRequest );
-        $( document ).on( 'change', priv.attrSelector( 'model' ), self.updateModel );
+        $( document ).on( 'keydown', lojax.select.methodWithEnterOrModel, self.handleEnterKey );
+        $( document ).on( 'submit', lojax.select.formWithMethod, self.handleRequest );
+        $( document ).on( 'change', lojax.select.model, self.updateModel );
 
         if ( lojax.config.hash ) {
             window.addEventListener( "hashchange", self.handleHash, false );
@@ -102,13 +102,16 @@ lojax.Controller.prototype = {
             // We want to support url-only access, and we don't want to clutter 
             // the url with request settings like transition and target. That 
             // means that there must be enough information already in the page 
-            // or response (jx-panel) to be able to properly handle the response.
+            // or response (data-panel) to be able to properly handle the response.
             handler = $( 'a[name="' + hash.substr( 1 ) + '"]' );
             if ( handler.size() === 0 ) {
                 instance.executeRequest( {
                     action: hash,
                     method: 'ajax-get',
-                    transition: instance.currentTransition
+                    transition: instance.currentTransition,
+                    // beforeRequest and afterRequest events are triggered in response to user action
+                    beforeRequest: instance.beforeRequest,
+                    afterRequest: instance.afterRequest
                 } );
             }
             instance.currentTransition = null;
@@ -119,7 +122,10 @@ lojax.Controller.prototype = {
             // so load the current page via ajax
             instance.executeRequest( {
                 action: window.location.href,
-                method: 'ajax-get'
+                method: 'ajax-get',
+                // beforeRequest and afterRequest events are triggered in response to user action
+                beforeRequest: instance.beforeRequest,
+                afterRequest: instance.afterRequest
             } );
         }
     },
@@ -178,7 +184,7 @@ lojax.Controller.prototype = {
     updateModel: function ( evt ) {
         // model's change handler 
         // provides simple one-way binding from HTML elements to a model
-        // 'this' is the element with data-model|jx-model attribute
+        // 'this' is the element with data-model|data-model attribute
         var $this = $( this );
         // $target is the element that triggered change event
         var $target = $( evt.target );
@@ -225,10 +231,10 @@ lojax.Controller.prototype = {
             var node = $( this );
             // match up with panels on the page
             id = priv.attr( node, 'panel' );
-            target = request.target || $( '[jx-panel="' + id + '"],[data-panel="' + id + '"]' ).first();
+            target = request.target || $( lojax.select.panel( id ) ).first();
 
             if ( target.length ) {
-                lojax.log( 'injectContent: jx-panel: ' + id );
+                lojax.log( 'injectContent: data-panel: ' + id );
                 transition = priv.resolveTransition( request, node );
                 result = transition( target, node );
                 if ( priv.hasValue( request ) ) {
@@ -350,7 +356,7 @@ lojax.Controller.prototype = {
     // an AJAX alternative to iframes
     loadDataSrcDivs: function ( root ) {
         root = root || document;
-        $( root ).find( 'div[data-src],div[jx-src]' ).each( function () {
+        $( root ).find( lojax.select.divWithSrc ).each( function () {
             var $this = $( this );
             var url = priv.attr( $this, 'src' );
             instance.executeRequest( {
@@ -369,7 +375,7 @@ lojax.Controller.prototype = {
         // do this after everything else
         setTimeout( function () {
             // find elements that are supposed to be pre-loaded
-            $( root ).find( '[data-cache=prefetch],[jx-cache=prefetch]' ).each( function () {
+            $( root ).find( lojax.select.prefetch ).each( function () {
                 config = priv.getConfig( this );
                 request = new lojax.Request( config );
                 // if it's got a valid action that hasn't already been cached, cache and execute

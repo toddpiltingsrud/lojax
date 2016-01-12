@@ -1,8 +1,5 @@
 Better error handling. Currently if a request fails, afterRequest doesn't fire, leaving everybody hanging.
 
-Enter key should submit div[data-model]. That also means the action needs to be defined on the div.
-What if the enter key is pressed in a form or div[data-model] and the action is defined on the submit button or anchor tag?
-
 Figure out how to hook into client-side validation. Can we copy validation attributes when we create dynamic forms?
 "To parse new HTML, you can call the jQuery.validator.unobtrusive.parse() method, passing it a selector for the HTML that you would like to be parsed. 
 You can also call the jQuery.validator.unobtrusive.parseElement() function to parse a single HTML element." 
@@ -18,8 +15,9 @@ Allow arbitrary elements to be bound to a model (e.g. div.text()). Give any elem
 This means we'll have to query forms with ':input' instead of [name].
 
 For caching, set a default expiration. Add the ability to expire a cached item after it's requested the first time.
+Use a data-model attribute to specify a JSON resource to bind a form to.
+<a href="modal.html" jx-cache="prefetch" data-model="/partials/model.json">show data</a>
 
-Allow the attribute prefix (jx) to be changed.
 
 Consider replacing jquery's event triggering mechanism with my own. Need custom events that bubble. 
 Currently, all events must be triggered and handled on window.document. This doesn't follow the event pattern.

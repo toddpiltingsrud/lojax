@@ -6,9 +6,9 @@ private functions
 var rexp = {
     segments: /[^\[\]\.\s]+|\[\d+\]/g,
     indexer: /\[\d+\]/,
-    quoted: /'.+'|".+"/,
     search: /\?.+(?=#)|\?.+$/,
-    hash: /#((.*)?[a-z]{2}(.*)?)/i
+    hash: /#((.*)?[a-z]{2}(.*)?)/i,
+    json: /^\{.*\}$|^\[.*\]$/
 };
 
 var priv = {
@@ -21,6 +21,9 @@ var priv = {
     },
     attrSelector: function ( name ) {
         return '[data-' + name + '],[' + lojax.config.prefix + name + ']';
+    },
+    isJson: function ( str ) {
+        return rexp.json.test( str );
     },
     attributes: 'method action transition target form model cache expire renew'.split( ' ' ),
     getConfig: function ( elem ) {
@@ -117,8 +120,8 @@ var priv = {
     },
     getModel: function ( elem ) {
         var model = $( elem ).data( 'model' );
-        if ( model === undefined && $( elem ).is( '[jx-model]' ) ) {
-            model = JSON.parse( $( elem ).attr( 'jx-model' ) );
+        if ( model === undefined && $( elem ).is( lojax.select.jxModelAttribute ) ) {
+            model = JSON.parse( $( elem ).attr( lojax.select.jxModel ) );
             // store model in jQuery's data object
             // reference it there from now on
             $( elem ).data( 'model', model );

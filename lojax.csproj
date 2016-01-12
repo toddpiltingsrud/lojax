@@ -169,6 +169,9 @@
     <None Include="fonts\glyphicons-halflings-regular.ttf" />
     <None Include="fonts\glyphicons-halflings-regular.woff" />
     <None Include="fonts\glyphicons-halflings-regular.woff2" />
+    <None Include="lojax.min.js.map">
+      <DependentUpon>lojax.min.js</DependentUpon>
+    </None>
     <None Include="README.md" />
     <None Include="spec\fonts\glyphicons-halflings-regular.eot" />
     <None Include="spec\fonts\glyphicons-halflings-regular.ttf" />
@@ -198,10 +201,11 @@
     <Content Include="demo\tables.html" />
     <Content Include="fonts\glyphicons-halflings-regular.svg" />
     <Content Include="lojax.js">
-      <DependentUpon>lojax.tt</DependentUpon>
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
+      <DependentUpon>lojax.tt</DependentUpon>
     </Content>
+    <Content Include="lojax.min.js" />
     <Content Include="lojax.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>lojax.js</LastGenOutput>
@@ -218,15 +222,12 @@
     <Content Include="spec\partials\CallInTest.html" />
     <Content Include="spec\partials\InjectTest.html" />
     <Content Include="spec\partials\ModelTest2.html" />
-    <Content Include="spec\scripts\blanket.js" />
     <Content Include="spec\tests.js" />
     <Content Include="spec\styles\bootstrap.min.css" />
     <Content Include="spec\styles\qunit-1.20.0.css" />
     <Content Include="spec\styles\Styles.css" />
-    <Content Include="spec\scripts\jquery.mockjax.min.js" />
     <Content Include="spec\partials\ModelTest.html" />
     <Content Include="spec\SpecRunner.html" />
-    <Content Include="spec\scripts\mockjax.config.js" />
     <Content Include="spec\scripts\qunit-1.20.0.js" />
     <Content Include="spec\scripts\respond.js" />
     <Content Include="src\controller.js" />

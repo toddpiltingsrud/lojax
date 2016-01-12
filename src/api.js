@@ -72,7 +72,38 @@ lojax.log = function ( arg ) {
     }
     catch ( ex ) { }
     return {
-        log: priv.noop
+        log: function () { }
     };
 };
 
+lojax.config = {
+    prefix: 'jx-',
+    transition: 'fade-in',
+    hash: true
+};
+
+lojax.select = {
+    methodOrRequest: '[data-request],[jx-request],[data-method]:not([data-trigger]),[jx-method]:not([jx-trigger])',
+    methodWithChange: '[data-method][data-trigger*=change],[jx-method][jx-trigger*=change]',
+    methodWithEnterOrModel: '[data-method][data-trigger*=enter],[jx-method][jx-trigger*=enter],[data-model],[jx-model]',
+    formWithMethod: 'form[data-method],form[jx-method]',
+    model: '[data-model],[jx-model]',
+    panel: function ( id ) {
+        return '[' + lojax.config.prefix + 'panel="' + id + '"],[data-panel="' + id + '"]';
+    },
+    divWithSrc: 'div[data-src],div[jx-src]',
+    prefetch: '[data-cache=prefetch],[jx-cache=prefetch]',
+    jxModelAttribute: '[jx-model]',
+    jxModel: 'jx-model'
+};
+
+( function () {
+    if ( lojax.config.prefix !== 'jx-' ) {
+        Object.getOwnPropertyNames( lojax.select ).forEach( function ( prop ) {
+            if ( prop !== 'panel' ) {
+                lojax.select[prop] = lojax.select[prop].replace( /jx-/g, lojax.config.prefix );
+            }
+        } );
+        lojax.log( lojax.select );
+    }
+} )();

@@ -60,12 +60,6 @@ foreach (var file in files)
 }
 #>
 
-    lojax.config = {
-        prefix: 'jx-',
-		transition: 'fade-in',
-		hash: true
-    };
-
 	// global
 	lojax.instance = new lojax.Controller();
 

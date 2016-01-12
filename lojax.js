@@ -77,10 +77,41 @@ var lojax = lojax || {};
         }
         catch ( ex ) { }
         return {
-            log: priv.noop
+            log: function () { }
         };
     };
     
+    lojax.config = {
+        prefix: 'jx-',
+        transition: 'fade-in',
+        hash: true
+    };
+    
+    lojax.select = {
+        methodOrRequest: '[data-request],[jx-request],[data-method]:not([data-trigger]),[jx-method]:not([jx-trigger])',
+        methodWithChange: '[data-method][data-trigger*=change],[jx-method][jx-trigger*=change]',
+        methodWithEnterOrModel: '[data-method][data-trigger*=enter],[jx-method][jx-trigger*=enter],[data-model],[jx-model]',
+        formWithMethod: 'form[data-method],form[jx-method]',
+        model: '[data-model],[jx-model]',
+        panel: function ( id ) {
+            return '[' + lojax.config.prefix + 'panel="' + id + '"],[data-panel="' + id + '"]';
+        },
+        divWithSrc: 'div[data-src],div[jx-src]',
+        prefetch: '[data-cache=prefetch],[jx-cache=prefetch]',
+        jxModelAttribute: '[jx-model]',
+        jxModel: 'jx-model'
+    };
+    
+    ( function () {
+        if ( lojax.config.prefix !== 'jx-' ) {
+            Object.getOwnPropertyNames( lojax.select ).forEach( function ( prop ) {
+                if ( prop !== 'panel' ) {
+                    lojax.select[prop] = lojax.select[prop].replace( /jx-/g, lojax.config.prefix );
+                }
+            } );
+            lojax.log( lojax.select );
+        }
+    } )();
     
     /***********\
        Cache
@@ -160,13 +191,13 @@ var lojax = lojax || {};
     
         $( function () {
             self.div = $( "<div style='display:none'></div>" ).appendTo( 'body' );
-            $( document ).on( 'click', '[data-request],[jx-request],[data-method]:not([data-trigger]),[jx-method]:not([jx-trigger])', self.handleRequest );
-            $( document ).on( 'change', '[data-method][data-trigger*=change],[jx-method][jx-trigger*=change]', self.handleRequest );
+            $( document ).on( 'click', lojax.select.methodOrRequest, self.handleRequest );
+            $( document ).on( 'change', lojax.select.methodWithChange, self.handleRequest );
             // allows executing a request on a single input element without wrapping it in a form (e.g. data-trigger="change enter")
             // also submits an element with a model attribute if enter key is pressed
-            $( document ).on( 'keydown', '[data-method][data-trigger*=enter],[jx-method][jx-trigger*=enter],' + priv.attrSelector( 'model' ), self.handleEnterKey );
-            $( document ).on( 'submit', 'form[data-method],form[jx-method]', self.handleRequest );
-            $( document ).on( 'change', priv.attrSelector( 'model' ), self.updateModel );
+            $( document ).on( 'keydown', lojax.select.methodWithEnterOrModel, self.handleEnterKey );
+            $( document ).on( 'submit', lojax.select.formWithMethod, self.handleRequest );
+            $( document ).on( 'change', lojax.select.model, self.updateModel );
     
             if ( lojax.config.hash ) {
                 window.addEventListener( "hashchange", self.handleHash, false );
@@ -249,13 +280,16 @@ var lojax = lojax || {};
                 // We want to support url-only access, and we don't want to clutter 
                 // the url with request settings like transition and target. That 
                 // means that there must be enough information already in the page 
-                // or response (jx-panel) to be able to properly handle the response.
+                // or response (data-panel) to be able to properly handle the response.
                 handler = $( 'a[name="' + hash.substr( 1 ) + '"]' );
                 if ( handler.size() === 0 ) {
                     instance.executeRequest( {
                         action: hash,
                         method: 'ajax-get',
-                        transition: instance.currentTransition
+                        transition: instance.currentTransition,
+                        // beforeRequest and afterRequest events are triggered in response to user action
+                        beforeRequest: instance.beforeRequest,
+                        afterRequest: instance.afterRequest
                     } );
                 }
                 instance.currentTransition = null;
@@ -266,7 +300,10 @@ var lojax = lojax || {};
                 // so load the current page via ajax
                 instance.executeRequest( {
                     action: window.location.href,
-                    method: 'ajax-get'
+                    method: 'ajax-get',
+                    // beforeRequest and afterRequest events are triggered in response to user action
+                    beforeRequest: instance.beforeRequest,
+                    afterRequest: instance.afterRequest
                 } );
             }
         },
@@ -325,7 +362,7 @@ var lojax = lojax || {};
         updateModel: function ( evt ) {
             // model's change handler 
             // provides simple one-way binding from HTML elements to a model
-            // 'this' is the element with data-model|jx-model attribute
+            // 'this' is the element with data-model|data-model attribute
             var $this = $( this );
             // $target is the element that triggered change event
             var $target = $( evt.target );
@@ -372,10 +409,10 @@ var lojax = lojax || {};
                 var node = $( this );
                 // match up with panels on the page
                 id = priv.attr( node, 'panel' );
-                target = request.target || $( '[jx-panel="' + id + '"],[data-panel="' + id + '"]' ).first();
+                target = request.target || $( lojax.select.panel( id ) ).first();
     
                 if ( target.length ) {
-                    lojax.log( 'injectContent: jx-panel: ' + id );
+                    lojax.log( 'injectContent: data-panel: ' + id );
                     transition = priv.resolveTransition( request, node );
                     result = transition( target, node );
                     if ( priv.hasValue( request ) ) {
@@ -497,7 +534,7 @@ var lojax = lojax || {};
         // an AJAX alternative to iframes
         loadDataSrcDivs: function ( root ) {
             root = root || document;
-            $( root ).find( 'div[data-src],div[jx-src]' ).each( function () {
+            $( root ).find( lojax.select.divWithSrc ).each( function () {
                 var $this = $( this );
                 var url = priv.attr( $this, 'src' );
                 instance.executeRequest( {
@@ -516,7 +553,7 @@ var lojax = lojax || {};
             // do this after everything else
             setTimeout( function () {
                 // find elements that are supposed to be pre-loaded
-                $( root ).find( '[data-cache=prefetch],[jx-cache=prefetch]' ).each( function () {
+                $( root ).find( lojax.select.prefetch ).each( function () {
                     config = priv.getConfig( this );
                     request = new lojax.Request( config );
                     // if it's got a valid action that hasn't already been cached, cache and execute
@@ -557,9 +594,9 @@ var lojax = lojax || {};
     var rexp = {
         segments: /[^\[\]\.\s]+|\[\d+\]/g,
         indexer: /\[\d+\]/,
-        quoted: /'.+'|".+"/,
         search: /\?.+(?=#)|\?.+$/,
-        hash: /#((.*)?[a-z]{2}(.*)?)/i
+        hash: /#((.*)?[a-z]{2}(.*)?)/i,
+        json: /^\{.*\}$|^\[.*\]$/
     };
     
     var priv = {
@@ -572,6 +609,9 @@ var lojax = lojax || {};
         },
         attrSelector: function ( name ) {
             return '[data-' + name + '],[' + lojax.config.prefix + name + ']';
+        },
+        isJson: function ( str ) {
+            return rexp.json.test( str );
         },
         attributes: 'method action transition target form model cache expire renew'.split( ' ' ),
         getConfig: function ( elem ) {
@@ -668,8 +708,8 @@ var lojax = lojax || {};
         },
         getModel: function ( elem ) {
             var model = $( elem ).data( 'model' );
-            if ( model === undefined && $( elem ).is( '[jx-model]' ) ) {
-                model = JSON.parse( $( elem ).attr( 'jx-model' ) );
+            if ( model === undefined && $( elem ).is( lojax.select.jxModelAttribute ) ) {
+                model = JSON.parse( $( elem ).attr( lojax.select.jxModel ) );
                 // store model in jQuery's data object
                 // reference it there from now on
                 $( elem ).data( 'model', model );
@@ -1279,12 +1319,6 @@ var lojax = lojax || {};
         }
     };
     
-
-    lojax.config = {
-        prefix: 'jx-',
-		transition: 'fade-in',
-		hash: true
-    };
 
 	// global
 	lojax.instance = new lojax.Controller();

@@ -1,5 +1,7 @@
 var tests = tests || {};
 
+lojax.config.prefix = 'jx-';
+
 var div = null;
 
 var methods = 'get post ajax-get ajax-post ajax-put ajax-delete jsonp'.split( ' ' );
@@ -58,6 +60,45 @@ var escapeHTML = function ( obj ) {
     }
     return obj;
 };
+
+QUnit.test( 'handleHash1', function ( assert ) {
+
+    div.empty();
+
+    lojax.logging = true;
+
+    var done = assert.async();
+
+    $( document ).one( lojax.events.beforeRequest, function ( evt, arg ) {
+        arg.cancel = true;
+        assert.equal( arg.action, window.location.href, 'handleHash should load the current page if there is no hash' );
+        done();
+        lojax.logging = false;
+    } );
+
+    lojax.instance.handleHash();
+
+} );
+
+//QUnit.test( 'handleHash2', function ( assert ) {
+
+//    div.empty();
+
+//    lojax.logging = true;
+
+//    var done = assert.async();
+
+//    $( document ).one( lojax.events.beforeRequest, function ( evt, arg ) {
+//        arg.cancel = true;
+//        window.location.hash = '';
+//        assert.ok( true, 'hash change handled' );
+//        done();
+//        lojax.logging = false;
+//    } );
+
+//    $( '<a href="#partials/RaiseEvent.html" jx-method="ajax-get"></a>' ).appendTo( div ).click();
+
+//} );
 
 QUnit.test( 'lojax.get', function ( assert ) {
 
@@ -1013,29 +1054,6 @@ QUnit.test( 'posting forms 1', function ( assert ) {
 
 } );
 
-//QUnit.test( 'handleHash', function ( assert ) {
-//    div.empty();
-
-//    lojax.logging = true;
-
-//    var done = assert.async();
-
-//    $( document ).one( lojax.events.beforeRequest, function ( evt, arg ) {
-//        arg.cancel = true;
-//        assert.ok( true, 'hash change was handled' );
-//        done();
-//        lojax.logging = false;
-//    } );
-
-//    window.addEventListener( "hashchange", function ( evt ) {
-//        evt.preventDefault();
-//    }, false );
-
-
-//    $( '<a type="text" data-method="ajax-get" href="#partials/raiseevent.html"></a>' ).appendTo( div ).click();
-
-//} );
-
 QUnit.test( 'callOnLoad', function ( assert ) {
 
     lojax.logging = true;
@@ -1286,6 +1304,7 @@ QUnit.test( 'prefetch1', function ( assert ) {
         setTimeout( function () {
             var store = lojax.instance.cache.store;
             var prop = Object.getOwnPropertyNames( store )[0];
+            console.log( store );
             assert.ok( /prefetch2/.test( prop ), 'make sure we have the right request' );
             var request = lojax.instance.cache.store[prop];
             assert.ok( request != null, 'stuff should get cached' );
@@ -1322,18 +1341,30 @@ QUnit.test( 'coverage report', function ( assert ) {
         setTimeout( function () {
             var out = [],
                 indexes = Object.getOwnPropertyNames( lojax.covered ),
-                last = indexes[indexes.length - 2];
+                last = indexes[indexes.length - 2],
+                covered = last,
+                percentage;
 
-            var currentIndex = -1;
             out.push( '<ul>' );
+
             for ( var i = 0; i < last; i++ ) {
-                if ( lojax.covered[i] == undefined ) {
+                if ( !lojax.covered[i] ) {
                     out.push( '<li>' );
                     out.push( i );
                     out.push( '</li>' );
+                    covered--;
                 }
             }
+
+            percentage = covered / last;
+
             out.push( '</ul>' );
+
+            out.push( '<h3>Coverage: ' );
+
+            out.push( Math.round( percentage * 100 ) );
+
+            out.push( ' %</h3>' );
 
             $( '#coverage-report' ).html( out.join( '' ) );
         } );
