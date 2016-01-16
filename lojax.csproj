@@ -222,6 +222,8 @@
     <Content Include="spec\partials\CallInTest.html" />
     <Content Include="spec\partials\InjectTest.html" />
     <Content Include="spec\partials\ModelTest2.html" />
+    <Content Include="spec\scripts\bootstrap.min.js" />
+    <Content Include="spec\scripts\jquery-2.1.4.min.js" />
     <Content Include="spec\tests.js" />
     <Content Include="spec\styles\bootstrap.min.css" />
     <Content Include="spec\styles\qunit-1.20.0.css" />

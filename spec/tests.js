@@ -61,7 +61,56 @@ var escapeHTML = function ( obj ) {
     return obj;
 };
 
-QUnit.test( 'handleHash1', function ( assert ) {
+QUnit.test( 'isJSON', function ( assert ) {
+
+    assert.equal( lojax.priv.isJSON( '{"number":5}' ), true, 'should detect objects' );
+
+    assert.equal( lojax.priv.isJSON( '[1,2,3]' ), true, 'should detect arrays' );
+
+    assert.equal( lojax.priv.isJSON( 'partials/ModelTest.html' ), false, 'should detect urls' );
+
+    assert.equal( lojax.priv.isJSON( 'http://10.4.9.149:8080/lojax/spec/SpecRunner.html' ), false, 'should detect urls' );
+
+} );
+
+QUnit.test( 'emptyHashAction', function ( assert ) {
+
+    div.empty();
+
+    lojax.logging = true;
+
+    var done1 = assert.async();
+    $( document ).one( 'customEvent', function ( evt, arg ) {
+        assert.ok( true, 'handleHash should execute the configured action if there is no hash' );
+        done1();
+    } );
+    lojax.emptyHashAction = 'partials/RaiseEvent.html';
+    lojax.instance.handleHash();
+
+    var done2 = assert.async();
+    $( document ).one( 'customEvent', function ( evt, arg ) {
+        assert.ok( true, 'handleHash should execute the configured action if there is no hash' );
+        done2();
+    } );
+    lojax.emptyHashAction = function () {
+        return 'partials/RaiseEvent.html';
+    };
+    lojax.instance.handleHash();
+
+    var done3 = assert.async();
+    $( document ).one( 'customEvent', function ( evt, arg ) {
+        assert.ok( true, 'handleHash should execute the configured action if there is no hash' );
+        done3();
+    } );
+    lojax.emptyHashAction = {
+        action: 'partials/RaiseEvent.html',
+        method: 'ajax-get'
+    };
+    lojax.instance.handleHash();
+
+} );
+
+QUnit.test( 'handleHash2', function ( assert ) {
 
     div.empty();
 
@@ -69,36 +118,15 @@ QUnit.test( 'handleHash1', function ( assert ) {
 
     var done = assert.async();
 
-    $( document ).one( lojax.events.beforeRequest, function ( evt, arg ) {
-        arg.cancel = true;
-        assert.equal( arg.action, window.location.href, 'handleHash should load the current page if there is no hash' );
+    $( document ).one( 'customEvent', function ( evt, arg ) {
+        assert.ok( true, 'hash change handled' );
         done();
-        lojax.logging = false;
+        //lojax.logging = false;
     } );
 
-    lojax.instance.handleHash();
+    $( '<a href="#partials/RaiseEvent.html" jx-method="ajax-get"></a>' ).appendTo( div ).click();
 
 } );
-
-//QUnit.test( 'handleHash2', function ( assert ) {
-
-//    div.empty();
-
-//    lojax.logging = true;
-
-//    var done = assert.async();
-
-//    $( document ).one( lojax.events.beforeRequest, function ( evt, arg ) {
-//        arg.cancel = true;
-//        window.location.hash = '';
-//        assert.ok( true, 'hash change handled' );
-//        done();
-//        lojax.logging = false;
-//    } );
-
-//    $( '<a href="#partials/RaiseEvent.html" jx-method="ajax-get"></a>' ).appendTo( div ).click();
-
-//} );
 
 QUnit.test( 'lojax.get', function ( assert ) {
 
@@ -278,7 +306,7 @@ QUnit.test( 'priv.noCache', function ( assert ) {
 
 QUnit.test( 'methods1', function ( assert ) {
 
-    //lojax.logging = true;
+    lojax.logging = true;
 
     var link = $( '<a href="partials/EmptyResponse.html" jx-form="#div1 [name=number]"></a>' );
 
@@ -954,7 +982,7 @@ QUnit.test( 'posting models 2', function ( assert ) {
 
     var model = modelDiv.data( 'model' );
 
-    assert.strictEqual( model.daterange[0], '2015-11-01' );
+    assert.strictEqual( model.daterange[0], '2015-11-01' , 'lojax should monitor changes' );
     assert.strictEqual( model.daterange[1], '2015-11-15' );
     assert.strictEqual( model.bool, true );
 
@@ -962,7 +990,9 @@ QUnit.test( 'posting models 2', function ( assert ) {
 
     $( document ).on( lojax.events.beforeRequest, function ( evt, arg ) {
         assert.ok( arg.model != null );
-        assert.equal( arg.model.daterange[0], '2015-11-01' );
+        console.log( 'arg' );
+        console.log( arg );
+        assert.equal( arg.model.daterange[0], '2015-11-01', 'model should be passed to beforeRequest' );
         assert.equal( arg.model.daterange[1], '2015-11-15' );
         assert.equal( arg.model.bool, true );
         assert.equal( arg.model.arrays.names.length, 3 );
@@ -1243,14 +1273,15 @@ QUnit.test( 'cache auto-renew', function ( assert ) {
 
     var done = assert.async();
 
-    request.afterRequest = function () {
+    $( document ).on( lojax.events.afterRequest, function () {
         if ( requestCount-- === 0 ) {
             assert.ok( true, 'auto renew works' );
             cache.clear();
             assert.equal( cache.get( request.action ), undefined );
             done();
+            $( document ).off( lojax.events.afterRequest );
         }
-    };
+    } );
 
     cache.add( request );
 
@@ -1300,7 +1331,7 @@ QUnit.test( 'prefetch1', function ( assert ) {
 
     lojax.logging = true;
 
-    $( document ).on( lojax.events.afterRequest, function ( evt, arg ) {
+    $( document ).one( lojax.events.afterRequest, function ( evt, arg ) {
         setTimeout( function () {
             var store = lojax.instance.cache.store;
             var prop = Object.getOwnPropertyNames( store )[0];

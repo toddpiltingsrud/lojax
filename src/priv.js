@@ -16,13 +16,14 @@ var priv = {
     hasValue: function ( val ) {
         return val !== undefined && val !== null;
     },
-    attr: function(elem, name) {
+    attr: function ( elem, name ) {
+        // use attr instead of data function to account for changing attribute values
         return $( elem ).attr( 'data-' + name ) || $( elem ).attr( lojax.config.prefix + name );
     },
     attrSelector: function ( name ) {
         return '[data-' + name + '],[' + lojax.config.prefix + name + ']';
     },
-    isJson: function ( str ) {
+    isJSON: function ( str ) {
         return rexp.json.test( str );
     },
     attributes: 'method action transition target form model cache expire renew'.split( ' ' ),
@@ -50,32 +51,45 @@ var priv = {
         return config;
     },
     resolveAction: function ( params ) {
+        var action;
         // if there's an action in the params, return it
         if ( priv.hasValue( params.action ) && params.action.length ) {
-            return params.action;
+            action = params.action;
         }
         // check for a valid href
-        if ( priv.hasValue( params.source )
+        else if ( priv.hasValue( params.source )
             && priv.hasValue( params.source.href )
             && params.source.href.length
-            && params.source.href.substr( params.source.href.length - 1, 1 ) !== '#'
             && params.source.href.substr( 0, 11 ) !== 'javascript:' ) {
-            return params.source.href;
+            action = params.source.href;
         }
         // if this is a submit button check for a form
-        if ( $( params.source ).is( '[type=submit]' ) ) {
-            var closest = $( params.source ).closest( 'form,' + priv.attrSelector('model') );
+        else if ( $( params.source ).is( '[type=submit]' ) ) {
+            var closest = $( params.source ).closest( 'form,' + priv.attrSelector( 'model' ) );
             // is submit button inside a form?
             if ( closest.is( 'form' ) ) {
                 // post to form.action or current page
-                return closest.attr('action') || window.location.href;
+                action = closest.attr( 'action' ) || window.location.href;
             }
         }
         // if this is a form use form.action or current page
-        if ( $( params.source ).is( 'form' ) ) {
-            return $( params.source ).attr( 'action' ) || window.location.href;
+        else if ( $( params.source ).is( 'form' ) ) {
+            action = $( params.source ).attr( 'action' ) || window.location.href;
         }
-        return null;
+
+        if ( params.method === 'ajax-get' && priv.hasHash( action ) ) {
+            action = priv.resolveHash( action );
+            params.isNavHistory = true;
+        }
+
+        return action;
+    },
+    resolveHash: function ( url ) {
+        url = url || window.location.href;
+        if ( priv.hasHash( url ) ) {
+            return url.substr( url.indexOf( '#' ) + 1 );
+        }
+        return url;
     },
     resolveForm: function ( params ) {
         var closest;
@@ -88,7 +102,7 @@ var priv = {
         }
         // only a submit button can submit an enclosing form
         if ( $( params.source ).is( '[type=submit]' ) ) {
-            closest = $( params.source ).closest( 'form,' + priv.attrSelector('model') );
+            closest = $( params.source ).closest( 'form,' + lojax.select.model );
             if ( closest.is( 'form' ) ) {
                 return closest;
             }
@@ -100,31 +114,61 @@ var priv = {
     },
     resolveModel: function ( params ) {
         lojax.log( 'resolveModel: params:' ).log( params );
-        var closest;
-        if ( typeof params.model === 'object' ) {
-            return params.model;
+        var closest, model;
+        if ( priv.hasValue( params.model ) ) model = params.model;
+
+        else if ( priv.hasValue( params.source ) && $( params.source ).is( lojax.select.model ) ) {
+            model = priv.getModel( params.source );
         }
-        if ( priv.hasValue( params.source )
-            && priv.hasValue( priv.getModel(params.source) ) ) {
-            return priv.getModel( params.source );
-        }
+
         // only a submit button can submit an enclosing model
-        if ( $( params.source ).is( '[type=submit]' ) ) {
+        else if ( $( params.source ).is( 'input[type=submit],button[type=submit]' ) ) {
             // don't return anything if closest is form
-            closest = $( params.source ).closest( 'form,' + priv.attrSelector('model') );
-            if ( closest.is( priv.attrSelector( 'model' ) ) ) {
-                return priv.getModel( closest );
+            closest = $( params.source ).closest( 'form,' + lojax.select.model );
+            if ( closest.is( lojax.select.model ) ) {
+                model = priv.getModel( closest );
             }
         }
-        return null;
-    },
-    getModel: function ( elem ) {
-        var model = $( elem ).data( 'model' );
-        if ( model === undefined && $( elem ).is( lojax.select.jxModelAttribute ) ) {
-            model = JSON.parse( $( elem ).attr( lojax.select.jxModel ) );
+
+        if ( typeof model === 'string' && model.length ) {
+            if ( priv.isJSON( model ) ) {
+                model = JSON.parse( model );
+            }
+            else {
+                // it's a URL, create a new request
+                model = new lojax.Request( {
+                    action: model,
+                    method: 'ajax-get'
+                } );
+            }
+        }
+
+        if ( params.source && model ) {
             // store model in jQuery's data object
             // reference it there from now on
-            $( elem ).data( 'model', model );
+            $( params.source ).data( 'model', model );
+        }
+
+        return model;
+    },
+    getModel: function ( elem ) {
+        var $elem = $( elem );
+        var model = $elem.data( 'model' );
+        if ( !priv.hasValue( model ) && $(elem).is(lojax.select.model) ) {
+            model = $elem.attr( lojax.select.jxModel );
+            if ( priv.isJSON( model ) ) {
+                model = JSON.parse( model );
+            }
+            else {
+                // it's a URL, create a new request
+                model = new lojax.Request( {
+                    action: model,
+                    method: 'ajax-get'
+                } );
+            }
+            // store model in jQuery's data object
+            // reference it there from now on
+            $elem.data( 'model', model );
         }
         return model;
     },
@@ -162,6 +206,8 @@ var priv = {
     },
     formFromModel: function ( model, method, action, rootName, form ) {
         var t, i, props, name;
+
+        lojax.log( 'formFromModel: model:' ).log( model );
 
         if ( !priv.hasValue( form ) ) {
             // first time through
@@ -376,6 +422,12 @@ var priv = {
                 console.error( ex );
             }
         }
+    },
+    beforeRequest: function ( arg, suppress ) {
+        if ( !suppress ) priv.triggerEvent( lojax.events.beforeRequest, arg );
+    },
+    afterRequest: function ( arg, suppress ) {
+        if ( !suppress ) priv.triggerEvent( lojax.events.afterRequest, arg );
     },
     hasHash: function ( url ) {
         url = url || window.location.href;

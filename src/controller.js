@@ -29,6 +29,7 @@ lojax.Controller = function () {
         self.bindToModels();
         self.prefetchAsync();
 
+        // check window.location.hash for valid hash
         if ( priv.hasHash() ) {
             setTimeout( self.handleHash, 0 );
         }
@@ -38,22 +39,24 @@ lojax.Controller = function () {
 lojax.Controller.prototype = {
 
     handleRequest: function ( evt ) {
+        evt.stopPropagation();
+        evt.preventDefault();
+
         // handles click, change, submit, keydown (enter)
         // 'this' will be the element that was clicked, changed, submitted or keydowned
         var params = priv.getConfig( this ),
             $this = $( this );
-        // beforeRequest and afterRequest events are triggered in response to user action
-        params.beforeRequest = instance.beforeRequest;
-        params.afterRequest = instance.afterRequest;
 
         lojax.log( 'handleRequest: params: ' ).log( params );
 
         var request = new lojax.Request( params );
 
-        // delegate hashes to handleHash
-        if ( priv.hasHash( request.action ) && params.method === 'ajax-get' ) {
+        lojax.log( 'handleRequest: request: ' ).log( request );
 
-            var newHash = request.action.match( rexp.hash )[1];
+        // delegate hashes to handleHash
+        if ( request.isNavHistory ) {
+
+            var newHash = request.action;
 
             if ( request.data ) {
                 newHash += '?' + request.data;
@@ -76,9 +79,6 @@ lojax.Controller.prototype = {
             instance.executeRequest( request );
         }
 
-        evt.stopPropagation();
-
-        evt.preventDefault();
     },
 
     handleEnterKey: function ( evt ) {
@@ -95,6 +95,7 @@ lojax.Controller.prototype = {
         var handler, request, hash = window.location.hash;
 
         lojax.log( 'handleHash: hash:' ).log( hash );
+        lojax.log( 'handleHash: lojax.emptyHashAction:' ).log( lojax.emptyHashAction );
 
         if ( priv.hasHash() ) {
 
@@ -102,7 +103,7 @@ lojax.Controller.prototype = {
             // We want to support url-only access, and we don't want to clutter 
             // the url with request settings like transition and target. That 
             // means that there must be enough information already in the page 
-            // or response (data-panel) to be able to properly handle the response.
+            // or response (jx-panel) to be able to properly handle the response.
             handler = $( 'a[name="' + hash.substr( 1 ) + '"]' );
             if ( handler.size() === 0 ) {
                 instance.executeRequest( {
@@ -116,17 +117,11 @@ lojax.Controller.prototype = {
             }
             instance.currentTransition = null;
         }
-        else if ( hash === '' ) {
+        else if ( hash === '' && lojax.emptyHashAction ) {
             // we got here because a browser navigation button 
-            // was clicked which changed the hash to nothing
-            // so load the current page via ajax
-            instance.executeRequest( {
-                action: window.location.href,
-                method: 'ajax-get',
-                // beforeRequest and afterRequest events are triggered in response to user action
-                beforeRequest: instance.beforeRequest,
-                afterRequest: instance.afterRequest
-            } );
+            // was clicked which changed the hash to an empty string
+            // so execute the configured action if present, else do nothing
+            instance.executeRequest( lojax.emptyHashAction );
         }
     },
 
@@ -164,7 +159,7 @@ lojax.Controller.prototype = {
     bindToModels: function ( context ) {
         context = context || document;
         var model, $this, models = [];
-        var dataModels = $( context ).find( priv.attrSelector('model') ).add( context ).filter( priv.attrSelector('model') );
+        var dataModels = $( context ).find( lojax.select.model ).add( context ).filter( lojax.select.model );
 
         lojax.log( 'bindToModels: dataModels:' ).log( dataModels );
 
@@ -293,7 +288,6 @@ lojax.Controller.prototype = {
             }
         }
 
-
         // process any loose script or style nodes
         instance.div.empty();
         nodes.forEach( function ( node ) {
@@ -364,7 +358,8 @@ lojax.Controller.prototype = {
                 method: 'ajax-get',
                 target: $this,
                 source: $this,
-                transition: priv.attr($this, 'transition') || 'append'
+                transition: priv.attr( $this, 'transition' ) || 'append',
+                suppressEvents: true
             } );
         } );
     },
@@ -377,6 +372,7 @@ lojax.Controller.prototype = {
             // find elements that are supposed to be pre-loaded
             $( root ).find( lojax.select.prefetch ).each( function () {
                 config = priv.getConfig( this );
+                config.suppressEvents = true;
                 request = new lojax.Request( config );
                 // if it's got a valid action that hasn't already been cached, cache and execute
                 if ( request.action && !self.cache.contains( request.action ) ) {
@@ -398,13 +394,7 @@ lojax.Controller.prototype = {
             }
         } );
         lojax.log( 'handleError: response: ' ).log( response );
-    },
-
-    beforeRequest: function ( request ) {
-        priv.triggerEvent( lojax.events.beforeRequest, request, request.source );
-    },
-    afterRequest: function ( request ) {
-        priv.triggerEvent( lojax.events.afterRequest, request, request.source );
     }
+
 };
 

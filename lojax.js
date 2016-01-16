@@ -56,6 +56,12 @@ var lojax = lojax || {};
         return model;
     };
     
+    // This action is executed when a browser nav button is clicked
+    // which changes window.location.hash to an empty string.
+    // This can be a url, a config object for creating a new request, 
+    // or a function which returns a url or config object.
+    lojax.emptyHashAction = null;
+    
     lojax.events = {
         beforeRequest: 'beforeRequest',
         afterRequest: 'afterRequest',
@@ -207,6 +213,7 @@ var lojax = lojax || {};
             self.bindToModels();
             self.prefetchAsync();
     
+            // check window.location.hash for valid hash
             if ( priv.hasHash() ) {
                 setTimeout( self.handleHash, 0 );
             }
@@ -216,22 +223,24 @@ var lojax = lojax || {};
     lojax.Controller.prototype = {
     
         handleRequest: function ( evt ) {
+            evt.stopPropagation();
+            evt.preventDefault();
+    
             // handles click, change, submit, keydown (enter)
             // 'this' will be the element that was clicked, changed, submitted or keydowned
             var params = priv.getConfig( this ),
                 $this = $( this );
-            // beforeRequest and afterRequest events are triggered in response to user action
-            params.beforeRequest = instance.beforeRequest;
-            params.afterRequest = instance.afterRequest;
     
             lojax.log( 'handleRequest: params: ' ).log( params );
     
             var request = new lojax.Request( params );
     
-            // delegate hashes to handleHash
-            if ( priv.hasHash( request.action ) && params.method === 'ajax-get' ) {
+            lojax.log( 'handleRequest: request: ' ).log( request );
     
-                var newHash = request.action.match( rexp.hash )[1];
+            // delegate hashes to handleHash
+            if ( request.isNavHistory ) {
+    
+                var newHash = request.action;
     
                 if ( request.data ) {
                     newHash += '?' + request.data;
@@ -254,9 +263,6 @@ var lojax = lojax || {};
                 instance.executeRequest( request );
             }
     
-            evt.stopPropagation();
-    
-            evt.preventDefault();
         },
     
         handleEnterKey: function ( evt ) {
@@ -273,6 +279,7 @@ var lojax = lojax || {};
             var handler, request, hash = window.location.hash;
     
             lojax.log( 'handleHash: hash:' ).log( hash );
+            lojax.log( 'handleHash: lojax.emptyHashAction:' ).log( lojax.emptyHashAction );
     
             if ( priv.hasHash() ) {
     
@@ -280,7 +287,7 @@ var lojax = lojax || {};
                 // We want to support url-only access, and we don't want to clutter 
                 // the url with request settings like transition and target. That 
                 // means that there must be enough information already in the page 
-                // or response (data-panel) to be able to properly handle the response.
+                // or response (jx-panel) to be able to properly handle the response.
                 handler = $( 'a[name="' + hash.substr( 1 ) + '"]' );
                 if ( handler.size() === 0 ) {
                     instance.executeRequest( {
@@ -294,17 +301,11 @@ var lojax = lojax || {};
                 }
                 instance.currentTransition = null;
             }
-            else if ( hash === '' ) {
+            else if ( hash === '' && lojax.emptyHashAction ) {
                 // we got here because a browser navigation button 
-                // was clicked which changed the hash to nothing
-                // so load the current page via ajax
-                instance.executeRequest( {
-                    action: window.location.href,
-                    method: 'ajax-get',
-                    // beforeRequest and afterRequest events are triggered in response to user action
-                    beforeRequest: instance.beforeRequest,
-                    afterRequest: instance.afterRequest
-                } );
+                // was clicked which changed the hash to an empty string
+                // so execute the configured action if present, else do nothing
+                instance.executeRequest( lojax.emptyHashAction );
             }
         },
     
@@ -342,7 +343,7 @@ var lojax = lojax || {};
         bindToModels: function ( context ) {
             context = context || document;
             var model, $this, models = [];
-            var dataModels = $( context ).find( priv.attrSelector('model') ).add( context ).filter( priv.attrSelector('model') );
+            var dataModels = $( context ).find( lojax.select.model ).add( context ).filter( lojax.select.model );
     
             lojax.log( 'bindToModels: dataModels:' ).log( dataModels );
     
@@ -471,7 +472,6 @@ var lojax = lojax || {};
                 }
             }
     
-    
             // process any loose script or style nodes
             instance.div.empty();
             nodes.forEach( function ( node ) {
@@ -542,7 +542,8 @@ var lojax = lojax || {};
                     method: 'ajax-get',
                     target: $this,
                     source: $this,
-                    transition: priv.attr($this, 'transition') || 'append'
+                    transition: priv.attr( $this, 'transition' ) || 'append',
+                    suppressEvents: true
                 } );
             } );
         },
@@ -555,6 +556,7 @@ var lojax = lojax || {};
                 // find elements that are supposed to be pre-loaded
                 $( root ).find( lojax.select.prefetch ).each( function () {
                     config = priv.getConfig( this );
+                    config.suppressEvents = true;
                     request = new lojax.Request( config );
                     // if it's got a valid action that hasn't already been cached, cache and execute
                     if ( request.action && !self.cache.contains( request.action ) ) {
@@ -576,14 +578,8 @@ var lojax = lojax || {};
                 }
             } );
             lojax.log( 'handleError: response: ' ).log( response );
-        },
-    
-        beforeRequest: function ( request ) {
-            priv.triggerEvent( lojax.events.beforeRequest, request, request.source );
-        },
-        afterRequest: function ( request ) {
-            priv.triggerEvent( lojax.events.afterRequest, request, request.source );
         }
+    
     };
     
     
@@ -604,13 +600,14 @@ var lojax = lojax || {};
         hasValue: function ( val ) {
             return val !== undefined && val !== null;
         },
-        attr: function(elem, name) {
+        attr: function ( elem, name ) {
+            // use attr instead of data function to account for changing attribute values
             return $( elem ).attr( 'data-' + name ) || $( elem ).attr( lojax.config.prefix + name );
         },
         attrSelector: function ( name ) {
             return '[data-' + name + '],[' + lojax.config.prefix + name + ']';
         },
-        isJson: function ( str ) {
+        isJSON: function ( str ) {
             return rexp.json.test( str );
         },
         attributes: 'method action transition target form model cache expire renew'.split( ' ' ),
@@ -638,32 +635,45 @@ var lojax = lojax || {};
             return config;
         },
         resolveAction: function ( params ) {
+            var action;
             // if there's an action in the params, return it
             if ( priv.hasValue( params.action ) && params.action.length ) {
-                return params.action;
+                action = params.action;
             }
             // check for a valid href
-            if ( priv.hasValue( params.source )
+            else if ( priv.hasValue( params.source )
                 && priv.hasValue( params.source.href )
                 && params.source.href.length
-                && params.source.href.substr( params.source.href.length - 1, 1 ) !== '#'
                 && params.source.href.substr( 0, 11 ) !== 'javascript:' ) {
-                return params.source.href;
+                action = params.source.href;
             }
             // if this is a submit button check for a form
-            if ( $( params.source ).is( '[type=submit]' ) ) {
-                var closest = $( params.source ).closest( 'form,' + priv.attrSelector('model') );
+            else if ( $( params.source ).is( '[type=submit]' ) ) {
+                var closest = $( params.source ).closest( 'form,' + priv.attrSelector( 'model' ) );
                 // is submit button inside a form?
                 if ( closest.is( 'form' ) ) {
                     // post to form.action or current page
-                    return closest.attr('action') || window.location.href;
+                    action = closest.attr( 'action' ) || window.location.href;
                 }
             }
             // if this is a form use form.action or current page
-            if ( $( params.source ).is( 'form' ) ) {
-                return $( params.source ).attr( 'action' ) || window.location.href;
+            else if ( $( params.source ).is( 'form' ) ) {
+                action = $( params.source ).attr( 'action' ) || window.location.href;
             }
-            return null;
+    
+            if ( params.method === 'ajax-get' && priv.hasHash( action ) ) {
+                action = priv.resolveHash( action );
+                params.isNavHistory = true;
+            }
+    
+            return action;
+        },
+        resolveHash: function ( url ) {
+            url = url || window.location.href;
+            if ( priv.hasHash( url ) ) {
+                return url.substr( url.indexOf( '#' ) + 1 );
+            }
+            return url;
         },
         resolveForm: function ( params ) {
             var closest;
@@ -676,7 +686,7 @@ var lojax = lojax || {};
             }
             // only a submit button can submit an enclosing form
             if ( $( params.source ).is( '[type=submit]' ) ) {
-                closest = $( params.source ).closest( 'form,' + priv.attrSelector('model') );
+                closest = $( params.source ).closest( 'form,' + lojax.select.model );
                 if ( closest.is( 'form' ) ) {
                     return closest;
                 }
@@ -688,31 +698,61 @@ var lojax = lojax || {};
         },
         resolveModel: function ( params ) {
             lojax.log( 'resolveModel: params:' ).log( params );
-            var closest;
-            if ( typeof params.model === 'object' ) {
-                return params.model;
+            var closest, model;
+            if ( priv.hasValue( params.model ) ) model = params.model;
+    
+            else if ( priv.hasValue( params.source ) && $( params.source ).is( lojax.select.model ) ) {
+                model = priv.getModel( params.source );
             }
-            if ( priv.hasValue( params.source )
-                && priv.hasValue( priv.getModel(params.source) ) ) {
-                return priv.getModel( params.source );
-            }
+    
             // only a submit button can submit an enclosing model
-            if ( $( params.source ).is( '[type=submit]' ) ) {
+            else if ( $( params.source ).is( 'input[type=submit],button[type=submit]' ) ) {
                 // don't return anything if closest is form
-                closest = $( params.source ).closest( 'form,' + priv.attrSelector('model') );
-                if ( closest.is( priv.attrSelector( 'model' ) ) ) {
-                    return priv.getModel( closest );
+                closest = $( params.source ).closest( 'form,' + lojax.select.model );
+                if ( closest.is( lojax.select.model ) ) {
+                    model = priv.getModel( closest );
                 }
             }
-            return null;
-        },
-        getModel: function ( elem ) {
-            var model = $( elem ).data( 'model' );
-            if ( model === undefined && $( elem ).is( lojax.select.jxModelAttribute ) ) {
-                model = JSON.parse( $( elem ).attr( lojax.select.jxModel ) );
+    
+            if ( typeof model === 'string' && model.length ) {
+                if ( priv.isJSON( model ) ) {
+                    model = JSON.parse( model );
+                }
+                else {
+                    // it's a URL, create a new request
+                    model = new lojax.Request( {
+                        action: model,
+                        method: 'ajax-get'
+                    } );
+                }
+            }
+    
+            if ( params.source && model ) {
                 // store model in jQuery's data object
                 // reference it there from now on
-                $( elem ).data( 'model', model );
+                $( params.source ).data( 'model', model );
+            }
+    
+            return model;
+        },
+        getModel: function ( elem ) {
+            var $elem = $( elem );
+            var model = $elem.data( 'model' );
+            if ( !priv.hasValue( model ) && $(elem).is(lojax.select.model) ) {
+                model = $elem.attr( lojax.select.jxModel );
+                if ( priv.isJSON( model ) ) {
+                    model = JSON.parse( model );
+                }
+                else {
+                    // it's a URL, create a new request
+                    model = new lojax.Request( {
+                        action: model,
+                        method: 'ajax-get'
+                    } );
+                }
+                // store model in jQuery's data object
+                // reference it there from now on
+                $elem.data( 'model', model );
             }
             return model;
         },
@@ -750,6 +790,8 @@ var lojax = lojax || {};
         },
         formFromModel: function ( model, method, action, rootName, form ) {
             var t, i, props, name;
+    
+            lojax.log( 'formFromModel: model:' ).log( model );
     
             if ( !priv.hasValue( form ) ) {
                 // first time through
@@ -965,6 +1007,12 @@ var lojax = lojax || {};
                 }
             }
         },
+        beforeRequest: function ( arg, suppress ) {
+            if ( !suppress ) priv.triggerEvent( lojax.events.beforeRequest, arg );
+        },
+        afterRequest: function ( arg, suppress ) {
+            if ( !suppress ) priv.triggerEvent( lojax.events.afterRequest, arg );
+        },
         hasHash: function ( url ) {
             url = url || window.location.href;
             return rexp.hash.test( url );
@@ -1034,26 +1082,38 @@ var lojax = lojax || {};
        Request
     \***********/
     
-    lojax.Request = function ( params ) {
-        this.method = params.method.toLowerCase();
-        this.form = priv.resolveForm( params );
-        this.action = priv.resolveAction( params );
-        this.model = priv.resolveModel( params );
+    lojax.Request = function ( obj ) {
+        lojax.log( 'lojax.Request: obj:' ).log( obj );
+        if ( typeof obj === 'function' ) {
+            obj = obj();
+        }
+        if ( typeof obj === 'string' ) {
+            var o = obj;
+            obj = {
+                action: o,
+                method: 'ajax-get'
+            };
+        }
+    
+        this.method = obj.method.toLowerCase();
+        this.form = priv.resolveForm( obj );
+        this.action = priv.resolveAction( obj );
+        this.isNavHistory = obj.isNavHistory;
+        this.model = priv.resolveModel( obj );
         this.contentType = 'application/x-www-form-urlencoded; charset=UTF-8';
-        this.transition = params.transition;
-        this.target = priv.resolveTarget( params );
-        this.data = this.getData( params );
-        this.source = params.source;
-        this.cache = params.cache;
-        this.expire = params.expire;
-        this.renew = params.renew;
-        this.beforeRequest = params.beforeRequest || priv.noop;
-        this.afterRequest = params.afterRequest || priv.noop;
+        this.transition = obj.transition;
+        this.target = priv.resolveTarget( obj );
+        this.data = this.getData( obj );
+        this.source = obj.source;
+        this.cache = obj.cache;
+        this.expire = obj.expire;
+        this.renew = obj.renew;
         this.cancel = false;
         this.resolve = null;
         this.reject = null;
         this.result = null;
         this.error = null;
+        this.suppressEvents = obj.suppressEvents || false;
     };
     
     lojax.Request.prototype = {
@@ -1119,17 +1179,17 @@ var lojax = lojax || {};
         done: function ( response ) {
             this.result = response;
             if ( this.resolve ) this.resolve( response );
-            this.afterRequest( this );
+            priv.afterRequest( this, this.suppressEvents );
         },
         fail: function ( error ) {
             this.error = error;
             if ( this.reject ) this.reject( error );
-            this.afterRequest( this );
+            priv.afterRequest( this, this.suppressEvents );
         },
         methods: {
             get: function () {
                 window.location = this.action + ( this.data ? '?' + this.data : '' );
-                this.afterRequest( this );
+                priv.afterRequest( this, this.suppressEvents );
             },
             post: function () {
                 var self = this;
@@ -1140,7 +1200,7 @@ var lojax = lojax || {};
                 // so we still need to clean up after ourselves
                 setTimeout( function () {
                     form.remove();
-                    self.afterRequest( self );
+                    priv.afterRequest( self, self.suppressEvents );
                 }, 0 );
             },
             'ajax-get': function () {
@@ -1167,7 +1227,7 @@ var lojax = lojax || {};
                     document.body.removeChild( s );
                     // we have no way of handling the response of JSONP
                     // but trigger the event anyway
-                    self.afterRequest( self );
+                    priv.afterRequest( self, self.suppressEvents );
                 }, 10 );
             }
         },
@@ -1175,17 +1235,19 @@ var lojax = lojax || {};
         exec: function () {
             this.reset();
     
+            lojax.log( 'request.exec: this:' ).log( this );
+    
             if ( !priv.hasValue( this.methods[this.method] ) ) throw 'Unsupported method: ' + this.method;
     
             if ( priv.hasValue( this.action ) && this.action !== '' ) {
-                this.beforeRequest( this );
+                priv.beforeRequest( this, this.suppressEvents );
                 if ( !this.cancel ) {
                     if ( this.cache && ( this.result || this.error ) ) {
                         lojax.log( 'request.exec: cached' );
                         // don't execute the AJAX request, just call the handlers
                         if ( this.result ) this.done( this.result );
                         if ( this.error ) this.fail( this.error );
-                        this.afterRequest( this );
+                        priv.afterRequest( this, this.suppressEvents );
                     }
                     else {
                         // execute the method function
@@ -1196,7 +1258,7 @@ var lojax = lojax || {};
                 else {
                     // always trigger afterRequest even if there was no request
                     // it's typically used to turn off progress bars
-                    this.afterRequest( this );
+                    priv.afterRequest( this, this.suppressEvents );
                 }
             }
             return this;

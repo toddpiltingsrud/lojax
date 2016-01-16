@@ -51,6 +51,12 @@ lojax.bind = function ( elem, model ) {
     return model;
 };
 
+// This action is executed when a browser nav button is clicked
+// which changes window.location.hash to an empty string.
+// This can be a url, a config object for creating a new request, 
+// or a function which returns a url or config object.
+lojax.emptyHashAction = null;
+
 lojax.events = {
     beforeRequest: 'beforeRequest',
     afterRequest: 'afterRequest',

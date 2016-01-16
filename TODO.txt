@@ -14,9 +14,53 @@ Support callback parameters for JSONP.
 Allow arbitrary elements to be bound to a model (e.g. div.text()). Give any element a name attribute and lojax will figure out how to bind to it.
 This means we'll have to query forms with ':input' instead of [name].
 
+Instead of suppressing the events for background requests, set a flag on them to let handlers know what kind of request it is.
+
+
+
+### Regression Testing
+
+Make sure the hash is left on the url until just before it's executed.
+
+
+
+### Caching, Prefetching, and Models
+
 For caching, set a default expiration. Add the ability to expire a cached item after it's requested the first time.
-Use a data-model attribute to specify a JSON resource to bind a form to.
-<a href="modal.html" jx-cache="prefetch" data-model="/partials/model.json">show data</a>
+
+Use the data-model attribute to specify a JSON resource to bind a form to:
+<a href="modal.html" jx-cache="prefetch" data-model="partials/model.json">show data</a>
+
+When the page loads, lojax will detect the prefetch value and queue up a request for the modal behind the scenes.
+Then we wait for the user to click the link. Lojax will grab the cached request for the modal and execute it.
+It will also create a new request for the JSON. We'll probably need a new handler for this to coordinate the double request.
+
+Here's another scenario:
+
+<div jx-src="form.html" data-model="partials/model.json" />
+
+In this case lojax will make the usual request for form.html automatically. 
+But it should also make another request for the model at the same time.
+Again, a dedicated handler should coordinate the double request.
+
+One more:
+
+<div jx-model="model.json">
+    ... form inputs ...
+</div>
+
+Here lojax detects the model attribute and issues a request for model.json. There's no secondary request.
+When the request returns we bind the form inputs to the result.
+
+And by the way, we should account for the possibility that models could be prefetched and cached, just like any other request.
+Something like the following could be put at the bottom of a page to pre-load a resource, just like a script tag:
+
+<div style="display:none" jx-action="partials/model.json" jx-cache="prefetch" jx-method="ajax-get" />
+
+Keep in mind, we are caching lojax.Request objects, not just the resource itself. It's possible for a user action to hook into a request that's already running.
+The rest of your code won't know the difference between a request that was triggered by user action, and one that was triggered automatically by lojax,
+except that the response time will be immediate.
+
 
 
 Consider replacing jquery's event triggering mechanism with my own. Need custom events that bubble. 
@@ -24,7 +68,7 @@ Currently, all events must be triggered and handled on window.document. This doe
 
 Create a nuget package.
 
-Supported scenarios/patterns:
+### Supported scenarios/patterns:
 
 - Clicking an element executes a request with optional form or model.
 - Specify data-trigger = change to handle the change event on an element containing inputs and execute a request with optional form or model
@@ -35,13 +79,13 @@ Supported scenarios/patterns:
 - A non-empty data-model attribute on a parent element will set the values of the child inputs to the model by matching model properties to input names.
 - Change the url's hash to trigger an ajax-get request. Simple way to get cross-browser navigation history for ajax requests.
 - If input elements are inside an element with a data-model attribute, the change event writes the changes to the data model.
-- Add a data-src attribute to a div to load content into the div asynchronously. This uses the same logic as data-jaxpanels, so you can use transitions, model binding, other data-src divs, etc.
+- Add a data-src attribute to a div to load content into the div asynchronously. This uses the same logic as jx-panels, so you can use transitions, model binding, other data-src divs, etc.
 - Use lojax.onLoad(callback) inside a jx-panel, modal, or div[data-src] to execute a function with context ('this' keyword) set to the containing element.
   This works only if the script is inside the element you want as the context.
   The callback is invoked after model binding, but before loadDataSrcDivs. Callbacks are invoked only once.
 - Post a JSON model without ajax. This works by converting the model into a form and submitting it.
 
-AJAX responses:
+### AJAX responses:
 
 - Parse response into a collection of nodes.
 - If there are no nodes, return.
@@ -51,17 +95,17 @@ AJAX responses:
 - If there is not currently a modal being displayed and the node is a modal, instantiate a modal and show it. Continue.
 - If there is not currently a modal being displayed and the node contains a modal, instantiate a modal and show it.
 - If the node is a jx-panel, inject it.
-- If the node contains data-jaxpanels, inject them.
+- If the node contains jx-panels, inject them.
 - Once we're done iterating through the nodes, check for any loose script and style nodes. Inject them into a hidden div at the bottom of the page.
 
-Modal Creation
+### Modal Creation
 
 - Supports bootstrap and kendo
 - Modal content is appended to document body and a modal is instantiated and shown.
 - Optional: Call lojax.closeModal() to close the modal.
 - Handle the modal's hidden/close event and null out the modal instance and remove the element from the DOM.
 
-Tips: 
+### Tips: 
 - Use a layout to create modals on the server.
 - Use cache="prefetch" for modals to retrieve them before they are requested. Then bind them to a model with lojax.bind(elem, model).
 - Use a publish/subscribe pattern instead of a callback URL query parameter to receive JSONP responses.
@@ -69,4 +113,4 @@ Tips:
   This is also useful for letting the client know when something important has happened on the server (e.g. app/customer/update).
   Different parts of the app can react to actions on the server without having actually initiated them.
   This creates a cleaner separation of concerns in your client-side code. 
-  For example, you could use a modal to update a resource without forcing the modal to update other parts of the UI.
+  For example, you could use a modal to update a resource without forcing the modal to update other parts of the UI that it should know nothing about.
