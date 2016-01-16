@@ -194,6 +194,7 @@ var lojax = lojax || {};
         this.currentTransition = null;
         this.currentPanel = null;
         this.cache = new lojax.Cache();
+        this.isControl = false;
     
         $( function () {
             self.div = $( "<div style='display:none'></div>" ).appendTo( 'body' );
@@ -204,6 +205,8 @@ var lojax = lojax || {};
             $( document ).on( 'keydown', lojax.select.methodWithEnterOrModel, self.handleEnterKey );
             $( document ).on( 'submit', lojax.select.formWithMethod, self.handleRequest );
             $( document ).on( 'change', lojax.select.model, self.updateModel );
+            // handle the control key
+            $( document ).on( 'keydown', self.handleControlKey ).on( 'keyup', self.handleControlKey );
     
             if ( lojax.config.hash ) {
                 window.addEventListener( "hashchange", self.handleHash, false );
@@ -215,7 +218,7 @@ var lojax = lojax || {};
     
             // check window.location.hash for valid hash
             if ( priv.hasHash() ) {
-                setTimeout( self.handleHash, 0 );
+                setTimeout( self.handleHash );
             }
         } );
     };
@@ -224,7 +227,6 @@ var lojax = lojax || {};
     
         handleRequest: function ( evt ) {
             evt.stopPropagation();
-            evt.preventDefault();
     
             // handles click, change, submit, keydown (enter)
             // 'this' will be the element that was clicked, changed, submitted or keydowned
@@ -234,6 +236,13 @@ var lojax = lojax || {};
             lojax.log( 'handleRequest: params: ' ).log( params );
     
             var request = new lojax.Request( params );
+    
+            // if the control key is down and this is a hash url, let the browser to handle it
+            if ( instance.isControl && request.isNavHistory ) {
+                return;
+            }
+    
+            evt.preventDefault();
     
             lojax.log( 'handleRequest: request: ' ).log( request );
     
@@ -262,12 +271,17 @@ var lojax = lojax || {};
             else {
                 instance.executeRequest( request );
             }
-    
         },
     
         handleEnterKey: function ( evt ) {
             if ( evt.which === 13 ) {
                 instance.handleRequest.call( this, evt );
+            }
+        },
+    
+        handleControlKey: function ( evt ) {
+            if ( evt.which === 17 ) {
+                instance.isControl = evt.type === 'keydown';
             }
         },
     
@@ -1088,9 +1102,8 @@ var lojax = lojax || {};
             obj = obj();
         }
         if ( typeof obj === 'string' ) {
-            var o = obj;
             obj = {
-                action: o,
+                action: obj,
                 method: 'ajax-get'
             };
         }

@@ -10,6 +10,7 @@ lojax.Controller = function () {
     this.currentTransition = null;
     this.currentPanel = null;
     this.cache = new lojax.Cache();
+    this.isControl = false;
 
     $( function () {
         self.div = $( "<div style='display:none'></div>" ).appendTo( 'body' );
@@ -20,6 +21,8 @@ lojax.Controller = function () {
         $( document ).on( 'keydown', lojax.select.methodWithEnterOrModel, self.handleEnterKey );
         $( document ).on( 'submit', lojax.select.formWithMethod, self.handleRequest );
         $( document ).on( 'change', lojax.select.model, self.updateModel );
+        // handle the control key
+        $( document ).on( 'keydown', self.handleControlKey ).on( 'keyup', self.handleControlKey );
 
         if ( lojax.config.hash ) {
             window.addEventListener( "hashchange", self.handleHash, false );
@@ -31,7 +34,7 @@ lojax.Controller = function () {
 
         // check window.location.hash for valid hash
         if ( priv.hasHash() ) {
-            setTimeout( self.handleHash, 0 );
+            setTimeout( self.handleHash );
         }
     } );
 };
@@ -40,7 +43,6 @@ lojax.Controller.prototype = {
 
     handleRequest: function ( evt ) {
         evt.stopPropagation();
-        evt.preventDefault();
 
         // handles click, change, submit, keydown (enter)
         // 'this' will be the element that was clicked, changed, submitted or keydowned
@@ -50,6 +52,13 @@ lojax.Controller.prototype = {
         lojax.log( 'handleRequest: params: ' ).log( params );
 
         var request = new lojax.Request( params );
+
+        // if the control key is down and this is a hash url, let the browser handle it
+        if ( instance.isControl && request.isNavHistory ) {
+            return;
+        }
+
+        evt.preventDefault();
 
         lojax.log( 'handleRequest: request: ' ).log( request );
 
@@ -78,12 +87,17 @@ lojax.Controller.prototype = {
         else {
             instance.executeRequest( request );
         }
-
     },
 
     handleEnterKey: function ( evt ) {
         if ( evt.which === 13 ) {
             instance.handleRequest.call( this, evt );
+        }
+    },
+
+    handleControlKey: function ( evt ) {
+        if ( evt.which === 17 ) {
+            instance.isControl = evt.type === 'keydown';
         }
     },
 

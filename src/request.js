@@ -9,9 +9,8 @@ lojax.Request = function ( obj ) {
         obj = obj();
     }
     if ( typeof obj === 'string' ) {
-        var o = obj;
         obj = {
-            action: o,
+            action: obj,
             method: 'ajax-get'
         };
     }

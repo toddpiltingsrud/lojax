@@ -206,6 +206,7 @@
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>lojax.js</LastGenOutput>
     </Content>
+    <Content Include="spec\partials\ControlKeyTest.html" />
     <Content Include="spec\partials\Modal2.html" />
     <Content Include="spec\partials\Prefetch1.html" />
     <Content Include="spec\partials\Prefetch2.html" />

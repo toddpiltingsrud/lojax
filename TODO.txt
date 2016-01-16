@@ -14,10 +14,6 @@ Support callback parameters for JSONP.
 Allow arbitrary elements to be bound to a model (e.g. div.text()). Give any element a name attribute and lojax will figure out how to bind to it.
 This means we'll have to query forms with ':input' instead of [name].
 
-Instead of suppressing the events for background requests, set a flag on them to let handlers know what kind of request it is.
-
-
-
 ### Regression Testing
 
 Make sure the hash is left on the url until just before it's executed.
