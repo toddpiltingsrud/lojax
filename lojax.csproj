@@ -169,9 +169,6 @@
     <None Include="fonts\glyphicons-halflings-regular.ttf" />
     <None Include="fonts\glyphicons-halflings-regular.woff" />
     <None Include="fonts\glyphicons-halflings-regular.woff2" />
-    <None Include="lojax.min.js.map">
-      <DependentUpon>lojax.min.js</DependentUpon>
-    </None>
     <None Include="README.md" />
     <None Include="spec\fonts\glyphicons-halflings-regular.eot" />
     <None Include="spec\fonts\glyphicons-halflings-regular.ttf" />
@@ -205,7 +202,6 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>lojax.tt</DependentUpon>
     </Content>
-    <Content Include="lojax.min.js" />
     <Content Include="lojax.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>lojax.js</LastGenOutput>
