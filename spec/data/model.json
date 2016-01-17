@@ -1,0 +1,10 @@
+﻿{
+    "number": 3.14,
+    "daterange": ["2015-11-13", "2016-01-01T06:00:00Z"],
+    "bool": false,
+    "no": { "value": null },
+    "arrays": { "names": ["Anders", "Kaleb"] },
+    "select": "a",
+    "color": "green",
+    "jx-quoted": "&quot;"
+}

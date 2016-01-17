@@ -170,6 +170,7 @@
     <None Include="fonts\glyphicons-halflings-regular.woff" />
     <None Include="fonts\glyphicons-halflings-regular.woff2" />
     <None Include="README.md" />
+    <None Include="spec\data\model.json" />
     <None Include="spec\fonts\glyphicons-halflings-regular.eot" />
     <None Include="spec\fonts\glyphicons-halflings-regular.ttf" />
     <None Include="spec\fonts\glyphicons-halflings-regular.woff" />

@@ -20,20 +20,22 @@ Make sure the hash is left on the url until just before it's executed.
 
 
 
-### Caching, Prefetching, and Models
+### Caching, preloading, and Models
 
 For caching, set a default expiration. Add the ability to expire a cached item after it's requested the first time.
 
-Use the data-model attribute to specify a JSON resource to bind a form to:
-<a href="modal.html" jx-cache="prefetch" data-model="partials/model.json">show data</a>
+Use the jx-model attribute to specify a JSON resource to bind a form to:
+<a href="modal.html" jx-method="ajax-get" jx-cache="preload" jx-model="data/model.json">show data</a>
 
-When the page loads, lojax will detect the prefetch value and queue up a request for the modal behind the scenes.
-Then we wait for the user to click the link. Lojax will grab the cached request for the modal and execute it.
-It will also create a new request for the JSON. We'll probably need a new handler for this to coordinate the double request.
+When the page loads, lojax will detect the preload value and queue up a request for the modal behind the scenes.
+Since the element has a jx-method attribute, lojax assumes we're not binding the model to it, but to the resource it points to.
+When the link is clicked lojax will grab the cached request for the modal and execute it.
+It will also create a new request for the JSON. We'll probably need a new handler to coordinate the double request.
+When the modal is injected onto the page lojax binds the result of the model request to it.
 
 Here's another scenario:
 
-<div jx-src="form.html" data-model="partials/model.json" />
+<div jx-src="form.html" jx-model="partials/model.json" />
 
 In this case lojax will make the usual request for form.html automatically. 
 But it should also make another request for the model at the same time.
@@ -41,21 +43,64 @@ Again, a dedicated handler should coordinate the double request.
 
 One more:
 
-<div jx-model="model.json">
+<div jx-model="data/model.json">
     ... form inputs ...
 </div>
 
 Here lojax detects the model attribute and issues a request for model.json. There's no secondary request.
 When the request returns we bind the form inputs to the result.
 
-And by the way, we should account for the possibility that models could be prefetched and cached, just like any other request.
-Something like the following could be put at the bottom of a page to pre-load a resource, just like a script tag:
+Now how about the scenario of a grid where the rows are bound to models?
+Also assume there's a link for editing the row:
 
-<div style="display:none" jx-action="partials/model.json" jx-cache="prefetch" jx-method="ajax-get" />
+<table>
+	<tr jx-model="{...}">
+		<td name="color"></td>
+		<td>
+			<a href="partials/modal.html" jx-cache="preload" jx-method="ajax-get">edit</a>
+		</td>
+	</tr>
+</table>
 
-Keep in mind, we are caching lojax.Request objects, not just the resource itself. It's possible for a user action to hook into a request that's already running.
-The rest of your code won't know the difference between a request that was triggered by user action, and one that was triggered automatically by lojax,
-except that the response time will be immediate.
+When the user clicks the edit link, we want to bind the form in the modal (which has already been loaded and cached) to the model for the row.
+But we've already got the data in the jx-model attribute, so we shouldn't have to make another request for it.
+For these kinds of cases we can use lojax.onLoad.
+
+<form>
+	<input name="color" type="color" />
+	...
+
+	<script>
+		lojax.onLoad(function(request){
+			// 'this' is the form
+			// 'request' contains a reference to the link that initiated the request (request.source)
+			// so we can get a reference to the model thusly:
+			
+			var model = $(request.source).closest('[jx-model]').data('model');
+
+			// and bind the form to the model thusly:
+			
+			lojax.bind(this, model);
+		});
+	</script>
+</form>
+
+The script in the form will run when it is injected into the page, setting lojax's onLoad callback.
+After lojax injects the form, it immediately checks for an onLoad callback and executes it if present,
+supplying the form as the context and the request as the argument.
+lojax then immediately nulls out its internal reference to the callback to prepare for the next injection.
+So we just have to make sure that the script tag is INSIDE the form.
+If you place a call to lojax.onLoad outside the form, the callback won't be executed.
+
+And by the way, we should account for the possibility that models could be preloaded and cached, just like any other request.
+Something like the following could be put at the bottom of a page to pre-load a resource:
+
+<div style="display:none" jx-action="data/model.json" jx-cache="preload" jx-method="ajax-get" />
+
+Keep in mind, we are caching lojax.Request objects, not just the resource itself. 
+It's possible for a user action to hook into a request that's already running.
+The rest of your code won't know the difference between a request that was triggered by user action, 
+and one that was triggered automatically by lojax, except that the response time will be immediate.
 
 
 
@@ -67,16 +112,16 @@ Create a nuget package.
 ### Supported scenarios/patterns:
 
 - Clicking an element executes a request with optional form or model.
-- Specify data-trigger = change to handle the change event on an element containing inputs and execute a request with optional form or model
-- An element with data-method and data-trigger containg 'enter' executes a request with optional form or model when enter key is pressed.
-- Clicking a submit button inside a form with a data-method attribute executes a request with the form.
-- Clicking a submit button inside an element with a data-model attribute executes a request with the model.
-- Add an empty data-model attribute to any parent element to create a JSON model from the child inputs.
-- A non-empty data-model attribute on a parent element will set the values of the child inputs to the model by matching model properties to input names.
+- Specify jx-trigger = change to handle the change event on an element containing inputs and execute a request with optional form or model
+- An element with jx-method and jx-trigger containg 'enter' executes a request with optional form or model when enter key is pressed.
+- Clicking a submit button inside a form with a jx-method attribute executes a request with the form.
+- Clicking a submit button inside an element with a jx-model attribute executes a request with the model.
+- Add an empty jx-model attribute to any parent element to create a JSON model from the child inputs.
+- A non-empty jx-model attribute on a parent element will set the values of the child inputs to the model by matching model properties to input names.
 - Change the url's hash to trigger an ajax-get request. Simple way to get cross-browser navigation history for ajax requests.
-- If input elements are inside an element with a data-model attribute, the change event writes the changes to the data model.
-- Add a data-src attribute to a div to load content into the div asynchronously. This uses the same logic as jx-panels, so you can use transitions, model binding, other data-src divs, etc.
-- Use lojax.onLoad(callback) inside a jx-panel, modal, or div[data-src] to execute a function with context ('this' keyword) set to the containing element.
+- If input elements are inside an element with a jx-model attribute, the change event writes the changes to the data model.
+- Add a jx-src attribute to a div to load content into the div asynchronously. This uses the same logic as jx-panels, so you can use transitions, model binding, other jx-src divs, etc.
+- Use lojax.onLoad(callback) inside a jx-panel, modal, or div[jx-src] to execute a function with context ('this' keyword) set to the containing element.
   This works only if the script is inside the element you want as the context.
   The callback is invoked after model binding, but before loadDataSrcDivs. Callbacks are invoked only once.
 - Post a JSON model without ajax. This works by converting the model into a form and submitting it.
@@ -103,7 +148,7 @@ Create a nuget package.
 
 ### Tips: 
 - Use a layout to create modals on the server.
-- Use cache="prefetch" for modals to retrieve them before they are requested. Then bind them to a model with lojax.bind(elem, model).
+- Use cache="preload" for modals to retrieve them before they are requested. Then bind them to a model with lojax.bind(elem, model).
 - Use a publish/subscribe pattern instead of a callback URL query parameter to receive JSONP responses.
   Use an attenuated version of the URL as the event name (app/controller/action).
   This is also useful for letting the client know when something important has happened on the server (e.g. app/customer/update).

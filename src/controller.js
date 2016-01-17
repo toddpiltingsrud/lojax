@@ -53,26 +53,24 @@ lojax.Controller.prototype = {
 
         var request = new lojax.Request( params );
 
-        // if the control key is down and this is a hash url, let the browser handle it
-        if ( instance.isControl && request.isNavHistory ) {
-            return;
-        }
-
-        evt.preventDefault();
-
         lojax.log( 'handleRequest: request: ' ).log( request );
 
         // delegate hashes to handleHash
         if ( request.isNavHistory ) {
+
+            // if the control key is down and this is a hash url, let the browser handle it
+            if ( instance.isControl ) {
+                return;
+            }
+
+            // store the request's transition so handleHash can pick it up
+            instance.currentTransition = request.transition;
 
             var newHash = request.action;
 
             if ( request.data ) {
                 newHash += '?' + request.data;
             }
-
-            // store the request's transition so handleHash can pick it up
-            instance.currentTransition = request.transition;
 
             // if hash equals the current hash, hashchange event won't fire
             // so call handleHash directly
@@ -87,6 +85,8 @@ lojax.Controller.prototype = {
         else {
             instance.executeRequest( request );
         }
+
+        evt.preventDefault();
     },
 
     handleEnterKey: function ( evt ) {
@@ -119,14 +119,11 @@ lojax.Controller.prototype = {
             // means that there must be enough information already in the page 
             // or response (jx-panel) to be able to properly handle the response.
             handler = $( 'a[name="' + hash.substr( 1 ) + '"]' );
-            if ( handler.size() === 0 ) {
+            if ( handler.length === 0 ) {
                 instance.executeRequest( {
                     action: hash,
                     method: 'ajax-get',
-                    transition: instance.currentTransition,
-                    // beforeRequest and afterRequest events are triggered in response to user action
-                    beforeRequest: instance.beforeRequest,
-                    afterRequest: instance.afterRequest
+                    transition: instance.currentTransition
                 } );
             }
             instance.currentTransition = null;
@@ -251,7 +248,7 @@ lojax.Controller.prototype = {
                 }
                 priv.triggerEvent( lojax.events.afterInject, result, node );
                 instance.bindToModels( result );
-                priv.callOnLoad( result );
+                priv.callOnLoad( result, request );
                 instance.loadDataSrcDivs( result );
                 instance.prefetchAsync( result );
             }
@@ -279,14 +276,14 @@ lojax.Controller.prototype = {
                 if ( instance.modal === null ) {
                     // check if the node is a modal
                     if ( $node.is( '.modal' ) ) {
-                        instance.createModal( $node );
+                        instance.createModal( $node, request );
                         continue;
                     }
                     else {
                         // check if the node contains a modal
                         newModal = $node.find( '.modal' );
                         if ( newModal.length ) {
-                            instance.createModal( newModal );
+                            instance.createModal( newModal, request );
                         }
                     }
                 }
@@ -312,7 +309,7 @@ lojax.Controller.prototype = {
         } );
     },
 
-    createModal: function ( content ) {
+    createModal: function ( content, request ) {
         // check for bootstrap
         if ( $.fn.modal ) {
             instance.modal = $( content ).appendTo( 'body' ).modal( {
@@ -355,7 +352,7 @@ lojax.Controller.prototype = {
         }
         if ( instance.modal ) {
             instance.bindToModels( instance.modal );
-            priv.callOnLoad( instance.modal );
+            priv.callOnLoad( instance.modal, request );
             instance.loadDataSrcDivs( instance.modal );
             instance.prefetchAsync( instance.modal );
         }

@@ -129,28 +129,29 @@ var lojax = lojax || {};
     
     lojax.Cache.prototype = {
         add: function ( request ) {
-            this.remove( request.action );
-            this.store[request.action] = request;
+            var key = request.getFullUrl();
+            this.remove( key );
+            this.store[key] = request;
             if ( request.expire ) {
                 this.setTimeout( request );
             }
         },
-        remove: function ( action ) {
-            var request = this.store[action];
+        remove: function ( key ) {
+            var request = this.store[key];
             if ( request ) {
                 if ( request.timeout ) {
                     clearTimeout( request.timeout );
                 }
-                delete this.store[action];
+                delete this.store[key];
             }
         },
-        get: function ( action ) {
-            var request = this.store[action];
+        get: function ( key ) {
+            var request = this.store[key];
             if ( request ) {
                 if ( request.renew === 'sliding' && request.timeout ) {
                     this.setTimeout( request );
                 }
-                return this.store[action];
+                return this.store[key];
             }
         },
         setTimeout: function ( request ) {
@@ -168,18 +169,18 @@ var lojax = lojax || {};
                 this.setTimeout( request );
             }
             else {
-                this.remove( request.action );
+                this.remove( request.getFullUrl() );
             }
         },
         clear: function () {
             var self = this;
-            var actions = Object.getOwnPropertyNames( this.store );
-            actions.forEach( function ( action ) {
-                self.remove( action );
+            var keys = Object.getOwnPropertyNames( this.store );
+            keys.forEach( function ( key ) {
+                self.remove( key );
             } );
         },
-        contains: function ( action ) {
-            return ( action in this.store );
+        contains: function ( key ) {
+            return ( key in this.store );
         }
     };
     
@@ -237,26 +238,24 @@ var lojax = lojax || {};
     
             var request = new lojax.Request( params );
     
-            // if the control key is down and this is a hash url, let the browser to handle it
-            if ( instance.isControl && request.isNavHistory ) {
-                return;
-            }
-    
-            evt.preventDefault();
-    
             lojax.log( 'handleRequest: request: ' ).log( request );
     
             // delegate hashes to handleHash
             if ( request.isNavHistory ) {
+    
+                // if the control key is down and this is a hash url, let the browser handle it
+                if ( instance.isControl ) {
+                    return;
+                }
+    
+                // store the request's transition so handleHash can pick it up
+                instance.currentTransition = request.transition;
     
                 var newHash = request.action;
     
                 if ( request.data ) {
                     newHash += '?' + request.data;
                 }
-    
-                // store the request's transition so handleHash can pick it up
-                instance.currentTransition = request.transition;
     
                 // if hash equals the current hash, hashchange event won't fire
                 // so call handleHash directly
@@ -271,6 +270,8 @@ var lojax = lojax || {};
             else {
                 instance.executeRequest( request );
             }
+    
+            evt.preventDefault();
         },
     
         handleEnterKey: function ( evt ) {
@@ -303,14 +304,11 @@ var lojax = lojax || {};
                 // means that there must be enough information already in the page 
                 // or response (jx-panel) to be able to properly handle the response.
                 handler = $( 'a[name="' + hash.substr( 1 ) + '"]' );
-                if ( handler.size() === 0 ) {
+                if ( handler.length === 0 ) {
                     instance.executeRequest( {
                         action: hash,
                         method: 'ajax-get',
-                        transition: instance.currentTransition,
-                        // beforeRequest and afterRequest events are triggered in response to user action
-                        beforeRequest: instance.beforeRequest,
-                        afterRequest: instance.afterRequest
+                        transition: instance.currentTransition
                     } );
                 }
                 instance.currentTransition = null;
@@ -435,7 +433,7 @@ var lojax = lojax || {};
                     }
                     priv.triggerEvent( lojax.events.afterInject, result, node );
                     instance.bindToModels( result );
-                    priv.callOnLoad( result );
+                    priv.callOnLoad( result, request );
                     instance.loadDataSrcDivs( result );
                     instance.prefetchAsync( result );
                 }
@@ -463,14 +461,14 @@ var lojax = lojax || {};
                     if ( instance.modal === null ) {
                         // check if the node is a modal
                         if ( $node.is( '.modal' ) ) {
-                            instance.createModal( $node );
+                            instance.createModal( $node, request );
                             continue;
                         }
                         else {
                             // check if the node contains a modal
                             newModal = $node.find( '.modal' );
                             if ( newModal.length ) {
-                                instance.createModal( newModal );
+                                instance.createModal( newModal, request );
                             }
                         }
                     }
@@ -496,7 +494,7 @@ var lojax = lojax || {};
             } );
         },
     
-        createModal: function ( content ) {
+        createModal: function ( content, request ) {
             // check for bootstrap
             if ( $.fn.modal ) {
                 instance.modal = $( content ).appendTo( 'body' ).modal( {
@@ -539,7 +537,7 @@ var lojax = lojax || {};
             }
             if ( instance.modal ) {
                 instance.bindToModels( instance.modal );
-                priv.callOnLoad( instance.modal );
+                priv.callOnLoad( instance.modal, request );
                 instance.loadDataSrcDivs( instance.modal );
                 instance.prefetchAsync( instance.modal );
             }
@@ -1051,9 +1049,9 @@ var lojax = lojax || {};
             out.push( d );
             return out.join( '' );
         },
-        callOnLoad: function ( panel ) {
+        callOnLoad: function ( panel, context ) {
             if ( panel && instance.onLoad ) {
-                instance.onLoad.call( panel );
+                instance.onLoad.call( panel, context );
             }
             // ensure in is called only once
             // and that calls to lojax.onLoad outside of a container are ignored
@@ -1175,17 +1173,25 @@ var lojax = lojax || {};
             }
             return data;
         },
+        getFullUrl: function() {
+            switch ( this.method ) {
+                case 'get':
+                case 'ajax-get':
+                case 'ajax-delete':
+                case 'jsonp':
+                    return this.action + ( this.data ? '?' + this.data : '' );
+                default:
+                    return this.action;
+            }
+        },
         ajax: function ( type ) {
-            var self = this,
-                options = {
+            var self = this;
+            $.ajax({
                     url: this.action,
                     type: type.toUpperCase(),
                     data: this.data,
                     contentType: this.contentType
-                };
-    
-            lojax.log( 'ajax: options: ' + options );
-            $.ajax( options )
+                })
                 .done( self.done.bind( self ) )
                 .fail( self.fail.bind( self ) );
         },
@@ -1201,7 +1207,7 @@ var lojax = lojax || {};
         },
         methods: {
             get: function () {
-                window.location = this.action + ( this.data ? '?' + this.data : '' );
+                window.location = this.getFullUrl();
                 priv.afterRequest( this, this.suppressEvents );
             },
             post: function () {
@@ -1234,7 +1240,7 @@ var lojax = lojax || {};
                 var self = this;
                 var s = document.createElement( 'script' );
                 s.type = 'text/javascript';
-                s.src = this.action + ( this.data ? '?' + this.data : '' );
+                s.src = this.getFullUrl();
                 document.body.appendChild( s );
                 setTimeout( function () {
                     document.body.removeChild( s );

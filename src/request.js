@@ -82,17 +82,25 @@ lojax.Request.prototype = {
         }
         return data;
     },
+    getFullUrl: function() {
+        switch ( this.method ) {
+            case 'get':
+            case 'ajax-get':
+            case 'ajax-delete':
+            case 'jsonp':
+                return this.action + ( this.data ? '?' + this.data : '' );
+            default:
+                return this.action;
+        }
+    },
     ajax: function ( type ) {
-        var self = this,
-            options = {
+        var self = this;
+        $.ajax({
                 url: this.action,
                 type: type.toUpperCase(),
                 data: this.data,
                 contentType: this.contentType
-            };
-
-        lojax.log( 'ajax: options: ' + options );
-        $.ajax( options )
+            })
             .done( self.done.bind( self ) )
             .fail( self.fail.bind( self ) );
     },
@@ -108,7 +116,7 @@ lojax.Request.prototype = {
     },
     methods: {
         get: function () {
-            window.location = this.action + ( this.data ? '?' + this.data : '' );
+            window.location = this.getFullUrl();
             priv.afterRequest( this, this.suppressEvents );
         },
         post: function () {
@@ -141,7 +149,7 @@ lojax.Request.prototype = {
             var self = this;
             var s = document.createElement( 'script' );
             s.type = 'text/javascript';
-            s.src = this.action + ( this.data ? '?' + this.data : '' );
+            s.src = this.getFullUrl();
             document.body.appendChild( s );
             setTimeout( function () {
                 document.body.removeChild( s );

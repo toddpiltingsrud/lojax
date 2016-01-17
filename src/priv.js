@@ -453,9 +453,9 @@ var priv = {
         out.push( d );
         return out.join( '' );
     },
-    callOnLoad: function ( panel ) {
+    callOnLoad: function ( panel, context ) {
         if ( panel && instance.onLoad ) {
-            instance.onLoad.call( panel );
+            instance.onLoad.call( panel, context );
         }
         // ensure in is called only once
         // and that calls to lojax.onLoad outside of a container are ignored

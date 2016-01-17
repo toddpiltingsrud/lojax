@@ -9,28 +9,29 @@ lojax.Cache = function () {
 
 lojax.Cache.prototype = {
     add: function ( request ) {
-        this.remove( request.action );
-        this.store[request.action] = request;
+        var key = request.getFullUrl();
+        this.remove( key );
+        this.store[key] = request;
         if ( request.expire ) {
             this.setTimeout( request );
         }
     },
-    remove: function ( action ) {
-        var request = this.store[action];
+    remove: function ( key ) {
+        var request = this.store[key];
         if ( request ) {
             if ( request.timeout ) {
                 clearTimeout( request.timeout );
             }
-            delete this.store[action];
+            delete this.store[key];
         }
     },
-    get: function ( action ) {
-        var request = this.store[action];
+    get: function ( key ) {
+        var request = this.store[key];
         if ( request ) {
             if ( request.renew === 'sliding' && request.timeout ) {
                 this.setTimeout( request );
             }
-            return this.store[action];
+            return this.store[key];
         }
     },
     setTimeout: function ( request ) {
@@ -48,17 +49,17 @@ lojax.Cache.prototype = {
             this.setTimeout( request );
         }
         else {
-            this.remove( request.action );
+            this.remove( request.getFullUrl() );
         }
     },
     clear: function () {
         var self = this;
-        var actions = Object.getOwnPropertyNames( this.store );
-        actions.forEach( function ( action ) {
-            self.remove( action );
+        var keys = Object.getOwnPropertyNames( this.store );
+        keys.forEach( function ( key ) {
+            self.remove( key );
         } );
     },
-    contains: function ( action ) {
-        return ( action in this.store );
+    contains: function ( key ) {
+        return ( key in this.store );
     }
 };
