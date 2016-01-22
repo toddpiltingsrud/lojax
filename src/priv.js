@@ -365,20 +365,24 @@ var priv = {
     setElementsFromModel: function ( context, model ) {
         var value,
             type,
+            name,
             $this = $( context );
 
         lojax.log( 'setELementsFromModel: model:' ).log( model );
 
         // set the inputs to the model
         $this.find( '[name]' ).each( function () {
-            value = priv.getModelValue( model, this.name );
+            name = this.name || $( this ).attr( 'name' );
+            value = priv.getModelValue( model, name );
+            console.log( name, value );
             type = $.type( value );
             // lojax assumes ISO 8601 date serialization format
-            // http://www.hanselman.com/blog/OnTheNightmareThatIsJSONDatesPlusJSONNETAndASPNETWebAPI.aspx
             // ISO 8601 is easy to parse
-            // making it possible to skip the problem of converting date strings to JS Date objects in most cases
-            if ( type === 'date' || this.type === 'date' ) {
+            // making it possible to skip the problem of converting 
+            // date strings to Date objects and back again in most cases
+            if ( type === 'date' && this.type === 'date' ) {
                 // date inputs expect yyyy-MM-dd
+                // keep in mind that some browsers (e.g. IE9) don't support the date input type
                 $( this ).val( priv.standardDateFormat( value ) );
             }
             else if ( type === 'boolean' && this.type === 'checkbox' ) {
@@ -387,8 +391,11 @@ var priv = {
             else if (this.type === 'radio') {
                 this.checked = ( this.value == value );
             }
-            else {
+            else if (this.value !== undefined) {
                 $( this ).val( value );
+            }
+            else if ( this.innerHTML !== undefined ) {
+                $( this ).html( value );
             }
         } );
     },
@@ -461,6 +468,12 @@ var priv = {
         // and that calls to lojax.onLoad outside of a container are ignored
         instance.onLoad = null;
     },
+    callOnUnload: function ( panel ) {
+        if ( panel && typeof panel[0].onUnload == 'function' ) {
+            panel[0].onUnload.call( panel );
+            panel[0].onUnload = null;
+        }
+    },
     nonce: jQuery.now(),
     noCache: function ( url ) {
         var a = ( url.indexOf( '?' ) != -1 ? '&_=' : '?_=' ) + priv.nonce++;
@@ -488,6 +501,18 @@ var priv = {
                 // let the server deserialize them
                 return val;
         }
+    },
+    propagateChange: function ( model, elem ) {
+        // find elements that are bound to the same model
+        $( document ).find( '[name="' + elem.name + '"]' ).not( elem ).each( function () {
+            var closest = $( this ).closest( lojax.select.model );
+            if ( closest.length ) {
+                var m = priv.getModel( closest );
+                if ( m === model ) {
+                    lojax.bind( closest, m );
+                }
+            }
+        } );
     }
 };
 

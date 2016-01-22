@@ -26,6 +26,11 @@ lojax.onLoad = function ( callback ) {
     instance.onLoad = callback;
 };
 
+lojax.onUnload = function ( callback ) {
+    lojax.log( 'lojax.onUnload called' );
+    instance.onUnload = callback;
+};
+
 lojax.closeModal = function () {
     if ( priv.hasValue( instance.modal ) ) {
         if ( $.fn.modal ) {
@@ -82,8 +87,9 @@ lojax.log = function ( arg ) {
     };
 };
 
+lojax.error = ( console && console.error ) ? console.error : function () { };
+
 lojax.config = {
-    prefix: 'jx-',
     transition: 'fade-in',
     hash: true
 };
@@ -103,13 +109,3 @@ lojax.select = {
     jxModel: 'jx-model'
 };
 
-( function () {
-    if ( lojax.config.prefix !== 'jx-' ) {
-        Object.getOwnPropertyNames( lojax.select ).forEach( function ( prop ) {
-            if ( prop !== 'panel' ) {
-                lojax.select[prop] = lojax.select[prop].replace( /jx-/g, lojax.config.prefix );
-            }
-        } );
-        lojax.log( lojax.select );
-    }
-} )();

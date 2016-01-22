@@ -1,18 +1,18 @@
-Better error handling. Currently if a request fails, afterRequest doesn't fire, leaving everybody hanging.
+Better error handling. Currently if a request fails, afterRequest doesn't fire, leaving everybody hanging. 
+Create a customizable error snippet that can be injected into a modal or jx-src.
 
-Figure out how to hook into client-side validation. Can we copy validation attributes when we create dynamic forms?
+Figure out how to hook into client-side validation. Can we copy validation attributes when we create dynamic forms? Can we re-examine the jQuery's clone function? We'd have to create special logic for selects.
 "To parse new HTML, you can call the jQuery.validator.unobtrusive.parse() method, passing it a selector for the HTML that you would like to be parsed. 
 You can also call the jQuery.validator.unobtrusive.parseElement() function to parse a single HTML element." 
 http://bradwilson.typepad.com/blog/2010/10/mvc3-unobtrusive-validation.html
 
-Add support for files.
-
-Use an object proxy to provide two-way binding for data models.
+Add support for files. Was thinking specifically of input[type=file]. 
+Can these be cloned?
 
 Support callback parameters for JSONP.
 
-Allow arbitrary elements to be bound to a model (e.g. div.text()). Give any element a name attribute and lojax will figure out how to bind to it.
-This means we'll have to query forms with ':input' instead of [name].
+
+
 
 ### Regression Testing
 

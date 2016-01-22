@@ -5,14 +5,22 @@
             val = $( this ).find( "input" ).val();
             window.callInTest( val );
         } );
+        lojax.onUnload( function () {
+            val = $( this ).find( "input" ).val();
+            window.callOutTest( val );
+        } );
     </script>
 </div>
-<div jx-panel="hidden-div2">
+<div jx-panel="hidden-div">
     <input type="hidden" value="call-in-test2" />
     <script>
         lojax.onLoad( function () {
             val = $( this ).find( "input" ).val();
             window.callInTest2( val );
+        } );
+        lojax.onUnload( function () {
+            val = $( this ).find( "input" ).val();
+            window.callOutTest( val );
         } );
     </script>
     <div data-src="partials/LoadAsyncContent.html"></div>

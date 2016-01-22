@@ -31,6 +31,11 @@ var lojax = lojax || {};
         instance.onLoad = callback;
     };
     
+    lojax.onUnload = function ( callback ) {
+        lojax.log( 'lojax.onUnload called' );
+        instance.onUnload = callback;
+    };
+    
     lojax.closeModal = function () {
         if ( priv.hasValue( instance.modal ) ) {
             if ( $.fn.modal ) {
@@ -87,8 +92,9 @@ var lojax = lojax || {};
         };
     };
     
+    lojax.error = ( console && console.error ) ? console.error : function () { };
+    
     lojax.config = {
-        prefix: 'jx-',
         transition: 'fade-in',
         hash: true
     };
@@ -108,16 +114,6 @@ var lojax = lojax || {};
         jxModel: 'jx-model'
     };
     
-    ( function () {
-        if ( lojax.config.prefix !== 'jx-' ) {
-            Object.getOwnPropertyNames( lojax.select ).forEach( function ( prop ) {
-                if ( prop !== 'panel' ) {
-                    lojax.select[prop] = lojax.select[prop].replace( /jx-/g, lojax.config.prefix );
-                }
-            } );
-            lojax.log( lojax.select );
-        }
-    } )();
     
     /***********\
        Cache
@@ -199,20 +195,9 @@ var lojax = lojax || {};
     
         $( function () {
             self.div = $( "<div style='display:none'></div>" ).appendTo( 'body' );
-            $( document ).on( 'click', lojax.select.methodOrRequest, self.handleRequest );
-            $( document ).on( 'change', lojax.select.methodWithChange, self.handleRequest );
-            // allows executing a request on a single input element without wrapping it in a form (e.g. data-trigger="change enter")
-            // also submits an element with a model attribute if enter key is pressed
-            $( document ).on( 'keydown', lojax.select.methodWithEnterOrModel, self.handleEnterKey );
-            $( document ).on( 'submit', lojax.select.formWithMethod, self.handleRequest );
-            $( document ).on( 'change', lojax.select.model, self.updateModel );
-            // handle the control key
-            $( document ).on( 'keydown', self.handleControlKey ).on( 'keyup', self.handleControlKey );
     
-            if ( lojax.config.hash ) {
-                window.addEventListener( "hashchange", self.handleHash, false );
-            }
-    
+            self.removeHandlers();
+            self.addHandlers();
             self.loadDataSrcDivs();
             self.bindToModels();
             self.prefetchAsync();
@@ -225,6 +210,36 @@ var lojax = lojax || {};
     };
     
     lojax.Controller.prototype = {
+    
+        addHandlers: function() {
+            $( document )
+                .on( 'click', lojax.select.methodOrRequest, this.handleRequest )
+                .on( 'change', lojax.select.methodWithChange, this.handleRequest )
+                // allows executing a request on a single input element without wrapping it in a form (e.g. data-trigger="change enter")
+                // also submits an element with a model attribute if enter key is pressed
+                .on( 'keydown', lojax.select.methodWithEnterOrModel, this.handleEnterKey )
+                .on( 'submit', lojax.select.formWithMethod, this.handleRequest )
+                .on( 'change', lojax.select.model, this.updateModel )
+                // handle the control key
+                .on( 'keydown', this.handleControlKey ).on( 'keyup', this.handleControlKey );
+            if ( lojax.config.hash ) {
+                window.addEventListener( "hashchange", this.handleHash, false );
+            }
+        },
+    
+        removeHandlers: function() {
+            $( document )
+                .off( 'click', this.handleRequest )
+                .off( 'change', this.handleRequest )
+                .off( 'keydown', this.handleEnterKey )
+                .off( 'submit', this.handleRequest )
+                .off( 'change', this.updateModel )
+                .off( 'keydown', this.handleControlKey )
+                .off( 'keyup', this.handleControlKey );
+            if ( lojax.config.hash ) {
+                window.removeEventListener( "hashchange", this.handleHash, false );
+            }
+        },
     
         handleRequest: function ( evt ) {
             evt.stopPropagation();
@@ -240,35 +255,40 @@ var lojax = lojax || {};
     
             lojax.log( 'handleRequest: request: ' ).log( request );
     
-            // delegate hashes to handleHash
-            if ( request.isNavHistory ) {
+            try {
+                // delegate hashes to handleHash
+                if ( request.isNavHistory ) {
     
-                // if the control key is down and this is a hash url, let the browser handle it
-                if ( instance.isControl ) {
-                    return;
-                }
+                    // if the control key is down and this is a hash url, let the browser handle it
+                    if ( instance.isControl ) {
+                        return;
+                    }
     
-                // store the request's transition so handleHash can pick it up
-                instance.currentTransition = request.transition;
+                    // store the request's transition so handleHash can pick it up
+                    instance.currentTransition = request.transition;
     
-                var newHash = request.action;
+                    var newHash = request.action;
     
-                if ( request.data ) {
-                    newHash += '?' + request.data;
-                }
+                    if ( request.data ) {
+                        newHash += '?' + request.data;
+                    }
     
-                // if hash equals the current hash, hashchange event won't fire
-                // so call handleHash directly
-                if ( '#' + newHash === window.location.hash ) {
-                    instance.handleHash();
+                    // if hash equals the current hash, hashchange event won't fire
+                    // so call handleHash directly
+                    if ( '#' + newHash === window.location.hash ) {
+                        instance.handleHash();
+                    }
+                    else {
+                        // trigger hashchange event
+                        window.location.hash = newHash;
+                    }
                 }
                 else {
-                    // trigger hashchange event
-                    window.location.hash = newHash;
+                    instance.executeRequest( request );
                 }
             }
-            else {
-                instance.executeRequest( request );
+            catch ( ex ) {
+                lojax.error( ex );
             }
     
             evt.preventDefault();
@@ -375,9 +395,9 @@ var lojax = lojax || {};
         updateModel: function ( evt ) {
             // model's change handler 
             // provides simple one-way binding from HTML elements to a model
-            // 'this' is the element with data-model|data-model attribute
+            // 'this' is the element with jx-model attribute
             var $this = $( this );
-            // $target is the element that triggered change event
+            // $target is the element that triggered the change event
             var $target = $( evt.target );
             var model = priv.getModel( $this );
             var name = evt.target.name;
@@ -407,6 +427,7 @@ var lojax = lojax || {};
     
             lojax.log( 'updateModel: afterUpdateModel raised' );
     
+            priv.propagateChange( model, $target );
         },
     
         injectContent: function ( request, response ) {
@@ -425,14 +446,20 @@ var lojax = lojax || {};
                 target = request.target || $( lojax.select.panel( id ) ).first();
     
                 if ( target.length ) {
+    
                     lojax.log( 'injectContent: data-panel: ' + id );
                     transition = priv.resolveTransition( request, node );
+                    priv.callOnUnload( target );
                     result = transition( target, node );
                     if ( priv.hasValue( request ) ) {
                         result.refresh = request.exec.bind( request );
                     }
                     priv.triggerEvent( lojax.events.afterInject, result, node );
                     instance.bindToModels( result );
+                    if ( typeof instance.onUnload == 'function' ) {
+                        $( result )[0].onUnload = instance.onUnload;
+                        instance.onUnload = null;
+                    }
                     priv.callOnLoad( result, request );
                     instance.loadDataSrcDivs( result );
                     instance.prefetchAsync( result );
@@ -961,19 +988,22 @@ var lojax = lojax || {};
         setElementsFromModel: function ( context, model ) {
             var value,
                 type,
+                name,
                 $this = $( context );
     
             lojax.log( 'setELementsFromModel: model:' ).log( model );
     
             // set the inputs to the model
             $this.find( '[name]' ).each( function () {
-                value = priv.getModelValue( model, this.name );
+                name = this.name || $( this ).attr( 'name' );
+                value = priv.getModelValue( model, name );
+                console.log( name, value );
                 type = $.type( value );
                 // lojax assumes ISO 8601 date serialization format
-                // http://www.hanselman.com/blog/OnTheNightmareThatIsJSONDatesPlusJSONNETAndASPNETWebAPI.aspx
                 // ISO 8601 is easy to parse
-                // making it possible to skip the problem of converting date strings to JS Date objects in most cases
-                if ( type === 'date' || this.type === 'date' ) {
+                // making it possible to skip the problem of converting 
+                // date strings to Date objects and back again in most cases
+                if ( type === 'date' && this.type === 'date' ) {
                     // date inputs expect yyyy-MM-dd
                     $( this ).val( priv.standardDateFormat( value ) );
                 }
@@ -983,8 +1013,11 @@ var lojax = lojax || {};
                 else if (this.type === 'radio') {
                     this.checked = ( this.value == value );
                 }
-                else {
+                else if (this.value !== undefined) {
                     $( this ).val( value );
+                }
+                else if ( this.innerHTML !== undefined ) {
+                    $( this ).html( value );
                 }
             } );
         },
@@ -1057,6 +1090,12 @@ var lojax = lojax || {};
             // and that calls to lojax.onLoad outside of a container are ignored
             instance.onLoad = null;
         },
+        callOnUnload: function ( panel ) {
+            if ( panel && typeof panel[0].onUnload == 'function' ) {
+                panel[0].onUnload.call( panel );
+                panel[0].onUnload = null;
+            }
+        },
         nonce: jQuery.now(),
         noCache: function ( url ) {
             var a = ( url.indexOf( '?' ) != -1 ? '&_=' : '?_=' ) + priv.nonce++;
@@ -1084,6 +1123,18 @@ var lojax = lojax || {};
                     // let the server deserialize them
                     return val;
             }
+        },
+        propagateChange: function ( model, elem ) {
+            // find elements that are bound to the same model
+            $( document ).find( '[name="' + elem.name + '"]' ).not( elem ).each( function () {
+                var closest = $( this ).closest( lojax.select.model );
+                if ( closest.length ) {
+                    var m = priv.getModel( closest );
+                    if ( m === model ) {
+                        lojax.bind( closest, m );
+                    }
+                }
+            } );
         }
     };
     
@@ -1336,54 +1387,6 @@ var lojax = lojax || {};
                 $new = $( newNode );
             $old.fadeOut( 0 ).empty().append( $new.contents() ).fadeIn();
             return $old;
-        },
-        'flip-horizontal': function ( oldNode, newNode ) {
-            var $old = $( oldNode ),
-                $new = $( newNode );
-            var parent = $old.parent().addClass( 'flip-horizontal' ).css( 'position', 'relative' );
-            $old.addClass( 'front' );
-            $new.addClass( 'back' ).width( $old.width() ).appendTo( parent );
-            setTimeout( function () {
-                parent.addClass( 'flip' );
-            }, 100 );
-            setTimeout( function () {
-                $old.remove();
-                parent.removeClass( 'flip' ).removeClass( 'flip-horizontal' );
-                $new.removeClass( 'back' ).css( 'width', '' );
-            }, 1000 );
-            return $new;
-        },
-        'flip-vertical': function ( oldNode, newNode ) {
-            var $old = $( oldNode ),
-                $new = $( newNode );
-            var parent = $old.parent().addClass( 'flip-vertical' ).css( 'position', 'relative' );
-            $old.addClass( 'front' );
-            $new.addClass( 'back' ).css( 'width', $old.width() ).appendTo( parent );
-            setTimeout( function () {
-                parent.addClass( 'flip' );
-            }, 100 );
-            setTimeout( function () {
-                $old.remove();
-                parent.removeClass( 'flip' ).removeClass( 'flip-vertical' );
-                $new.removeClass( 'back' ).css( 'width', '' );
-            }, 1000 );
-            return $new;
-        },
-        'slide-left': function ( oldNode, newNode ) {
-            var $old = $( oldNode ),
-                $new = $( newNode );
-            var parent = $old.parent().addClass( 'slide-left' ).css( 'position', 'relative' );
-            $old.addClass( 'left' );
-            $new.addClass( 'right' ).appendTo( parent );
-            setTimeout( function () {
-                parent.addClass( 'slide' );
-            }, 100 );
-            setTimeout( function () {
-                $old.remove();
-                parent.removeClass( 'slide' ).removeClass( 'slide-left' );
-                $new.removeClass( 'right' );
-            }, 800 );
-            return $new;
         },
         'append': function ( oldNode, newNode ) {
             // useful for paging
