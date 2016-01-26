@@ -170,18 +170,21 @@ lojax.Request.prototype = {
         if ( priv.hasValue( this.action ) && this.action !== '' ) {
             priv.beforeRequest( this, this.suppressEvents );
             if ( !this.cancel ) {
-                if ( this.cache && ( this.result || this.error ) ) {
-                    lojax.log( 'request.exec: cached' );
-                    // don't execute the AJAX request, just call the handlers
-                    if ( this.result ) this.done( this.result );
-                    if ( this.error ) this.fail( this.error );
-                    priv.afterRequest( this, this.suppressEvents );
-                }
-                else {
-                    // execute the method function
-                    this.methods[this.method].bind( this )();
-                    lojax.log( 'request.exec: executed' );
-                }
+                // execute the method function
+                this.methods[this.method].bind( this )();
+                lojax.log( 'request.exec: executed' );
+                //if ( this.cache && ( this.result || this.error ) ) {
+                //    lojax.log( 'request.exec: cached' );
+                //    // don't execute the AJAX request, just call the handlers
+                //    if ( this.result ) this.done( this.result );
+                //    if ( this.error ) this.fail( this.error );
+                //    priv.afterRequest( this, this.suppressEvents );
+                //}
+                //else {
+                //    // execute the method function
+                //    this.methods[this.method].bind( this )();
+                //    lojax.log( 'request.exec: executed' );
+                //}
             }
             else {
                 // always trigger afterRequest even if there was no request

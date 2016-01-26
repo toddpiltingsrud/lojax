@@ -9,7 +9,7 @@ lojax.Controller = function () {
     this.modal = null;
     this.currentTransition = null;
     this.currentPanel = null;
-    this.cache = new lojax.Cache();
+    this.cache = {};
     this.isControl = false;
 
     $( function () {
@@ -19,7 +19,7 @@ lojax.Controller = function () {
         self.addHandlers();
         self.loadDataSrcDivs();
         self.bindToModels();
-        self.prefetchAsync();
+        self.preloadAsync();
 
         // check window.location.hash for valid hash
         if ( priv.hasHash() ) {
@@ -41,7 +41,7 @@ lojax.Controller.prototype = {
             .on( 'change', lojax.select.model, this.updateModel )
             // handle the control key
             .on( 'keydown', this.handleControlKey ).on( 'keyup', this.handleControlKey );
-        if ( lojax.config.hash ) {
+        if ( lojax.config.navHistory  ) {
             window.addEventListener( "hashchange", this.handleHash, false );
         }
     },
@@ -55,7 +55,7 @@ lojax.Controller.prototype = {
             .off( 'change', this.updateModel )
             .off( 'keydown', this.handleControlKey )
             .off( 'keyup', this.handleControlKey );
-        if ( lojax.config.hash ) {
+        if ( lojax.config.navHistory  ) {
             window.removeEventListener( "hashchange", this.handleHash, false );
         }
     },
@@ -126,7 +126,10 @@ lojax.Controller.prototype = {
     },
 
     handleHash: function () {
-        if ( !lojax.config.hash ) return;
+
+        lojax.log( 'handleHash called' );
+
+        if ( !lojax.config.navHistory  ) return;
 
         // grab the current hash and request it with ajax-get
 
@@ -172,19 +175,16 @@ lojax.Controller.prototype = {
         if ( request.action === null ) return;
 
         // check for caching
-        if ( request.cache ) {
-            if ( this.cache.contains( request.action ) ) {
-                request = this.cache.get( request.action );
-                lojax.log( 'executeRequest: retrieved from cache' );
-            }
-            else {
-                this.cache.add( request );
-                lojax.log( 'executeRequest: added to cache' );
-            }
+        if ( this.cache[request.action] !== undefined ) {
+            request = this.cache[request.action];
+            delete this.cache[request.action];
+            lojax.log( 'executeRequest: retrieved from cache' );
+        }
+        else {
+            request.exec();
         }
 
         request
-            .exec()
             .then( function ( response ) {
                 instance.injectContent( request, response );
             } )
@@ -281,7 +281,7 @@ lojax.Controller.prototype = {
                 }
                 priv.callOnLoad( result, request );
                 instance.loadDataSrcDivs( result );
-                instance.prefetchAsync( result );
+                instance.preloadAsync( result );
             }
         };
 
@@ -385,14 +385,14 @@ lojax.Controller.prototype = {
             instance.bindToModels( instance.modal );
             priv.callOnLoad( instance.modal, request );
             instance.loadDataSrcDivs( instance.modal );
-            instance.prefetchAsync( instance.modal );
+            instance.preloadAsync( instance.modal );
         }
     },
 
     // an AJAX alternative to iframes
     loadDataSrcDivs: function ( root ) {
         root = root || document;
-        $( root ).find( lojax.select.divWithSrc ).each( function () {
+        $( root ).find( lojax.select.src ).each( function () {
             var $this = $( this );
             var url = priv.attr( $this, 'src' );
             instance.executeRequest( {
@@ -400,27 +400,27 @@ lojax.Controller.prototype = {
                 method: 'ajax-get',
                 target: $this,
                 source: $this,
-                transition: priv.attr( $this, 'transition' ) || 'append',
+                transition: priv.attr( $this, 'transition' ) || 'swap-contents',
                 suppressEvents: true
             } );
         } );
     },
 
-    prefetchAsync: function ( root ) {
+    preloadAsync: function ( root ) {
         var self = this, config, request;
         root = root || document;
         // do this after everything else
         setTimeout( function () {
             // find elements that are supposed to be pre-loaded
-            $( root ).find( lojax.select.prefetch ).each( function () {
+            $( root ).find( lojax.select.preload ).each( function () {
                 config = priv.getConfig( this );
                 config.suppressEvents = true;
                 request = new lojax.Request( config );
                 // if it's got a valid action that hasn't already been cached, cache and execute
-                if ( request.action && !self.cache.contains( request.action ) ) {
-                    self.cache.add( request );
+                if ( priv.hasValue( request.action ) && !self.cache[ request.action ] ) {
+                    self.cache[request.action] = request;
                     request.exec();
-                    lojax.log( 'prefetchAsync: request:' ).log( request );
+                    lojax.log( 'preloadAsync: request:' ).log( request );
                 }
             } );
         } );

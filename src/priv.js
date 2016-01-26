@@ -26,7 +26,7 @@ var priv = {
     isJSON: function ( str ) {
         return rexp.json.test( str );
     },
-    attributes: 'method action transition target form model cache expire renew'.split( ' ' ),
+    attributes: 'method action transition target form model preload'.split( ' ' ),
     getConfig: function ( elem ) {
         var name, config, $this = $( elem );
 
@@ -107,7 +107,9 @@ var priv = {
                 return closest;
             }
         }
-        if ( $( params.source ).is( 'form' ) ) {
+        // check for a form or a single named input with a trigger
+        if ( $( params.source ).is( 'form' )
+            || $( params.source ).is( lojax.select.inputTriggerChangeOrEnter ) ) {
             return params.source;
         }
         return null;

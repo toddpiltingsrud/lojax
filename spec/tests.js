@@ -1,6 +1,6 @@
 var tests = tests || {};
 
-lojax.config.prefix = 'jx-';
+//lojax.config.prefix = 'jx-';
 
 var div = null;
 
@@ -145,16 +145,16 @@ QUnit.test( 'handleHash2', function ( assert ) {
 
 } );
 
-QUnit.test( 'lojax.get', function ( assert ) {
+QUnit.test( 'lojax.exec', function ( assert ) {
 
     var done = assert.async();
 
     $( document ).one( 'customEvent', function () {
-        assert.ok( true, 'lojax.get should execute a request' );
+        assert.ok( true, 'lojax.exec should execute a request' );
         done();
     } );
 
-    lojax.get( {
+    lojax.exec( {
         action: 'partials/RaiseEvent.html',
         method: 'ajax-get'
     } );
@@ -806,10 +806,14 @@ QUnit.test( 'loadDataSrcDivs', function ( assert ) {
 
         var datamodel = div.find( '[data-model]' ).data( 'model' );
 
+        var replaceThis = div.find( '#replaceThis' ).length;
+
+        assert.equal( replaceThis, 0, 'jx-src should completely replace contents by default' );
+
         done();
     } );
 
-    div.append( '<div data-src="partials/ModelTest.html"></div>' );
+    div.append( '<div data-src="partials/ModelTest.html"><span id="replaceThis"></span></div>' );
 
     lojax.instance.loadDataSrcDivs( div );
 
@@ -854,6 +858,7 @@ QUnit.test( 'injectContent2', function ( assert ) {
     $( document ).on( lojax.events.afterRequest, function () {
         assert.equal( window.testvalue, '1', 'new content should be queried by new script' );
         assert.equal( window.testvalue2, true, 'loose scripts should run' );
+        assert.equal( div.find( '#testinput' ).length, 1, 'jx-panels should get injected' );
         done();
         lojax.logging = false;
     } );
@@ -1251,6 +1256,30 @@ QUnit.test( 'posting forms 3', function ( assert ) {
 
 } );
 
+QUnit.test( 'posting forms 4', function ( assert ) {
+
+    div.empty();
+
+    // create a single input
+    var input = $( '<input type="text" name="search" jx-action="/home/search" jx-method="ajax-post" jx-trigger="change enter" value="single input" />' );
+
+    div.append( input );
+
+    var done = assert.async();
+
+    $( document ).one( lojax.events.afterRequest, function ( evt, arg ) {
+        console.log( arg );
+        assert.equal( $(arg.form).val(), 'single input', 'if the event source is a single input, assume it is suposed to be the form' );
+        done();
+        lojax.logging = false;
+    } );
+
+    lojax.logging = true;
+
+    input.change();
+
+} );
+
 QUnit.test( 'modals1', function ( assert ) {
 
     lojax.logging = true;
@@ -1303,112 +1332,27 @@ QUnit.test( 'modals2', function ( assert ) {
 
 } );
 
-QUnit.test( 'cache request', function ( assert ) {
-
-    lojax.logging = true;
-    var cache = lojax.instance.cache;
-
-    var request = new lojax.Request( {
-        action: 'partials/EmptyResponse.html',
-        method: 'ajax-get',
-        expire: .5,
-        cache: true
-    } );
-
-    lojax.instance.executeRequest( request );
-
-    assert.equal( cache.get( request.action ), request );
-
-    lojax.instance.executeRequest( request );
-
-} );
-
-QUnit.test( 'cache auto-renew', function ( assert ) {
-
-    var cache = new lojax.Cache();
-
-    var request = new lojax.Request( {
-        action: 'partials/Modal.html',
-        method: 'ajax-get',
-        cache: true,
-        expire: .5,
-        renew: 'auto'
-    } );
-
-    var requestCount = 3;
-
-    var done = assert.async();
-
-    $( document ).on( lojax.events.afterRequest, function () {
-        if ( requestCount-- === 0 ) {
-            assert.ok( true, 'auto renew works' );
-            cache.clear();
-            assert.equal( cache.get( request.action ), undefined );
-            done();
-            $( document ).off( lojax.events.afterRequest );
-        }
-    } );
-
-    cache.add( request );
-
-    assert.equal( cache.get( request.action ), request );
-
-} );
-
-QUnit.test( 'cache sliding renew', function ( assert ) {
-
-    var done = assert.async();
-
-    cache = new lojax.Cache();
-
-    var request = new lojax.Request( {
-        action: 'partials/Modal.html',
-        method: 'ajax-get',
-        expire: .5,
-        renew: 'sliding'
-    } );
-
-    var requestCount = 3;
-
-    var renew = function () {
-        if ( requestCount-- > 0 ) {
-            assert.notEqual( cache.get( request.action ), undefined );
-            setTimeout( renew, 250 );
-        }
-        else {
-            setTimeout( function () {
-                assert.equal( cache.get( request.action ), undefined );
-                done();
-            }, 750 );
-        }
-    };
-
-    cache.add( request );
-
-    renew();
-
-} );
-
-QUnit.test( 'prefetch1', function ( assert ) {
+QUnit.test( 'preload', function ( assert ) {
 
     div.empty();
 
     var done = assert.async();
 
-    lojax.logging = true;
+    lojax.logging = false;
+    var store = lojax.instance.cache;
+    var prop;
 
     $( document ).one( lojax.events.afterRequest, function ( evt, arg ) {
         setTimeout( function () {
-            var store = lojax.instance.cache.store;
-            var prop = Object.getOwnPropertyNames( store )[0];
-            console.log( store );
-            assert.ok( /prefetch2/.test( prop ), 'make sure we have the right request' );
-            var request = lojax.instance.cache.store[prop];
+            prop = Object.getOwnPropertyNames( store )[0];
+            assert.ok( /RaiseEvent/.test( prop ), 'make sure we have the right request' );
+            var request = lojax.instance.cache[prop];
             assert.ok( request != null, 'stuff should get cached' );
-            console.log( request );
+            // wait for it to return, then check the contents
             request.then( function ( response ) {
-                assert.equal( response, '<h4>Cache This</h4>' );
-                done();
+                assert.ok( /customEvent/.test( response ) ,'' );
+                // now execute the request for real
+                lojax.exec( request );
             },
             function ( error ) {
                 assert.ok( false, 'ajax error' );
@@ -1418,7 +1362,17 @@ QUnit.test( 'prefetch1', function ( assert ) {
         } );
     } );
 
-    $( '<button data-method="ajax-get" data-action="partials/prefetch1.html">' ).appendTo( div ).click();
+    $( document ).off( 'customEvent' );
+
+    $( document ).on( 'customEvent', function () {
+        assert.ok( true, 'customEvent was raised' );
+        setTimeout( function () {
+            assert.equal( store[prop], undefined, 'preloaded requests should be automatically removed' );
+            done();
+        } );
+    } );
+
+    $( '<button data-method="ajax-get" data-action="partials/preload1.html">' ).appendTo( div ).click();
 
 } );
 

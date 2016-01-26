@@ -209,8 +209,7 @@
     </Content>
     <Content Include="spec\partials\ControlKeyTest.html" />
     <Content Include="spec\partials\Modal2.html" />
-    <Content Include="spec\partials\Prefetch1.html" />
-    <Content Include="spec\partials\Prefetch2.html" />
+    <Content Include="spec\partials\Preload1.html" />
     <Content Include="spec\partials\Modal.html" />
     <Content Include="spec\partials\EmptyResponse.html" />
     <Content Include="spec\partials\LoadAsyncContent.html" />
@@ -231,7 +230,6 @@
     <Content Include="spec\scripts\qunit-1.20.0.js" />
     <Content Include="spec\scripts\respond.js" />
     <Content Include="src\controller.js" />
-    <Content Include="src\cache.js" />
     <Content Include="src\api.js" />
     <Content Include="src\priv.js" />
     <Content Include="src\transitions.js" />

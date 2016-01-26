@@ -9,9 +9,16 @@ http://bradwilson.typepad.com/blog/2010/10/mvc3-unobtrusive-validation.html
 Add support for files. Was thinking specifically of input[type=file]. 
 Can these be cloned?
 
+
+If multiple elements are bound to an empty model or a model with missing properties, 
+use the input elements to supply the missing properties.
+
+
 Support callback parameters for JSONP.
 
+Allow jx-src to be used on any element.
 
+Change lojax.config.navHistory  to lojax.config.navHistory.
 
 
 ### Regression Testing
@@ -66,7 +73,7 @@ When the user clicks the edit link, we want to bind the form in the modal (which
 But we've already got the data in the jx-model attribute, so we shouldn't have to make another request for it.
 For these kinds of cases we can use lojax.onLoad.
 
-<form>
+<form jx-panel="theForm">
 	<input name="color" type="color" />
 	...
 
@@ -88,7 +95,7 @@ For these kinds of cases we can use lojax.onLoad.
 The script in the form will run when it is injected into the page, setting lojax's onLoad callback.
 After lojax injects the form, it immediately checks for an onLoad callback and executes it if present,
 supplying the form as the context and the request as the argument.
-lojax then immediately nulls out its internal reference to the callback to prepare for the next injection.
+lojax then immediately nulls out its internal reference to the callback to prepare for the next iteration.
 So we just have to make sure that the script tag is INSIDE the form.
 If you place a call to lojax.onLoad outside the form, the callback won't be executed.
 
@@ -112,19 +119,28 @@ Create a nuget package.
 ### Supported scenarios/patterns:
 
 - Clicking an element executes a request with optional form or model.
-- Specify jx-trigger = change to handle the change event on an element containing inputs and execute a request with optional form or model
+- Specify jx-trigger = change to handle the change event on an element containing inputs and execute a request with optional form or model.
 - An element with jx-method and jx-trigger containg 'enter' executes a request with optional form or model when enter key is pressed.
 - Clicking a submit button inside a form with a jx-method attribute executes a request with the form.
 - Clicking a submit button inside an element with a jx-model attribute executes a request with the model.
 - Add an empty jx-model attribute to any parent element to create a JSON model from the child inputs.
 - A non-empty jx-model attribute on a parent element will set the values of the child inputs to the model by matching model properties to input names.
-- Change the url's hash to trigger an ajax-get request. Simple way to get cross-browser navigation history for ajax requests.
 - If input elements are inside an element with a jx-model attribute, the change event writes the changes to the data model.
-- Add a jx-src attribute to a div to load content into the div asynchronously. This uses the same logic as jx-panels, so you can use transitions, model binding, other jx-src divs, etc.
-- Use lojax.onLoad(callback) inside a jx-panel, modal, or div[jx-src] to execute a function with context ('this' keyword) set to the containing element.
+- Change the url's hash to trigger an ajax-get request. Simple way to get cross-browser navigation history for ajax requests.
+  Configure what happens when hash changes to nothing.
+  Hold down the control key and click a link with a hash to open a new tab. After the main page loads, lojax will make an ajax request for the hash.
+- Add a jx-src attribute to a div to load content into the div asynchronously. 
+  This uses the same logic as jx-panels, so you can use transitions, model binding, other jx-src divs, etc.
+- Use lojax.onLoad(callback) inside a jx-panel, modal, or div[jx-src] to execute a function with context set to the containing element when the element is injected.
+  The request is passed as an argument to the callback.
   This works only if the script is inside the element you want as the context.
   The callback is invoked after model binding, but before loadDataSrcDivs. Callbacks are invoked only once.
-- Post a JSON model without ajax. This works by converting the model into a form and submitting it.
+- Use lojax.onUnload(callback) inside a jx-panel, modal, or div[jx-src] to execute a function with context set to the containing element when the element is about to be replaced.
+  Useful for removing event handlers.
+  This works only if the script is inside the element you want as the context.
+- Post a JSON model without ajax by setting jx-method = post. This works by converting the model to a form and submitting it.
+  If you set jx-method = get, lojax will convert the model to a form, serialize it, and append it to the URL.
+  This doesn't work the other way. There is no established pattern for converting a form to a model.
 
 ### AJAX responses:
 
@@ -150,8 +166,8 @@ Create a nuget package.
 - Use a layout to create modals on the server.
 - Use cache="preload" for modals to retrieve them before they are requested. Then bind them to a model with lojax.bind(elem, model).
 - Use a publish/subscribe pattern instead of a callback URL query parameter to receive JSONP responses.
-  Use an attenuated version of the URL as the event name (app/controller/action).
+  Use an abbreviated version of the URL as the event name (app/controller/action).
   This is also useful for letting the client know when something important has happened on the server (e.g. app/customer/update).
   Different parts of the app can react to actions on the server without having actually initiated them.
   This creates a cleaner separation of concerns in your client-side code. 
-  For example, you could use a modal to update a resource without forcing the modal to update other parts of the UI that it should know nothing about.
+  For example, you could use a modal to update a resource without forcing the modal to update other parts of the UI as a result.

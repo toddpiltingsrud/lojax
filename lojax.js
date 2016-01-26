@@ -21,7 +21,7 @@ var lojax = lojax || {};
     };
     
     // execute a request
-    lojax.get = function ( params ) {
+    lojax.exec = function ( params ) {
         instance.executeRequest( params );
     };
     
@@ -95,8 +95,9 @@ var lojax = lojax || {};
     lojax.error = ( console && console.error ) ? console.error : function () { };
     
     lojax.config = {
+        prefix: 'jx-',
         transition: 'fade-in',
-        hash: true
+        navHistory: true
     };
     
     lojax.select = {
@@ -108,77 +109,13 @@ var lojax = lojax || {};
         panel: function ( id ) {
             return '[' + lojax.config.prefix + 'panel="' + id + '"],[data-panel="' + id + '"]';
         },
-        divWithSrc: 'div[data-src],div[jx-src]',
-        prefetch: '[data-cache=prefetch],[jx-cache=prefetch]',
+        src: '[data-src],[jx-src]',
+        preload: '[data-preload],[jx-preload]',
         jxModelAttribute: '[jx-model]',
-        jxModel: 'jx-model'
+        jxModel: 'jx-model',
+        inputTriggerChangeOrEnter: ':input[name][jx-trigger*=change],:input[name][data-trigger*=change],:input[name][jx-trigger*=enter],:input[name][data-trigger*=enter]'
     };
     
-    
-    /***********\
-       Cache
-    \***********/
-    
-    lojax.Cache = function () {
-        this.store = {};
-    };
-    
-    lojax.Cache.prototype = {
-        add: function ( request ) {
-            var key = request.getFullUrl();
-            this.remove( key );
-            this.store[key] = request;
-            if ( request.expire ) {
-                this.setTimeout( request );
-            }
-        },
-        remove: function ( key ) {
-            var request = this.store[key];
-            if ( request ) {
-                if ( request.timeout ) {
-                    clearTimeout( request.timeout );
-                }
-                delete this.store[key];
-            }
-        },
-        get: function ( key ) {
-            var request = this.store[key];
-            if ( request ) {
-                if ( request.renew === 'sliding' && request.timeout ) {
-                    this.setTimeout( request );
-                }
-                return this.store[key];
-            }
-        },
-        setTimeout: function ( request ) {
-            var self = this;
-            if ( request.timeout ) {
-                clearTimeout( request.timeout );
-            }
-            request.timeout = setTimeout( function () {
-                self.expire( request );
-            }, request.expire * 1000 );
-        },
-        expire: function ( request ) {
-            if ( request.renew === 'auto' ) {
-                request.exec();
-                this.setTimeout( request );
-            }
-            else {
-                this.remove( request.getFullUrl() );
-            }
-        },
-        clear: function () {
-            var self = this;
-            var keys = Object.getOwnPropertyNames( this.store );
-            keys.forEach( function ( key ) {
-                self.remove( key );
-            } );
-        },
-        contains: function ( key ) {
-            return ( key in this.store );
-        }
-    };
     
     /***********\
      Controller
@@ -190,7 +127,7 @@ var lojax = lojax || {};
         this.modal = null;
         this.currentTransition = null;
         this.currentPanel = null;
-        this.cache = new lojax.Cache();
+        this.cache = {};
         this.isControl = false;
     
         $( function () {
@@ -200,7 +137,7 @@ var lojax = lojax || {};
             self.addHandlers();
             self.loadDataSrcDivs();
             self.bindToModels();
-            self.prefetchAsync();
+            self.preloadAsync();
     
             // check window.location.hash for valid hash
             if ( priv.hasHash() ) {
@@ -222,7 +159,7 @@ var lojax = lojax || {};
                 .on( 'change', lojax.select.model, this.updateModel )
                 // handle the control key
                 .on( 'keydown', this.handleControlKey ).on( 'keyup', this.handleControlKey );
-            if ( lojax.config.hash ) {
+            if ( lojax.config.navHistory  ) {
                 window.addEventListener( "hashchange", this.handleHash, false );
             }
         },
@@ -236,7 +173,7 @@ var lojax = lojax || {};
                 .off( 'change', this.updateModel )
                 .off( 'keydown', this.handleControlKey )
                 .off( 'keyup', this.handleControlKey );
-            if ( lojax.config.hash ) {
+            if ( lojax.config.navHistory  ) {
                 window.removeEventListener( "hashchange", this.handleHash, false );
             }
         },
@@ -307,7 +244,10 @@ var lojax = lojax || {};
         },
     
         handleHash: function () {
-            if ( !lojax.config.hash ) return;
+    
+            lojax.log( 'handleHash called' );
+    
+            if ( !lojax.config.navHistory  ) return;
     
             // grab the current hash and request it with ajax-get
     
@@ -353,19 +293,16 @@ var lojax = lojax || {};
             if ( request.action === null ) return;
     
             // check for caching
-            if ( request.cache ) {
-                if ( this.cache.contains( request.action ) ) {
-                    request = this.cache.get( request.action );
-                    lojax.log( 'executeRequest: retrieved from cache' );
-                }
-                else {
-                    this.cache.add( request );
-                    lojax.log( 'executeRequest: added to cache' );
-                }
+            if ( this.cache[request.action] !== undefined ) {
+                request = this.cache[request.action];
+                delete this.cache[request.action];
+                lojax.log( 'executeRequest: retrieved from cache' );
+            }
+            else {
+                request.exec();
             }
     
             request
-                .exec()
                 .then( function ( response ) {
                     instance.injectContent( request, response );
                 } )
@@ -462,7 +399,7 @@ var lojax = lojax || {};
                     }
                     priv.callOnLoad( result, request );
                     instance.loadDataSrcDivs( result );
-                    instance.prefetchAsync( result );
+                    instance.preloadAsync( result );
                 }
             };
     
@@ -566,14 +503,14 @@ var lojax = lojax || {};
                 instance.bindToModels( instance.modal );
                 priv.callOnLoad( instance.modal, request );
                 instance.loadDataSrcDivs( instance.modal );
-                instance.prefetchAsync( instance.modal );
+                instance.preloadAsync( instance.modal );
             }
         },
     
         // an AJAX alternative to iframes
         loadDataSrcDivs: function ( root ) {
             root = root || document;
-            $( root ).find( lojax.select.divWithSrc ).each( function () {
+            $( root ).find( lojax.select.src ).each( function () {
                 var $this = $( this );
                 var url = priv.attr( $this, 'src' );
                 instance.executeRequest( {
@@ -581,27 +518,27 @@ var lojax = lojax || {};
                     method: 'ajax-get',
                     target: $this,
                     source: $this,
-                    transition: priv.attr( $this, 'transition' ) || 'append',
+                    transition: priv.attr( $this, 'transition' ) || 'swap-contents',
                     suppressEvents: true
                 } );
             } );
         },
     
-        prefetchAsync: function ( root ) {
+        preloadAsync: function ( root ) {
             var self = this, config, request;
             root = root || document;
             // do this after everything else
             setTimeout( function () {
                 // find elements that are supposed to be pre-loaded
-                $( root ).find( lojax.select.prefetch ).each( function () {
+                $( root ).find( lojax.select.preload ).each( function () {
                     config = priv.getConfig( this );
                     config.suppressEvents = true;
                     request = new lojax.Request( config );
                     // if it's got a valid action that hasn't already been cached, cache and execute
-                    if ( request.action && !self.cache.contains( request.action ) ) {
-                        self.cache.add( request );
+                    if ( priv.hasValue( request.action ) && !self.cache[ request.action ] ) {
+                        self.cache[request.action] = request;
                         request.exec();
-                        lojax.log( 'prefetchAsync: request:' ).log( request );
+                        lojax.log( 'preloadAsync: request:' ).log( request );
                     }
                 } );
             } );
@@ -649,7 +586,7 @@ var lojax = lojax || {};
         isJSON: function ( str ) {
             return rexp.json.test( str );
         },
-        attributes: 'method action transition target form model cache expire renew'.split( ' ' ),
+        attributes: 'method action transition target form model preload'.split( ' ' ),
         getConfig: function ( elem ) {
             var name, config, $this = $( elem );
     
@@ -730,7 +667,9 @@ var lojax = lojax || {};
                     return closest;
                 }
             }
-            if ( $( params.source ).is( 'form' ) ) {
+            // check for a form or a single named input with a trigger
+            if ( $( params.source ).is( 'form' )
+                || $( params.source ).is( lojax.select.inputTriggerChangeOrEnter ) ) {
                 return params.source;
             }
             return null;
@@ -1005,6 +944,7 @@ var lojax = lojax || {};
                 // date strings to Date objects and back again in most cases
                 if ( type === 'date' && this.type === 'date' ) {
                     // date inputs expect yyyy-MM-dd
+                    // keep in mind that some browsers (e.g. IE9) don't support the date input type
                     $( this ).val( priv.standardDateFormat( value ) );
                 }
                 else if ( type === 'boolean' && this.type === 'checkbox' ) {
@@ -1312,18 +1252,21 @@ var lojax = lojax || {};
             if ( priv.hasValue( this.action ) && this.action !== '' ) {
                 priv.beforeRequest( this, this.suppressEvents );
                 if ( !this.cancel ) {
-                    if ( this.cache && ( this.result || this.error ) ) {
-                        lojax.log( 'request.exec: cached' );
-                        // don't execute the AJAX request, just call the handlers
-                        if ( this.result ) this.done( this.result );
-                        if ( this.error ) this.fail( this.error );
-                        priv.afterRequest( this, this.suppressEvents );
-                    }
-                    else {
-                        // execute the method function
-                        this.methods[this.method].bind( this )();
-                        lojax.log( 'request.exec: executed' );
-                    }
+                    // execute the method function
+                    this.methods[this.method].bind( this )();
+                    lojax.log( 'request.exec: executed' );
+                    //if ( this.cache && ( this.result || this.error ) ) {
+                    //    lojax.log( 'request.exec: cached' );
+                    //    // don't execute the AJAX request, just call the handlers
+                    //    if ( this.result ) this.done( this.result );
+                    //    if ( this.error ) this.fail( this.error );
+                    //    priv.afterRequest( this, this.suppressEvents );
+                    //}
+                    //else {
+                    //    // execute the method function
+                    //    this.methods[this.method].bind( this )();
+                    //    lojax.log( 'request.exec: executed' );
+                    //}
                 }
                 else {
                     // always trigger afterRequest even if there was no request
@@ -1376,11 +1319,11 @@ var lojax = lojax || {};
     \***********/
     
     lojax.Transitions = {
-        'replace': function ( oldNode, newNode ) {
+        'swap-contents': function ( oldNode, newNode ) {
             var $old = $( oldNode ),
                 $new = $( newNode );
-            $old.replaceWith( $new );
-            return $new;
+            $old.empty().append( $new.contents() );
+            return $old;
         },
         'fade-in': function ( oldNode, newNode ) {
             var $old = $( oldNode ),
@@ -1388,14 +1331,21 @@ var lojax = lojax || {};
             $old.fadeOut( 0 ).empty().append( $new.contents() ).fadeIn();
             return $old;
         },
+        'replace': function ( oldNode, newNode ) {
+            var $old = $( oldNode ),
+                $new = $( newNode );
+            $old.replaceWith( $new );
+            return $new;
+        },
         'append': function ( oldNode, newNode ) {
-            // useful for paging
+            // useful for endless scrolling
             var $old = $( oldNode ),
                 $new = $( newNode );
             $old.append( $new );
             return $new;
         },
         'prepend': function ( oldNode, newNode ) {
+            // useful for adding new rows to tables
             var $old = $( oldNode ),
                 $new = $( newNode );
             $old.prepend( $new );

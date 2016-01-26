@@ -16,7 +16,7 @@ lojax.off = function ( event ) {
 };
 
 // execute a request
-lojax.get = function ( params ) {
+lojax.exec = function ( params ) {
     instance.executeRequest( params );
 };
 
@@ -90,8 +90,9 @@ lojax.log = function ( arg ) {
 lojax.error = ( console && console.error ) ? console.error : function () { };
 
 lojax.config = {
+    prefix: 'jx-',
     transition: 'fade-in',
-    hash: true
+    navHistory: true
 };
 
 lojax.select = {
@@ -103,9 +104,10 @@ lojax.select = {
     panel: function ( id ) {
         return '[' + lojax.config.prefix + 'panel="' + id + '"],[data-panel="' + id + '"]';
     },
-    divWithSrc: 'div[data-src],div[jx-src]',
-    prefetch: '[data-cache=prefetch],[jx-cache=prefetch]',
+    src: '[data-src],[jx-src]',
+    preload: '[data-preload],[jx-preload]',
     jxModelAttribute: '[jx-model]',
-    jxModel: 'jx-model'
+    jxModel: 'jx-model',
+    inputTriggerChangeOrEnter: ':input[name][jx-trigger*=change],:input[name][data-trigger*=change],:input[name][jx-trigger*=enter],:input[name][data-trigger*=enter]'
 };
 
