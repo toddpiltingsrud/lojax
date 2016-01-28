@@ -28,6 +28,8 @@ var getForm = function () {
     out.push( '<input type="radio" name="color" value="green" />' );
     out.push( '<input type="radio" name="color" value="blue" />' );
     out.push( '<input type="radio" name="color" value="cyan" />' );
+    out.push( '<input type="text" name="arrays.values" value="1" />' );
+    out.push( '<input type="text" name="arrays.values" value="2" />' );
 
     return out.join( '' );
 };
@@ -45,19 +47,22 @@ var getDetail = function () {
     out.push( '<p type="text" name="no.value" />' );
     out.push( '<p name="select">' );
     out.push( '<div name="color" />' );
+    out.push( '<div name="jx-quoted" />' );
 
     return out.join( '' );
 };
 
-var model = {
-    number: 3.14,
-    daterange: ['2015-11-13', new Date( '2016-01-01T06:00:00Z' )],
-    bool: false,
-    no: { value: null },
-    arrays: { names: ['Anders', 'Kaleb'] },
-    select: 'a',
-    color: 'green',
-    'jx-quoted': '&quot;'
+var getModel = function () {
+    return {
+        number: 3.14,
+        daterange: ['2015-11-13', new Date( '2016-01-01T06:00:00Z' )],
+        bool: false,
+        no: { value: null },
+        arrays: { names: ['Anders', 'Kaleb'] },
+        select: 'a',
+        color: 'green',
+        'jx-quoted': '&quot;'
+    };
 };
 
 $( function () {
@@ -230,7 +235,7 @@ QUnit.test( 'Request.getData', function ( assert ) {
         req = new lojax.Request( {
             action: 'partials/EmptyResponse.html',
             method:method,
-            model: model
+            model: getModel()
         } );
         data = req.getData();
         assert.ok( data != null );
@@ -453,7 +458,7 @@ QUnit.test( 'formFromModel', function ( assert ) {
 
     lojax.logging = true;
 
-    var form = lojax.priv.formFromModel( model );
+    var form = lojax.priv.formFromModel( getModel() );
 
     lojax.logging = false;
 
@@ -485,24 +490,26 @@ QUnit.test( 'standardDateFormat', function ( assert ) {
 
 QUnit.test( 'castValue', function ( assert ) {
 
-    var fn = lojax.priv.castValue;
+    div.empty();
 
-    assert.strictEqual( fn( undefined, 'number' ), null );
-    assert.strictEqual( fn( null, 'number' ), null );
-    assert.strictEqual( fn( '', 'number' ), null );
-    assert.strictEqual( fn( '1', 'number' ), 1 );
-    assert.strictEqual( fn( 'a', 'number' ), 'a' );
-    assert.strictEqual( fn( 'true', 'boolean' ), true );
-    assert.strictEqual( fn( 'false', 'boolean' ), false );
-    assert.strictEqual( fn( 'a', 'boolean' ), false );
-    assert.strictEqual( fn( 'true', 'null' ), true );
-    assert.strictEqual( fn( 'true', 'undefined' ), true );
-    assert.strictEqual( fn( 'false', 'null' ), false );
-    assert.strictEqual( fn( 'false', 'undefined' ), false );
-    assert.strictEqual( fn( 'a', 'null' ), 'a' );
-    assert.strictEqual( fn( '1', 'undefined' ), '1' );
-    assert.strictEqual( fn( 'true', 'date' ), 'true' );
-    assert.strictEqual( fn( 'true', 'object' ), 'true' );
+    var fn = lojax.priv.castValues;
+
+    var form = getForm();
+
+    div.append( form );
+
+    lojax.logging = true;
+
+    assert.strictEqual( fn( '5' , 'number' ), 5 );
+    assert.strictEqual( fn( '2015-01-01', 'date' ), '2015-01-01' );
+    assert.strictEqual( fn( 'True', 'boolean' ), true );
+    assert.strictEqual( fn( ['Todd', 'Kit'], 'undefined' )[0], 'Todd' );
+    assert.strictEqual( fn( ['Todd', 'Kit'], 'undefined' )[1], 'Kit' );
+    assert.strictEqual( fn( '', 'undefined' ), null );
+    assert.strictEqual( fn( ['1', '2'], 'number' )[0], 1 );
+    assert.strictEqual( fn( ['1', '2'], 'number' )[1], 2 );
+
+    lojax.logging = false;
 
 } );
 
@@ -535,7 +542,7 @@ QUnit.test( 'enter key event handler', function ( assert ) {
     var done = assert.async();
     var modelDiv = $( '<div data-model data-action="partials/RaiseEvent.html" data-method="ajax-post"></div>' );
     div.append( modelDiv );
-    modelDiv.data( 'model', model ).append( getForm() );
+    modelDiv.data( 'model', getModel() ).append( getForm() );
 
     $( document ).off( 'customEvent' );
 
@@ -646,6 +653,8 @@ QUnit.test( 'getObjectAtPath', function ( assert ) {
 
 QUnit.test( 'getModelValue', function ( assert ) {
 
+    var model = getModel();
+
     var result = lojax.priv.getModelValue( model, 'number' );
     assert.equal( result, model.number );
 
@@ -663,16 +672,18 @@ QUnit.test( 'getModelValue', function ( assert ) {
 
 } );
 
-QUnit.test( 'bindToModels1', function ( assert ) {
+QUnit.test( 'binding models 1', function ( assert ) {
     div.empty();
 
     var input = $( '<input data-model type="number" name="number" value="1" />' );
 
     div.append( input );
 
-    var models = lojax.instance.bindToModels( input );
+    lojax.instance.bindToModels( input );
 
-    assert.equal( models.length, 1, 'Should find one model' );
+    var model = input.data( 'model' );
+
+    assert.ok( model != undefined, 'Should find one model' );
 
     input.remove();
 
@@ -680,13 +691,15 @@ QUnit.test( 'bindToModels1', function ( assert ) {
 
     div.append( input );
 
-    var models = lojax.instance.bindToModels( input );
+    lojax.instance.bindToModels( input );
 
-    assert.equal( models.length, 0, 'Should find zero models' );
+    model = input.data( 'model' );
+
+    assert.ok( model == undefined, 'Should find zero models' );
 
 } );
 
-QUnit.test( 'bindToModels2', function ( assert ) {
+QUnit.test( 'binding models 2', function ( assert ) {
 
     div.empty();
 
@@ -696,11 +709,13 @@ QUnit.test( 'bindToModels2', function ( assert ) {
 
     div.append( modelDiv );
 
-    var models = lojax.instance.bindToModels( modelDiv );
+    lojax.logging = true;
 
-    assert.equal( models.length, 1, 'Should create one model' );
+    lojax.instance.bindToModels( modelDiv );
 
-    var m = models[0];
+    lojax.logging = false;
+
+    var m = modelDiv.data('model');
 
     assert.equal( m.number, 5, 'Should resolve numbers' );
 
@@ -761,13 +776,15 @@ QUnit.test( 'bindToModels2', function ( assert ) {
 
 } );
 
-QUnit.test( 'bindToModels3', function ( assert ) {
+QUnit.test( 'binding models 3', function ( assert ) {
 
     div.empty();
 
     div.append( getForm() );
 
     lojax.logging = true;
+
+    var model = getModel();
 
     lojax.bind( div, model );
 
@@ -796,8 +813,55 @@ QUnit.test( 'bindToModels3', function ( assert ) {
     lojax.logging = false;
 } );
 
-QUnit.test( 'loadDataSrcDivs', function ( assert ) {
+QUnit.test( 'binding models 4', function ( assert ) {
+
     div.empty();
+
+    // add a blank model
+    var modelDiv = $( '<div jx-model></div>' );
+
+    div.append( modelDiv );
+
+    // add some inputs
+    modelDiv.append( getForm() );
+
+    // bind the inputs to the model
+    lojax.instance.bindToModels( modelDiv );
+
+    // grab the model
+    var m = modelDiv.data( 'model' );
+
+    assert.strictEqual( m.daterange[0], '2015-01-01', 'Should resolve dates' );
+    assert.strictEqual( m.daterange[1], '2015-12-31', 'Should resolve dates' );
+    assert.strictEqual( m.bool, true, 'Should resolve bools' );
+    assert.strictEqual( m.arrays.names[1], 'Kit', 'Should resolve arrays' );
+    assert.strictEqual( m.arrays.names.length, 2, 'Should repopulate arrays' );
+
+    lojax.logging = true;
+
+    //modelDiv.find( '[name="daterange[0]"]' ).val( '2015-11-13' ).change();
+    //modelDiv.find( '[name="daterange[1]"]' ).val( '2015-11-15' ).change();
+    modelDiv.find( '[name=bool]' ).prop( 'checked', false ).change();
+    //modelDiv.find( '[value=Kaleb]' ).prop( 'checked', true ).change();
+    //modelDiv.find( '[name=color][value=green]' ).prop( 'checked', true ).change();
+
+    //assert.strictEqual( m.daterange[0], '2015-11-13', 'Should resolve dates' );
+    //assert.strictEqual( m.daterange[1], '2015-11-15', 'Should resolve dates' );
+    assert.strictEqual( m.bool, false, 'Should resolve bools' );
+    //assert.strictEqual( m.color, 'green', 'Should resolve radios' );
+    //assert.strictEqual( m.arrays.names[2], 'Kaleb', 'Should resolve arrays' );
+    //assert.strictEqual( m.arrays.names.length, 3, 'Should repopulate arrays' );
+
+    lojax.logging = false;
+
+    //console.log( m );
+
+} );
+
+QUnit.test( 'loadSrc', function ( assert ) {
+    div.empty();
+
+    lojax.logging = true;
 
     var done = assert.async();
 
@@ -811,11 +875,13 @@ QUnit.test( 'loadDataSrcDivs', function ( assert ) {
         assert.equal( replaceThis, 0, 'jx-src should completely replace contents by default' );
 
         done();
+
+        lojax.logging = false;
     } );
 
     div.append( '<div data-src="partials/ModelTest.html"><span id="replaceThis"></span></div>' );
 
-    lojax.instance.loadDataSrcDivs( div );
+    lojax.instance.loadSrc( div );
 
 } );
 
@@ -912,7 +978,7 @@ QUnit.test( 'formFromInputs', function ( assert ) {
 
     var serialized = builtForm.serialize();
 
-    var shouldBe = 'number=5&daterange%5B0%5D=2015-01-01&daterange%5B1%5D=2015-12-31&bool=true&arrays.names=Todd&arrays.names=Kit&no.value=&select=b&color=red&select2=3&number2=2&radio1=Kit';
+    var shouldBe = 'number=5&daterange%5B0%5D=2015-01-01&daterange%5B1%5D=2015-12-31&bool=true&arrays.names=Todd&arrays.names=Kit&no.value=&select=b&color=red&arrays.values=1&arrays.values=2&select2=3&number2=2&radio1=Kit';
 
     assert.equal( serialized, shouldBe, 'Should create a form' );
 
@@ -944,7 +1010,7 @@ QUnit.test( 'posting models 1', function ( assert ) {
 
     var form = $( '<form></form>' );
     var modelDiv = $( '<div data-model></div>' );
-    modelDiv.data( 'model', model );
+    modelDiv.data( 'model', getModel() );
     var submitBtn = $( '<input type="submit" data-method="ajax-post" data-action="partials/EmptyResponse.html" />' );
 
     modelDiv.append( submitBtn );
@@ -989,7 +1055,7 @@ QUnit.test( 'posting models 2', function ( assert ) {
     // create a data-model with a submit button
     var form = $( '<form></form>' );
     var modelDiv = $( '<div data-model></div>' );
-    modelDiv.data( 'model', model );
+    modelDiv.data( 'model', getModel() );
     var submitBtn = $( '<input type="submit" data-method="ajax-post" data-action="partials/EmptyResponse.html" />' );
 
     div.append( form );
@@ -1006,7 +1072,7 @@ QUnit.test( 'posting models 2', function ( assert ) {
     modelDiv.find( '[name="daterange[0]"]' ).val( '2015-11-01' ).change();
     modelDiv.find( '[name="daterange[1]"]' ).val( '2015-11-15' ).change();
     modelDiv.find( '[name=bool]' ).prop( 'checked', true ).change();
-    modelDiv.find( '[value=Kaleb]' ).prop( 'checked', true ).change();
+    modelDiv.find( '[value=Todd]' ).prop( 'checked', true ).change();
 
     var model = modelDiv.data( 'model' );
 
@@ -1042,7 +1108,7 @@ QUnit.test( 'posting models 3', function ( assert ) {
     // create a data-model with a submit button
     var form = $( '<form></form>' );
     var modelDiv = $( '<div data-model></div>' );
-    modelDiv.data( 'model', model );
+    modelDiv.data( 'model', getModel() );
     var submitBtn = $( '<input type="submit" data-method="post" data-action="partials/EmptyResponse.html" />' );
 
     div.append( form );
@@ -1080,11 +1146,12 @@ QUnit.test( 'posting models 3', function ( assert ) {
 
 } );
 
+
 QUnit.test( 'propagateChange', function ( assert ) {
 
-    lojax.logging = false;
-
     div.empty();
+
+    var model = getModel();
 
     var form = $( '<form jx-model></form>' );
     form.append( getForm() );
@@ -1096,23 +1163,40 @@ QUnit.test( 'propagateChange', function ( assert ) {
     detail.data( 'model', model );
     div.append( detail );
 
-    // bind the inputs to the model
-    lojax.instance.bindToModels( div );
+    // bind both areas to the same model
+    lojax.bind( form, model );
+    lojax.bind( detail, model );
 
-    console.log( form, detail );
+    function verifyDetail() {
+        assert.equal( detail.find( '[name="daterange[0]"]' ).text(), model.daterange[0] );
+        assert.equal( detail.find( '[name="daterange[1]"]' ).text(), model.daterange[1].toString() );
+        assert.equal( detail.find( '[name=bool]' ).text(), model.bool.toString() );
+        assert.equal( detail.find( '[name="arrays.names"]' ).text(), model.arrays.names.toString() );
+        assert.equal( detail.find( '[name=color]' ).text(), 'green' );
+        assert.equal( detail.find( '[name="jx-quoted"]' ).text(), '"' );
+        assert.equal( detail.find( '[name="no.value"]' ).text(), '' );
+        assert.equal( detail.find( '[name=number]' ).text(), model.number.toString() );
+        assert.equal( detail.find( '[name=select]' ).text(), model.select );
+    }
 
-    // change some of the values
+    verifyDetail();
+
+    lojax.logging = true;
+
+    // change some of the form inputs
     form.find( '[name="daterange[0]"]' ).val( '2015-11-13' ).change();
     form.find( '[name="daterange[1]"]' ).val( '2015-11-15' ).change();
     form.find( '[name=bool]' ).prop( 'checked', true ).change();
-    form.find( '[value=Kaleb]' ).prop( 'checked', true ).change();
+    form.find( '[value=Kaleb]' ).prop( 'checked', false ).change();
 
-    console.log(form, detail);
+    assert.equal( model.daterange[0], '2015-11-13' );
+    assert.equal( model.daterange[1], '2015-11-15' );
+    assert.equal( model.bool, true );
+    assert.equal( model.arrays.names.length, 1 );
 
-    assert.equal( detail.find( '[name="daterange[0]"]' ).text(), form.find( '[name="daterange[0]"]' ).val( ) );
-    assert.equal( detail.find( '[name="daterange[1]"]' ).text(), form.find( '[name="daterange[1]"]' ).val() );
-    assert.equal( detail.find( '[name=bool]' ).text(), 'true');
-    //assert.equal( detail.find( '[name=bool]' ).html(), 'true') );
+    lojax.logging = false;
+
+    verifyDetail();
 
 } );
 

@@ -26,7 +26,7 @@ var priv = {
     isJSON: function ( str ) {
         return rexp.json.test( str );
     },
-    attributes: 'method action transition target form model preload'.split( ' ' ),
+    attributes: 'method action transition target form model preload src'.split( ' ' ),
     getConfig: function ( elem ) {
         var name, config, $this = $( elem );
 
@@ -156,8 +156,11 @@ var priv = {
     getModel: function ( elem ) {
         var $elem = $( elem );
         var model = $elem.data( 'model' );
-        if ( !priv.hasValue( model ) && $(elem).is(lojax.select.model) ) {
+        if ( !priv.hasValue( model ) && $( elem ).is( lojax.select.jxModelAttribute ) ) {
             model = $elem.attr( lojax.select.jxModel );
+
+            if ( !model ) return null;
+
             if ( priv.isJSON( model ) ) {
                 model = JSON.parse( model );
             }
@@ -301,22 +304,28 @@ var priv = {
 
         return o;
     },
-    setModelProperty: function ( context, model, elem ) {
+    setModelProperty: function ( context, model, elems ) {
         var obj,
             prop,
             type,
-            isArray,
+            val,
             segments;
 
+        lojax.log( 'setModelProperty: elems.length:' ).log( elems.length );
+
         // derive an object path from the input name
-        segments = priv.getPathSegments( elem[0].name );
+        segments = priv.getPathSegments( elems[0].name );
 
-        // if there's more than one checkbox with this name, assume an array
-        isArray = ( elem.length > 1 && elem[0].type === 'checkbox' );
+        // get the raw value
+        val = priv.getValue( elems );
 
+        lojax.log( 'setModelProperty: val:' ).log( val );
+
+        // grab the object we're setting
+        obj = priv.getObjectAtPath( model, segments, Array.isArray(val) );
+
+        // grab the object property
         prop = priv.resolvePathSegment( segments[segments.length - 1] );
-
-        obj = priv.getObjectAtPath( model, segments, isArray );
 
         // attempt to resolve the data type in the model
         // if we can't get a type from the model
@@ -328,23 +337,25 @@ var priv = {
             type = $.type( obj[0] );
         }
 
-        if ( Array.isArray( obj ) && isArray ) {
+        // cast the raw value to the appropriate type
+        val = priv.castValues(val, type);
+
+        if ( Array.isArray( val ) && Array.isArray(obj)) {
+            // preserve the object reference in case it's referenced elsewhere
             // clear out the array and repopulate it
-            // but preserve the object reference in case it's referenced elsewhere
             obj.splice( 0, obj.length );
-            $(elem).serializeArray().forEach(function(e){
-                obj.push( priv.castValue( e.value, type ) );
+            val.forEach(function(v){
+                obj.push( v );
             });
         }
         else {
-            // there should only be one element
-            $(elem).serializeArray().forEach(function(e){
-                obj[prop] = priv.castValue( e.value, type );
-            });
+            obj[prop] = val;
         }
     },
     buildModelFromElements: function ( context ) {
         var model = {};
+
+        lojax.log( 'buildModelFromElements: context:' ).log( context );
 
         // there may be multiple elements with the same name
         // so build a dictionary of names and elements
@@ -376,7 +387,6 @@ var priv = {
         $this.find( '[name]' ).each( function () {
             name = this.name || $( this ).attr( 'name' );
             value = priv.getModelValue( model, name );
-            console.log( name, value );
             type = $.type( value );
             // lojax assumes ISO 8601 date serialization format
             // ISO 8601 is easy to parse
@@ -397,7 +407,7 @@ var priv = {
                 $( this ).val( value );
             }
             else if ( this.innerHTML !== undefined ) {
-                $( this ).html( value );
+                $( this ).html( value == null ? '' : value.toString() );
             }
         } );
     },
@@ -482,35 +492,73 @@ var priv = {
         var s = url.match( /\?.+(?=#)|\?.+$|.+(?=#)|.+/ );
         return url.replace( s, s + a );
     },
-    castValue: function ( val, type ) {
-        if ( !priv.hasValue( val ) || val === '' ) return null;
+    getValue: function ( elems ) {
+        if (elems.length === 0) return null;
+        var val;
+        var type = elems[0].type;
+        // it's supposed to be an array if they're all the same type and they're not radios
+        var isArray = elems.length > 1
+            && type !== 'radio'
+            && elems.filter( '[type="'+type+'"]' ).length === elems.length;
+        if ( type === 'checkbox' ) {
+            if ( isArray ) {
+                // this will only include checked boxes
+                val = elems.serializeArray().map( function ( nv ) { return nv.value; } );
+            }
+            else {
+                // this returns the checkbox value, not whether it's checked
+                val = elems.val();
+                // check for boolean, otherwise return val if it's checked, null if not checked
+                if ( val.toLowerCase() == 'true' ) val = (elems[0].checked).toString();
+                else if ( val.toLowerCase() == 'false' ) val = (!elems[0].checked).toString();
+                else val = elems[0].checked ? val : null;
+            }
+        }
+        else {
+            val = ( isArray ) ? elems.serializeArray().map( function ( nv ) { return nv.value; } ) : elems.val();
+        }
+        if ( !isArray && val === '' ) return null;
+        return val;
+    },
+    castValues: function ( val, type ) {
+        var isArray = Array.isArray( val );
+        var arr = isArray ? val : [val];
         switch ( type ) {
             case 'number':
-                if ( $.isNumeric( val ) ) {
-                    return parseFloat( val );
-                }
-                return val;
+                arr = arr.filter( $.isNumeric ).map( parseFloat );
+                break;
             case 'boolean':
-                return val.toLowerCase() === 'true';
+                arr = arr.map( function ( v ) {
+                    return v.toLowerCase() == 'true';
+                } );
+                break;
             case 'null':
             case 'undefined':
-                if ( /true|false/g.test(val.toLowerCase())) {
-                    return val.toLowerCase() === 'true';
-                }
-                return val;
+                arr = arr.map( function ( v ) {
+                    if ( /true|false/i.test( v ) ) {
+                        // assume boolean
+                        return v.toLowerCase() === 'true';
+                    }
+                    return v === '' ? null : v;
+                } );
+                break;
             default:
-                // don't attempt to convert dates
-                // let the server deserialize them
-                return val;
+                arr = arr.map( function ( v ) {
+                    return v === '' ? null : v;
+                } );
+                break;
         }
+        return isArray ? arr : arr[0];
     },
     propagateChange: function ( model, elem ) {
+        var $e = $( elem );
         // find elements that are bound to the same model
-        $( document ).find( '[name="' + elem.name + '"]' ).not( elem ).each( function () {
+        $( document ).find( '[name="' + $e[0].name + '"]' ).not( $e ).each( function () {
             var closest = $( this ).closest( lojax.select.model );
             if ( closest.length ) {
                 var m = priv.getModel( closest );
                 if ( m === model ) {
+                    lojax.log( 'propagateChange: m:' ).log( m );
                     lojax.bind( closest, m );
                 }
             }

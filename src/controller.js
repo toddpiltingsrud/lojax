@@ -17,7 +17,7 @@ lojax.Controller = function () {
 
         self.removeHandlers();
         self.addHandlers();
-        self.loadDataSrcDivs();
+        self.loadSrc();
         self.bindToModels();
         self.preloadAsync();
 
@@ -175,7 +175,7 @@ lojax.Controller.prototype = {
         if ( request.action === null ) return;
 
         // check for caching
-        if ( this.cache[request.action] !== undefined ) {
+        if ( request.action in this.cache ) {
             request = this.cache[request.action];
             delete this.cache[request.action];
             lojax.log( 'executeRequest: retrieved from cache' );
@@ -193,7 +193,7 @@ lojax.Controller.prototype = {
 
     bindToModels: function ( context ) {
         context = context || document;
-        var model, $this, models = [];
+        var $this, models = [];
         var dataModels = $( context ).find( lojax.select.model ).add( context ).filter( lojax.select.model );
 
         lojax.log( 'bindToModels: dataModels:' ).log( dataModels );
@@ -204,14 +204,13 @@ lojax.Controller.prototype = {
             // grab the data-model
             model = priv.getModel( $this );
             model = lojax.bind( $this, model );
-            models.push( model );
             lojax.log( 'bindToModels: model:' ).log( model );
         } );
-        // for testing
-        return models;
     },
 
     updateModel: function ( evt ) {
+        var name = evt.target.name;
+        if ( !priv.hasValue( name ) || name == '' ) return;
         // model's change handler 
         // provides simple one-way binding from HTML elements to a model
         // 'this' is the element with jx-model attribute
@@ -219,15 +218,12 @@ lojax.Controller.prototype = {
         // $target is the element that triggered the change event
         var $target = $( evt.target );
         var model = priv.getModel( $this );
-        var name = evt.target.name;
-        if ( !priv.hasValue( name ) ) return;
         var elems = $this.find( '[name="' + name + '"]' );
 
         var o = {
             target: evt.target,
             name: name,
             value: $target.val(),
-            type: $.type( model[name] ),
             model: model,
             cancel: false
         };
@@ -237,14 +233,14 @@ lojax.Controller.prototype = {
         priv.triggerEvent( lojax.events.beforeUpdateModel, o, $this );
         if ( o.cancel ) return;
 
-        lojax.log( 'updateModel: o.model' ).log( o.model );
+        lojax.log( 'updateModel: o.model: before:' ).log( o.model );
 
         priv.setModelProperty( $this, o.model, elems );
         // TODO: set an isDirty flag without corrupting the model
         // maybe use a wrapper class to observe the model
         priv.triggerEvent( lojax.events.afterUpdateModel, o, $this );
 
-        lojax.log( 'updateModel: afterUpdateModel raised' );
+        lojax.log( 'updateModel: o.model: after:' ).log( o.model );
 
         priv.propagateChange( model, $target );
     },
@@ -280,7 +276,7 @@ lojax.Controller.prototype = {
                     instance.onUnload = null;
                 }
                 priv.callOnLoad( result, request );
-                instance.loadDataSrcDivs( result );
+                instance.loadSrc( result );
                 instance.preloadAsync( result );
             }
         };
@@ -384,25 +380,24 @@ lojax.Controller.prototype = {
         if ( instance.modal ) {
             instance.bindToModels( instance.modal );
             priv.callOnLoad( instance.modal, request );
-            instance.loadDataSrcDivs( instance.modal );
+            instance.loadSrc( instance.modal );
             instance.preloadAsync( instance.modal );
         }
     },
 
     // an AJAX alternative to iframes
-    loadDataSrcDivs: function ( root ) {
+    loadSrc: function ( root ) {
         root = root || document;
         $( root ).find( lojax.select.src ).each( function () {
             var $this = $( this );
             var url = priv.attr( $this, 'src' );
-            instance.executeRequest( {
-                action: priv.noCache( url ),
-                method: 'ajax-get',
-                target: $this,
-                source: $this,
-                transition: priv.attr( $this, 'transition' ) || 'swap-contents',
-                suppressEvents: true
-            } );
+            var config = priv.getConfig( $this );
+            config.action = priv.noCache( config.src );
+            config.method = config.method || 'ajax-get';
+            config.target = $this;
+            config.transition = config.transition || 'swap-content';
+            config.suppressEvents = true;
+            instance.executeRequest( config );
         } );
     },
 

@@ -4,7 +4,7 @@
 \***********/
 
 lojax.Transitions = {
-    'swap-contents': function ( oldNode, newNode ) {
+    'swap-content': function ( oldNode, newNode ) {
         var $old = $( oldNode ),
             $new = $( newNode );
         $old.empty().append( $new.contents() );

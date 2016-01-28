@@ -16,25 +16,17 @@ use the input elements to supply the missing properties.
 
 Support callback parameters for JSONP.
 
-Allow jx-src to be used on any element.
-
-Change lojax.config.navHistory  to lojax.config.navHistory.
-
-
-### Regression Testing
-
-Make sure the hash is left on the url until just before it's executed.
 
 
 
-### Caching, preloading, and Models
 
-For caching, set a default expiration. Add the ability to expire a cached item after it's requested the first time.
+### Preloading and Models
 
 Use the jx-model attribute to specify a JSON resource to bind a form to:
-<a href="modal.html" jx-method="ajax-get" jx-cache="preload" jx-model="data/model.json">show data</a>
 
-When the page loads, lojax will detect the preload value and queue up a request for the modal behind the scenes.
+<a href="modal.html" jx-method="ajax-get" jx-preload jx-model="data/model.json">show data</a>
+
+When the page loads, lojax will detect the preload value and queue up a request for the modal.
 Since the element has a jx-method attribute, lojax assumes we're not binding the model to it, but to the resource it points to.
 When the link is clicked lojax will grab the cached request for the modal and execute it.
 It will also create a new request for the JSON. We'll probably need a new handler to coordinate the double request.
@@ -64,7 +56,7 @@ Also assume there's a link for editing the row:
 	<tr jx-model="{...}">
 		<td name="color"></td>
 		<td>
-			<a href="partials/modal.html" jx-cache="preload" jx-method="ajax-get">edit</a>
+			<a href="partials/modal.html" jx-preload jx-method="ajax-get">edit</a>
 		</td>
 	</tr>
 </table>
@@ -93,7 +85,7 @@ For these kinds of cases we can use lojax.onLoad.
 </form>
 
 The script in the form will run when it is injected into the page, setting lojax's onLoad callback.
-After lojax injects the form, it immediately checks for an onLoad callback and executes it if present,
+After lojax injects the form, it immediately checks for the onLoad callback and executes it,
 supplying the form as the context and the request as the argument.
 lojax then immediately nulls out its internal reference to the callback to prepare for the next iteration.
 So we just have to make sure that the script tag is INSIDE the form.
@@ -102,17 +94,14 @@ If you place a call to lojax.onLoad outside the form, the callback won't be exec
 And by the way, we should account for the possibility that models could be preloaded and cached, just like any other request.
 Something like the following could be put at the bottom of a page to pre-load a resource:
 
-<div style="display:none" jx-action="data/model.json" jx-cache="preload" jx-method="ajax-get" />
+<div style="display:none" jx-action="data/model.json" jx-preload jx-method="ajax-get" />
 
 Keep in mind, we are caching lojax.Request objects, not just the resource itself. 
-It's possible for a user action to hook into a request that's already running.
+That makes it possible for a user action to hook into a request that's already running.
 The rest of your code won't know the difference between a request that was triggered by user action, 
 and one that was triggered automatically by lojax, except that the response time will be immediate.
 
 
-
-Consider replacing jquery's event triggering mechanism with my own. Need custom events that bubble. 
-Currently, all events must be triggered and handled on window.document. This doesn't follow the event pattern.
 
 Create a nuget package.
 
@@ -134,7 +123,7 @@ Create a nuget package.
 - Use lojax.onLoad(callback) inside a jx-panel, modal, or div[jx-src] to execute a function with context set to the containing element when the element is injected.
   The request is passed as an argument to the callback.
   This works only if the script is inside the element you want as the context.
-  The callback is invoked after model binding, but before loadDataSrcDivs. Callbacks are invoked only once.
+  The callback is invoked after model binding, but before loadSrc. Callbacks are invoked only once.
 - Use lojax.onUnload(callback) inside a jx-panel, modal, or div[jx-src] to execute a function with context set to the containing element when the element is about to be replaced.
   Useful for removing event handlers.
   This works only if the script is inside the element you want as the context.
@@ -164,7 +153,7 @@ Create a nuget package.
 
 ### Tips: 
 - Use a layout to create modals on the server.
-- Use cache="preload" for modals to retrieve them before they are requested. Then bind them to a model with lojax.bind(elem, model).
+- Use jx-preload for modals to retrieve them before they are requested. Then bind them to a model with lojax.bind(elem, model).
 - Use a publish/subscribe pattern instead of a callback URL query parameter to receive JSONP responses.
   Use an abbreviated version of the URL as the event name (app/controller/action).
   This is also useful for letting the client know when something important has happened on the server (e.g. app/customer/update).

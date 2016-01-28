@@ -135,7 +135,7 @@ var lojax = lojax || {};
     
             self.removeHandlers();
             self.addHandlers();
-            self.loadDataSrcDivs();
+            self.loadSrc();
             self.bindToModels();
             self.preloadAsync();
     
@@ -293,7 +293,7 @@ var lojax = lojax || {};
             if ( request.action === null ) return;
     
             // check for caching
-            if ( this.cache[request.action] !== undefined ) {
+            if ( request.action in this.cache ) {
                 request = this.cache[request.action];
                 delete this.cache[request.action];
                 lojax.log( 'executeRequest: retrieved from cache' );
@@ -311,7 +311,7 @@ var lojax = lojax || {};
     
         bindToModels: function ( context ) {
             context = context || document;
-            var model, $this, models = [];
+            var $this, models = [];
             var dataModels = $( context ).find( lojax.select.model ).add( context ).filter( lojax.select.model );
     
             lojax.log( 'bindToModels: dataModels:' ).log( dataModels );
@@ -322,14 +322,13 @@ var lojax = lojax || {};
                 // grab the data-model
                 model = priv.getModel( $this );
                 model = lojax.bind( $this, model );
-                models.push( model );
                 lojax.log( 'bindToModels: model:' ).log( model );
             } );
-            // for testing
-            return models;
         },
     
         updateModel: function ( evt ) {
+            var name = evt.target.name;
+            if ( !priv.hasValue( name ) || name == '' ) return;
             // model's change handler 
             // provides simple one-way binding from HTML elements to a model
             // 'this' is the element with jx-model attribute
@@ -337,15 +336,12 @@ var lojax = lojax || {};
             // $target is the element that triggered the change event
             var $target = $( evt.target );
             var model = priv.getModel( $this );
-            var name = evt.target.name;
-            if ( !priv.hasValue( name ) ) return;
             var elems = $this.find( '[name="' + name + '"]' );
     
             var o = {
                 target: evt.target,
                 name: name,
                 value: $target.val(),
-                type: $.type( model[name] ),
                 model: model,
                 cancel: false
             };
@@ -355,14 +351,14 @@ var lojax = lojax || {};
             priv.triggerEvent( lojax.events.beforeUpdateModel, o, $this );
             if ( o.cancel ) return;
     
-            lojax.log( 'updateModel: o.model' ).log( o.model );
+            lojax.log( 'updateModel: o.model: before:' ).log( o.model );
     
             priv.setModelProperty( $this, o.model, elems );
             // TODO: set an isDirty flag without corrupting the model
             // maybe use a wrapper class to observe the model
             priv.triggerEvent( lojax.events.afterUpdateModel, o, $this );
     
-            lojax.log( 'updateModel: afterUpdateModel raised' );
+            lojax.log( 'updateModel: o.model: after:' ).log( o.model );
     
             priv.propagateChange( model, $target );
         },
@@ -398,7 +394,7 @@ var lojax = lojax || {};
                         instance.onUnload = null;
                     }
                     priv.callOnLoad( result, request );
-                    instance.loadDataSrcDivs( result );
+                    instance.loadSrc( result );
                     instance.preloadAsync( result );
                 }
             };
@@ -502,25 +498,24 @@ var lojax = lojax || {};
             if ( instance.modal ) {
                 instance.bindToModels( instance.modal );
                 priv.callOnLoad( instance.modal, request );
-                instance.loadDataSrcDivs( instance.modal );
+                instance.loadSrc( instance.modal );
                 instance.preloadAsync( instance.modal );
             }
         },
     
         // an AJAX alternative to iframes
-        loadDataSrcDivs: function ( root ) {
+        loadSrc: function ( root ) {
             root = root || document;
             $( root ).find( lojax.select.src ).each( function () {
                 var $this = $( this );
                 var url = priv.attr( $this, 'src' );
-                instance.executeRequest( {
-                    action: priv.noCache( url ),
-                    method: 'ajax-get',
-                    target: $this,
-                    source: $this,
-                    transition: priv.attr( $this, 'transition' ) || 'swap-contents',
-                    suppressEvents: true
-                } );
+                var config = priv.getConfig( $this );
+                config.action = priv.noCache( config.src );
+                config.method = config.method || 'ajax-get';
+                config.target = $this;
+                config.transition = config.transition || 'swap-content';
+                config.suppressEvents = true;
+                instance.executeRequest( config );
             } );
         },
     
@@ -586,7 +581,7 @@ var lojax = lojax || {};
         isJSON: function ( str ) {
             return rexp.json.test( str );
         },
-        attributes: 'method action transition target form model preload'.split( ' ' ),
+        attributes: 'method action transition target form model preload src'.split( ' ' ),
         getConfig: function ( elem ) {
             var name, config, $this = $( elem );
     
@@ -716,8 +711,11 @@ var lojax = lojax || {};
         getModel: function ( elem ) {
             var $elem = $( elem );
             var model = $elem.data( 'model' );
-            if ( !priv.hasValue( model ) && $(elem).is(lojax.select.model) ) {
+            if ( !priv.hasValue( model ) && $( elem ).is( lojax.select.jxModelAttribute ) ) {
                 model = $elem.attr( lojax.select.jxModel );
+    
+                if ( !model ) return null;
+    
                 if ( priv.isJSON( model ) ) {
                     model = JSON.parse( model );
                 }
@@ -861,22 +859,28 @@ var lojax = lojax || {};
     
             return o;
         },
-        setModelProperty: function ( context, model, elem ) {
+        setModelProperty: function ( context, model, elems ) {
             var obj,
                 prop,
                 type,
-                isArray,
+                val,
                 segments;
     
+            lojax.log( 'setModelProperty: elems.length:' ).log( elems.length );
+    
             // derive an object path from the input name
-            segments = priv.getPathSegments( elem[0].name );
+            segments = priv.getPathSegments( elems[0].name );
     
-            // if there's more than one checkbox with this name, assume an array
-            isArray = ( elem.length > 1 && elem[0].type === 'checkbox' );
+            // get the raw value
+            val = priv.getValue( elems );
     
+            lojax.log( 'setModelProperty: val:' ).log( val );
+    
+            // grab the object we're setting
+            obj = priv.getObjectAtPath( model, segments, Array.isArray(val) );
+    
+            // grab the object property
             prop = priv.resolvePathSegment( segments[segments.length - 1] );
-    
-            obj = priv.getObjectAtPath( model, segments, isArray );
     
             // attempt to resolve the data type in the model
             // if we can't get a type from the model
@@ -888,23 +892,25 @@ var lojax = lojax || {};
                 type = $.type( obj[0] );
             }
     
-            if ( Array.isArray( obj ) && isArray ) {
+            // cast the raw value to the appropriate type
+            val = priv.castValues(val, type);
+    
+            if ( Array.isArray( val ) && Array.isArray(obj)) {
+                // preserve the object reference in case it's referenced elsewhere
                 // clear out the array and repopulate it
-                // but preserve the object reference in case it's referenced elsewhere
                 obj.splice( 0, obj.length );
-                $(elem).serializeArray().forEach(function(e){
-                    obj.push( priv.castValue( e.value, type ) );
+                val.forEach(function(v){
+                    obj.push( v );
                 });
             }
             else {
-                // there should only be one element
-                $(elem).serializeArray().forEach(function(e){
-                    obj[prop] = priv.castValue( e.value, type );
-                });
+                obj[prop] = val;
             }
         },
         buildModelFromElements: function ( context ) {
             var model = {};
+    
+            lojax.log( 'buildModelFromElements: context:' ).log( context );
     
             // there may be multiple elements with the same name
             // so build a dictionary of names and elements
@@ -936,7 +942,6 @@ var lojax = lojax || {};
             $this.find( '[name]' ).each( function () {
                 name = this.name || $( this ).attr( 'name' );
                 value = priv.getModelValue( model, name );
-                console.log( name, value );
                 type = $.type( value );
                 // lojax assumes ISO 8601 date serialization format
                 // ISO 8601 is easy to parse
@@ -957,7 +962,7 @@ var lojax = lojax || {};
                     $( this ).val( value );
                 }
                 else if ( this.innerHTML !== undefined ) {
-                    $( this ).html( value );
+                    $( this ).html( value == null ? '' : value.toString() );
                 }
             } );
         },
@@ -1042,35 +1047,73 @@ var lojax = lojax || {};
             var s = url.match( /\?.+(?=#)|\?.+$|.+(?=#)|.+/ );
             return url.replace( s, s + a );
         },
-        castValue: function ( val, type ) {
-            if ( !priv.hasValue( val ) || val === '' ) return null;
+        getValue: function ( elems ) {
+            if (elems.length === 0) return null;
+            var val;
+            var type = elems[0].type;
+            // it's supposed to be an array if they're all the same type and they're not radios
+            var isArray = elems.length > 1
+                && type !== 'radio'
+                && elems.filter( '[type="'+type+'"]' ).length === elems.length;
+            if ( type === 'checkbox' ) {
+                if ( isArray ) {
+                    // this will only include checked boxes
+                    val = elems.serializeArray().map( function ( nv ) { return nv.value; } );
+                }
+                else {
+                    // this returns the checkbox value, not whether it's checked
+                    val = elems.val();
+                    // check for boolean, otherwise return val if it's checked, null if not checked
+                    if ( val.toLowerCase() == 'true' ) val = (elems[0].checked).toString();
+                    else if ( val.toLowerCase() == 'false' ) val = (!elems[0].checked).toString();
+                    else val = elems[0].checked ? val : null;
+                }
+            }
+            else {
+                val = ( isArray ) ? elems.serializeArray().map( function ( nv ) { return nv.value; } ) : elems.val();
+            }
+            if ( !isArray && val === '' ) return null;
+            return val;
+        },
+        castValues: function ( val, type ) {
+            var isArray = Array.isArray( val );
+            var arr = isArray ? val : [val];
             switch ( type ) {
                 case 'number':
-                    if ( $.isNumeric( val ) ) {
-                        return parseFloat( val );
-                    }
-                    return val;
+                    arr = arr.filter( $.isNumeric ).map( parseFloat );
+                    break;
                 case 'boolean':
-                    return val.toLowerCase() === 'true';
+                    arr = arr.map( function ( v ) {
+                        return v.toLowerCase() == 'true';
+                    } );
+                    break;
                 case 'null':
                 case 'undefined':
-                    if ( /true|false/g.test(val.toLowerCase())) {
-                        return val.toLowerCase() === 'true';
-                    }
-                    return val;
+                    arr = arr.map( function ( v ) {
+                        if ( /true|false/i.test( v ) ) {
+                            // assume boolean
+                            return v.toLowerCase() === 'true';
+                        }
+                        return v === '' ? null : v;
+                    } );
+                    break;
                 default:
-                    // don't attempt to convert dates
-                    // let the server deserialize them
-                    return val;
+                    arr = arr.map( function ( v ) {
+                        return v === '' ? null : v;
+                    } );
+                    break;
             }
+            return isArray ? arr : arr[0];
         },
         propagateChange: function ( model, elem ) {
+            var $e = $( elem );
             // find elements that are bound to the same model
-            $( document ).find( '[name="' + elem.name + '"]' ).not( elem ).each( function () {
+            $( document ).find( '[name="' + $e[0].name + '"]' ).not( $e ).each( function () {
                 var closest = $( this ).closest( lojax.select.model );
                 if ( closest.length ) {
                     var m = priv.getModel( closest );
                     if ( m === model ) {
+                        lojax.log( 'propagateChange: m:' ).log( m );
                         lojax.bind( closest, m );
                     }
                 }
@@ -1107,9 +1150,7 @@ var lojax = lojax || {};
         this.target = priv.resolveTarget( obj );
         this.data = this.getData( obj );
         this.source = obj.source;
-        this.cache = obj.cache;
-        this.expire = obj.expire;
-        this.renew = obj.renew;
+        this.preload = 'preload' in obj;
         this.cancel = false;
         this.resolve = null;
         this.reject = null;
@@ -1255,18 +1296,6 @@ var lojax = lojax || {};
                     // execute the method function
                     this.methods[this.method].bind( this )();
                     lojax.log( 'request.exec: executed' );
-                    //if ( this.cache && ( this.result || this.error ) ) {
-                    //    lojax.log( 'request.exec: cached' );
-                    //    // don't execute the AJAX request, just call the handlers
-                    //    if ( this.result ) this.done( this.result );
-                    //    if ( this.error ) this.fail( this.error );
-                    //    priv.afterRequest( this, this.suppressEvents );
-                    //}
-                    //else {
-                    //    // execute the method function
-                    //    this.methods[this.method].bind( this )();
-                    //    lojax.log( 'request.exec: executed' );
-                    //}
                 }
                 else {
                     // always trigger afterRequest even if there was no request
@@ -1319,7 +1348,7 @@ var lojax = lojax || {};
     \***********/
     
     lojax.Transitions = {
-        'swap-contents': function ( oldNode, newNode ) {
+        'swap-content': function ( oldNode, newNode ) {
             var $old = $( oldNode ),
                 $new = $( newNode );
             $old.empty().append( $new.contents() );

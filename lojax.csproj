@@ -199,9 +199,9 @@
     <Content Include="demo\tables.html" />
     <Content Include="fonts\glyphicons-halflings-regular.svg" />
     <Content Include="lojax.js">
+      <DependentUpon>lojax.tt</DependentUpon>
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
-      <DependentUpon>lojax.tt</DependentUpon>
     </Content>
     <Content Include="lojax.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
