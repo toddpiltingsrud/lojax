@@ -203,7 +203,14 @@ lojax.Controller.prototype = {
             $this = $( this );
             // grab the data-model
             model = priv.getModel( $this );
-            model = lojax.bind( $this, model );
+            if ( !priv.hasValue( model ) || model === '' ) {
+                // empty model, so create one from its inputs
+                model = priv.buildModelFromElements( $this );
+            }
+            else {
+                priv.setElementsFromModel( $this, model );
+            }
+            $this.data( 'model', model );
             lojax.log( 'bindToModels: model:' ).log( model );
         } );
     },

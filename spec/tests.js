@@ -839,18 +839,18 @@ QUnit.test( 'binding models 4', function ( assert ) {
 
     lojax.logging = true;
 
-    //modelDiv.find( '[name="daterange[0]"]' ).val( '2015-11-13' ).change();
-    //modelDiv.find( '[name="daterange[1]"]' ).val( '2015-11-15' ).change();
+    modelDiv.find( '[name="daterange[0]"]' ).val( '2015-11-13' ).change();
+    modelDiv.find( '[name="daterange[1]"]' ).val( '2015-11-15' ).change();
     modelDiv.find( '[name=bool]' ).prop( 'checked', false ).change();
-    //modelDiv.find( '[value=Kaleb]' ).prop( 'checked', true ).change();
-    //modelDiv.find( '[name=color][value=green]' ).prop( 'checked', true ).change();
+    modelDiv.find( '[value=Kaleb]' ).prop( 'checked', true ).change();
+    modelDiv.find( '[name=color][value=green]' ).prop( 'checked', true ).change();
 
-    //assert.strictEqual( m.daterange[0], '2015-11-13', 'Should resolve dates' );
-    //assert.strictEqual( m.daterange[1], '2015-11-15', 'Should resolve dates' );
+    assert.strictEqual( m.daterange[0], '2015-11-13', 'Should resolve dates' );
+    assert.strictEqual( m.daterange[1], '2015-11-15', 'Should resolve dates' );
     assert.strictEqual( m.bool, false, 'Should resolve bools' );
-    //assert.strictEqual( m.color, 'green', 'Should resolve radios' );
-    //assert.strictEqual( m.arrays.names[2], 'Kaleb', 'Should resolve arrays' );
-    //assert.strictEqual( m.arrays.names.length, 3, 'Should repopulate arrays' );
+    assert.strictEqual( m.color, 'green', 'Should resolve radios' );
+    assert.strictEqual( m.arrays.names[2], 'Kaleb', 'Should resolve arrays' );
+    assert.strictEqual( m.arrays.names.length, 3, 'Should repopulate arrays' );
 
     lojax.logging = false;
 

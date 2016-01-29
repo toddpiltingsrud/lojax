@@ -45,14 +45,8 @@ lojax.closeModal = function () {
 // bind an element to a JSON model
 lojax.bind = function ( elem, model ) {
     var $elem = $( elem );
-    if ( !priv.hasValue( model ) || model === '' ) {
-        // empty model, so create one from its inputs
-        model = priv.buildModelFromElements( $elem );
-    }
-    else {
-        priv.setElementsFromModel( $elem, model );
-    }
     $elem.data( 'model', model );
+    priv.setElementsFromModel( $elem, model );
     return model;
 };
 

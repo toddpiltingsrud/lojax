@@ -1,18 +1,38 @@
 Better error handling. Currently if a request fails, afterRequest doesn't fire, leaving everybody hanging. 
 Create a customizable error snippet that can be injected into a modal or jx-src.
 
-Figure out how to hook into client-side validation. Can we copy validation attributes when we create dynamic forms? Can we re-examine the jQuery's clone function? We'd have to create special logic for selects.
+Figure out how to hook into client-side validation. Can we copy validation attributes when we create dynamic forms? Can we re-examine jQuery's clone function? We'd have to create special logic for selects.
 "To parse new HTML, you can call the jQuery.validator.unobtrusive.parse() method, passing it a selector for the HTML that you would like to be parsed. 
 You can also call the jQuery.validator.unobtrusive.parseElement() function to parse a single HTML element." 
 http://bradwilson.typepad.com/blog/2010/10/mvc3-unobtrusive-validation.html
 
+Add a way to capture an event of an entire section:
+
+<div jx-capture="click submit change enter" jx-request="{'method':'ajax-get','transition':'append'}">
+   ...
+</div>
+
+This is useful in situations where we don't have easy access to the markup inside the section
+(e.g. a third party component), or when we want to treat all the sources inside a section in the same way without marking up every single one (e.g. a grid with many links).
+lojax intercepts the event and crafts a request using the union of the source's attributes and the jx-request attribute. The attributes in the source override jx-request.
+
 Add support for files. Was thinking specifically of input[type=file]. 
 Can these be cloned?
 
+Expand the capability of the events. Make it possible to subscribe to events from specific panels.
+Will this work?
+$( document ).on( lojax.events.beforeRequest, '[jx-panel=thePanel]', function () { } );
 
 If multiple elements are bound to an empty model or a model with missing properties, 
 use the input elements to supply the missing properties.
+If lojax.bind is used on two elements without jx-model attributes, propagateChange will not work.
 
+Add a mechanism for loading scripts once?
+<script jx-once="theScript">
+...
+</script>
+This script would load one time. On subsequent requests, lojax would check for the existence of the script and prevent another with the same selector from being executed.
+This might be a bad idea. Might encourage devs to write sloppy JavaScript.
 
 Support callback parameters for JSONP.
 

@@ -71,7 +71,7 @@ foreach (var file in files)
 <#+ 
 private bool IsLogExpression(string line)
 {
-    if (line.Trim().StartsWith("lojax.log")) return true;
+    if (line.Trim().StartsWith("lojax.log(")) return true;
     return false;
 }
 

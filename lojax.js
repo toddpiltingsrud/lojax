@@ -50,14 +50,8 @@ var lojax = lojax || {};
     // bind an element to a JSON model
     lojax.bind = function ( elem, model ) {
         var $elem = $( elem );
-        if ( !priv.hasValue( model ) || model === '' ) {
-            // empty model, so create one from its inputs
-            model = priv.buildModelFromElements( $elem );
-        }
-        else {
-            priv.setElementsFromModel( $elem, model );
-        }
         $elem.data( 'model', model );
+        priv.setElementsFromModel( $elem, model );
         return model;
     };
     
@@ -321,7 +315,14 @@ var lojax = lojax || {};
                 $this = $( this );
                 // grab the data-model
                 model = priv.getModel( $this );
-                model = lojax.bind( $this, model );
+                if ( !priv.hasValue( model ) || model === '' ) {
+                    // empty model, so create one from its inputs
+                    model = priv.buildModelFromElements( $this );
+                }
+                else {
+                    priv.setElementsFromModel( $this, model );
+                }
+                $this.data( 'model', model );
                 lojax.log( 'bindToModels: model:' ).log( model );
             } );
         },
@@ -869,7 +870,7 @@ var lojax = lojax || {};
             lojax.log( 'setModelProperty: elems.length:' ).log( elems.length );
     
             // derive an object path from the input name
-            segments = priv.getPathSegments( elems[0].name );
+            segments = priv.getPathSegments( $(elems).attr('name') );
     
             // get the raw value
             val = priv.getValue( elems );
@@ -917,8 +918,9 @@ var lojax = lojax || {};
             var names = {};
             var elems = $( context ).find( '[name]' );
             elems.each( function () {
-                if ( !( this.name in names ) ) {
-                    names[this.name] = $( context ).find( '[name="' + this.name + '"]' );
+                var name = $( this ).attr( 'name' );
+                if ( !( name in names ) ) {
+                    names[name] = $( context ).find( '[name="' + name + '"]' );
                 }
             } );
     
@@ -1069,6 +1071,9 @@ var lojax = lojax || {};
                     else val = elems[0].checked ? val : null;
                 }
             }
+            else if ( type === 'radio' ) {
+                val = elems.serializeArray()[0].value;
+            }
             else {
                 val = ( isArray ) ? elems.serializeArray().map( function ( nv ) { return nv.value; } ) : elems.val();
             }
@@ -1107,15 +1112,12 @@ var lojax = lojax || {};
         },
         propagateChange: function ( model, elem ) {
             var $e = $( elem );
+            var closest = $e.closest( lojax.select.model );
             // find elements that are bound to the same model
-            $( document ).find( '[name="' + $e[0].name + '"]' ).not( $e ).each( function () {
-                var closest = $( this ).closest( lojax.select.model );
-                if ( closest.length ) {
-                    var m = priv.getModel( closest );
-                    if ( m === model ) {
-                        lojax.log( 'propagateChange: m:' ).log( m );
-                        lojax.bind( closest, m );
-                    }
+            $( document ).find( lojax.select.model ).not( closest ).each( function () {
+                var m = $( this ).data( 'model' );
+                if ( m === model ) {
+                    priv.setElementsFromModel( this, model );
                 }
             } );
         }
