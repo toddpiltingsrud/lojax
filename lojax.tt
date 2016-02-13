@@ -10,6 +10,7 @@
 var path = "";
 var stripLogging = false;
 var coverage = false;
+var addModules = true;
 #>
 
 // namespace
@@ -41,7 +42,7 @@ else
     path = @"C:\Users\Todd\OneDrive\Documents\Code\Projects\lojax\src";
 }
 
-var files = new DirectoryInfo(path).GetFiles("*.js", SearchOption.AllDirectories);
+var files = new DirectoryInfo(path + @"\core").GetFiles("*.js", SearchOption.AllDirectories);
 
 foreach (var file in files)
 {
@@ -58,13 +59,30 @@ foreach (var file in files)
 		}
 	}
 }
+
+if (addModules) 
+{
+	files = new DirectoryInfo(path + @"\modules").GetFiles("*.js", SearchOption.AllDirectories);
+
+	foreach (var file in files)
+	{
+		var lines = File.ReadAllLines(file.FullName);
+		foreach (var line in lines)
+		{
+			if (stripLogging && IsLogExpression(line)) continue;
+#>
+	<#= line #>
+<#  
+			if (coverage) {
+#>
+<#= OutputCoverage(line) #><#  
+			}
+		}
+	}
+}
 #>
 
-	// global
-	lojax.instance = new lojax.Controller();
-
-	// local
-	var instance = lojax.instance;
+	lojax.Controller.init();
 
 })(jQuery, lojax);
 

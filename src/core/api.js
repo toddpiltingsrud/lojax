@@ -3,6 +3,13 @@
     API
 \***********/
 
+var priv = {};
+var rexp = {};
+lojax.Controller = {};
+lojax.Transitions = {};
+var instance = lojax.Controller;
+lojax.priv = priv;
+
 // handle an arbitrary event and execute a request
 lojax.on = function ( event, params ) {
     $( document ).on( event, function () {
@@ -20,34 +27,33 @@ lojax.exec = function ( params ) {
     instance.executeRequest( params );
 };
 
-// call this from a script that is located inside a jx-panel or div[data-src]
-// executes a callback with the context set to the injected content
-lojax.onLoad = function ( callback ) {
-    instance.onLoad = callback;
+// call this from a script that is located inside a jx-panel, div[data-src] or .modal
+// executes a callback with the context set to the injected node
+lojax.in = function ( callback ) {
+    lojax.log( 'lojax.in called' );
+    instance.in = callback;
 };
 
-lojax.onUnload = function ( callback ) {
-    lojax.log( 'lojax.onUnload called' );
-    instance.onUnload = callback;
+lojax.out = function ( callback ) {
+    lojax.log( 'lojax.out called' );
+    instance.out = callback;
 };
 
 lojax.closeModal = function () {
-    if ( priv.hasValue( instance.modal ) ) {
-        if ( $.fn.modal ) {
-            instance.modal.modal( 'hide' );
+    // during testing the call to closeModal occurs
+    // before the modal has a change to initialize
+    // resulting in a modal that doesn't close
+    // so use a timeout to make this function run last
+    setTimeout( function () {
+        if ( priv.hasValue( instance.modal ) ) {
+            if ( $.fn.modal ) {
+                instance.modal.modal( 'hide' );
+            }
+            else if ( $.fn.kendoWindow ) {
+                instance.modal.data( 'kendoWindow' ).close();
+            }
         }
-        else if ( $.fn.kendoWindow ) {
-            instance.modal.data( 'kendoWindow' ).close();
-        }
-    }
-};
-
-// bind an element to a JSON model
-lojax.bind = function ( elem, model ) {
-    var $elem = $( elem );
-    $elem.data( 'model', model );
-    priv.setElementsFromModel( $elem, model );
-    return model;
+    } );
 };
 
 // This action is executed when a browser nav button is clicked
@@ -105,3 +111,10 @@ lojax.select = {
     inputTriggerChangeOrEnter: ':input[name][jx-trigger*=change],:input[name][data-trigger*=change],:input[name][jx-trigger*=enter],:input[name][data-trigger*=enter]'
 };
 
+lojax.extend = function ( target, source ) {
+    target = target || {};
+    Object.getOwnPropertyNames( source ).forEach( function ( prop ) {
+        target[prop] = source[prop];
+    } );
+    return target;
+};

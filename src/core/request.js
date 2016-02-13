@@ -19,7 +19,7 @@ lojax.Request = function ( obj ) {
     this.form = priv.resolveForm( obj );
     this.action = priv.resolveAction( obj );
     this.isNavHistory = obj.isNavHistory;
-    this.model = priv.resolveModel( obj );
+    if (priv.resolveModel) this.model = priv.resolveModel( obj );
     this.contentType = 'application/x-www-form-urlencoded; charset=UTF-8';
     this.transition = obj.transition;
     this.target = priv.resolveTarget( obj );
@@ -215,5 +215,6 @@ lojax.Request.prototype = {
         this.resolve = null;
         this.reject = null;
     }
+
 };
 

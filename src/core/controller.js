@@ -3,34 +3,33 @@
  Controller
 \***********/
 
-lojax.Controller = function () {
-    var self = this;
-    this.div = null;
-    this.modal = null;
-    this.currentTransition = null;
-    this.currentPanel = null;
-    this.cache = {};
-    this.isControl = false;
+lojax.extend( lojax.Controller, {
 
-    $( function () {
-        self.div = $( "<div style='display:none'></div>" ).appendTo( 'body' );
+    init: function () {
+        var self = this;
+        this.div = null;
+        this.modal = null;
+        this.currentTransition = null;
+        this.currentPanel = null;
+        this.cache = {};
+        this.isControl = false;
 
-        self.removeHandlers();
-        self.addHandlers();
-        self.loadSrc();
-        self.bindToModels();
-        self.preloadAsync();
+        $( function () {
+            self.div = $( "<div style='display:none'></div>" ).appendTo( 'body' );
 
-        // check window.location.hash for valid hash
-        if ( priv.hasHash() ) {
-            setTimeout( self.handleHash );
-        }
-    } );
-};
+            self.removeHandlers();
+            self.addHandlers();
+            self.loadSrc();
+            self.preloadAsync();
 
-lojax.Controller.prototype = {
+            // check window.location.hash for valid hash
+            if ( priv.hasHash() ) {
+                setTimeout( self.handleHash );
+            }
+        } );
+    },
 
-    addHandlers: function() {
+    addHandlers: function () {
         $( document )
             .on( 'click', lojax.select.methodOrRequest, this.handleRequest )
             .on( 'change', lojax.select.methodWithChange, this.handleRequest )
@@ -38,24 +37,22 @@ lojax.Controller.prototype = {
             // also submits an element with a model attribute if enter key is pressed
             .on( 'keydown', lojax.select.methodWithEnterOrModel, this.handleEnterKey )
             .on( 'submit', lojax.select.formWithMethod, this.handleRequest )
-            .on( 'change', lojax.select.model, this.updateModel )
             // handle the control key
             .on( 'keydown', this.handleControlKey ).on( 'keyup', this.handleControlKey );
-        if ( lojax.config.navHistory  ) {
+        if ( lojax.config.navHistory ) {
             window.addEventListener( "hashchange", this.handleHash, false );
         }
     },
 
-    removeHandlers: function() {
+    removeHandlers: function () {
         $( document )
             .off( 'click', this.handleRequest )
             .off( 'change', this.handleRequest )
             .off( 'keydown', this.handleEnterKey )
             .off( 'submit', this.handleRequest )
-            .off( 'change', this.updateModel )
             .off( 'keydown', this.handleControlKey )
             .off( 'keyup', this.handleControlKey );
-        if ( lojax.config.navHistory  ) {
+        if ( lojax.config.navHistory ) {
             window.removeEventListener( "hashchange", this.handleHash, false );
         }
     },
@@ -129,7 +126,7 @@ lojax.Controller.prototype = {
 
         lojax.log( 'handleHash called' );
 
-        if ( !lojax.config.navHistory  ) return;
+        if ( !lojax.config.navHistory ) return;
 
         // grab the current hash and request it with ajax-get
 
@@ -191,75 +188,14 @@ lojax.Controller.prototype = {
             .catch( instance.handleError );
     },
 
-    bindToModels: function ( context ) {
-        context = context || document;
-        var $this, models = [];
-        var dataModels = $( context ).find( lojax.select.model ).add( context ).filter( lojax.select.model );
-
-        lojax.log( 'bindToModels: dataModels:' ).log( dataModels );
-
-        // iterate over the models in context
-        dataModels.each( function () {
-            $this = $( this );
-            // grab the data-model
-            model = priv.getModel( $this );
-            if ( !priv.hasValue( model ) || model === '' ) {
-                // empty model, so create one from its inputs
-                model = priv.buildModelFromElements( $this );
-            }
-            else {
-                priv.setElementsFromModel( $this, model );
-            }
-            $this.data( 'model', model );
-            lojax.log( 'bindToModels: model:' ).log( model );
-        } );
-    },
-
-    updateModel: function ( evt ) {
-        var name = evt.target.name;
-        if ( !priv.hasValue( name ) || name == '' ) return;
-        // model's change handler 
-        // provides simple one-way binding from HTML elements to a model
-        // 'this' is the element with jx-model attribute
-        var $this = $( this );
-        // $target is the element that triggered the change event
-        var $target = $( evt.target );
-        var model = priv.getModel( $this );
-        var elems = $this.find( '[name="' + name + '"]' );
-
-        var o = {
-            target: evt.target,
-            name: name,
-            value: $target.val(),
-            model: model,
-            cancel: false
-        };
-
-        lojax.log( 'updateModel: o:' ).log( o );
-
-        priv.triggerEvent( lojax.events.beforeUpdateModel, o, $this );
-        if ( o.cancel ) return;
-
-        lojax.log( 'updateModel: o.model: before:' ).log( o.model );
-
-        priv.setModelProperty( $this, o.model, elems );
-        // TODO: set an isDirty flag without corrupting the model
-        // maybe use a wrapper class to observe the model
-        priv.triggerEvent( lojax.events.afterUpdateModel, o, $this );
-
-        lojax.log( 'updateModel: o.model: after:' ).log( o.model );
-
-        priv.propagateChange( model, $target );
-    },
-
     injectContent: function ( request, response ) {
         var id, target, newModal, transition, $node, result;
 
         // empty response?
         if ( !priv.hasValue( response ) ) return;
 
-        // ensure any loose calls to lojax.onLoad are ignored
-        instance.onLoad = null;
+        // ensure any loose calls to lojax.in are ignored
+        instance.in = null;
 
         var doPanel = function () {
             var node = $( this );
@@ -271,20 +207,11 @@ lojax.Controller.prototype = {
 
                 lojax.log( 'injectContent: data-panel: ' + id );
                 transition = priv.resolveTransition( request, node );
-                priv.callOnUnload( target );
+                priv.callOut( target );
+                // swap out the content
                 result = transition( target, node );
-                if ( priv.hasValue( request ) ) {
-                    result.refresh = request.exec.bind( request );
-                }
-                priv.triggerEvent( lojax.events.afterInject, result, node );
-                instance.bindToModels( result );
-                if ( typeof instance.onUnload == 'function' ) {
-                    $( result )[0].onUnload = instance.onUnload;
-                    instance.onUnload = null;
-                }
-                priv.callOnLoad( result, request );
-                instance.loadSrc( result );
-                instance.preloadAsync( result );
+                // perform post-inject chores
+                instance.postInject( result, node, request );
             }
         };
 
@@ -323,12 +250,12 @@ lojax.Controller.prototype = {
                 }
 
                 // find all the panels in the new content
-                if ( request.target || $node.is( priv.attrSelector('panel') ) ) {
+                if ( request.target || $node.is( priv.attrSelector( 'panel' ) ) ) {
                     doPanel.call( $node );
                 }
                 else {
                     // iterate through the panels
-                    $( nodes[i] ).find( priv.attrSelector('panel') ).each( doPanel );
+                    $( nodes[i] ).find( priv.attrSelector( 'panel' ) ).each( doPanel );
                 }
             }
         }
@@ -344,6 +271,8 @@ lojax.Controller.prototype = {
     },
 
     createModal: function ( content, request ) {
+        // injectContent delegates modals here
+
         // check for bootstrap
         if ( $.fn.modal ) {
             instance.modal = $( content ).appendTo( 'body' ).modal( {
@@ -385,10 +314,7 @@ lojax.Controller.prototype = {
             } );
         }
         if ( instance.modal ) {
-            instance.bindToModels( instance.modal );
-            priv.callOnLoad( instance.modal, request );
-            instance.loadSrc( instance.modal );
-            instance.preloadAsync( instance.modal );
+            instance.postInject( instance.modal, content, request );
         }
     },
 
@@ -419,13 +345,27 @@ lojax.Controller.prototype = {
                 config.suppressEvents = true;
                 request = new lojax.Request( config );
                 // if it's got a valid action that hasn't already been cached, cache and execute
-                if ( priv.hasValue( request.action ) && !self.cache[ request.action ] ) {
+                if ( priv.hasValue( request.action ) && !self.cache[request.action] ) {
                     self.cache[request.action] = request;
                     request.exec();
                     lojax.log( 'preloadAsync: request:' ).log( request );
                 }
             } );
         } );
+    },
+
+    postInject: function(context, source, request) {
+        if ( typeof instance.out == 'function' ) {
+            $( context )[0].out = instance.out;
+            instance.out = null;
+        }
+        priv.triggerEvent( lojax.events.afterInject, context, source );
+        priv.callIn( context, request );
+        if ( priv.hasValue( request ) ) {
+            context.refresh = request.exec.bind( request );
+        }
+        instance.loadSrc( context );
+        instance.preloadAsync( context );
     },
 
     handleError: function ( response ) {
@@ -440,5 +380,5 @@ lojax.Controller.prototype = {
         lojax.log( 'handleError: response: ' ).log( response );
     }
 
-};
+} );
 
