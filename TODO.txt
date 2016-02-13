@@ -6,18 +6,25 @@ Figure out how to hook into client-side validation. Can we copy validation attri
 You can also call the jQuery.validator.unobtrusive.parseElement() function to parse a single HTML element." 
 http://bradwilson.typepad.com/blog/2010/10/mvc3-unobtrusive-validation.html
 
+Add support for lojax.out to modals.
+
+Add support for sockets (SignalR). Use a publish/subscribe pattern.
+
 Add a way to capture an event of an entire section:
 
 <div jx-capture="click submit change enter" jx-request="{'method':'ajax-get','transition':'append'}">
    ...
 </div>
 
-This is useful in situations where we don't have easy access to the markup inside the section
-(e.g. a third party component), or when we want to treat all the sources inside a section in the same way without marking up every single one (e.g. a grid with many links).
+This is useful in situations where we don't have easy access to the markup inside the section (e.g. a third party component), 
+or when we want to treat all the sources inside a section in the same way without marking up every single one (e.g. a grid with many links).
 lojax intercepts the event and crafts a request using the union of the source's attributes and the jx-request attribute. The attributes in the source override jx-request.
 
 Add support for files. Was thinking specifically of input[type=file]. 
 Can these be cloned?
+
+Create an interface for modals. Create implementations for bootstrap and kendo.
+Register them with lojax.
 
 Expand the capability of the events. Make it possible to subscribe to events from specific panels.
 Will this work?
@@ -83,14 +90,14 @@ Also assume there's a link for editing the row:
 
 When the user clicks the edit link, we want to bind the form in the modal (which has already been loaded and cached) to the model for the row.
 But we've already got the data in the jx-model attribute, so we shouldn't have to make another request for it.
-For these kinds of cases we can use lojax.onLoad.
+For these kinds of cases we can use lojax.in.
 
 <form jx-panel="theForm">
 	<input name="color" type="color" />
 	...
 
 	<script>
-		lojax.onLoad(function(request){
+		lojax.in(function(request){
 			// 'this' is the form
 			// 'request' contains a reference to the link that initiated the request (request.source)
 			// so we can get a reference to the model thusly:
@@ -104,12 +111,12 @@ For these kinds of cases we can use lojax.onLoad.
 	</script>
 </form>
 
-The script in the form will run when it is injected into the page, setting lojax's onLoad callback.
-After lojax injects the form, it immediately checks for the onLoad callback and executes it,
+The script in the form will run when it is injected into the page, setting lojax's in callback.
+After lojax injects the form, it immediately checks for the in callback and executes it,
 supplying the form as the context and the request as the argument.
 lojax then immediately nulls out its internal reference to the callback to prepare for the next iteration.
 So we just have to make sure that the script tag is INSIDE the form.
-If you place a call to lojax.onLoad outside the form, the callback won't be executed.
+If you place a call to lojax.in outside the form, the callback won't be executed.
 
 And by the way, we should account for the possibility that models could be preloaded and cached, just like any other request.
 Something like the following could be put at the bottom of a page to pre-load a resource:
@@ -140,11 +147,11 @@ Create a nuget package.
   Hold down the control key and click a link with a hash to open a new tab. After the main page loads, lojax will make an ajax request for the hash.
 - Add a jx-src attribute to a div to load content into the div asynchronously. 
   This uses the same logic as jx-panels, so you can use transitions, model binding, other jx-src divs, etc.
-- Use lojax.onLoad(callback) inside a jx-panel, modal, or div[jx-src] to execute a function with context set to the containing element when the element is injected.
+- Use lojax.in(callback) inside a jx-panel, modal, or div[jx-src] to execute a function with context set to the containing element when the element is injected.
   The request is passed as an argument to the callback.
   This works only if the script is inside the element you want as the context.
   The callback is invoked after model binding, but before loadSrc. Callbacks are invoked only once.
-- Use lojax.onUnload(callback) inside a jx-panel, modal, or div[jx-src] to execute a function with context set to the containing element when the element is about to be replaced.
+- Use lojax.out(callback) inside a jx-panel, modal, or div[jx-src] to execute a function with context set to the containing element when the element is about to be replaced.
   Useful for removing event handlers.
   This works only if the script is inside the element you want as the context.
 - Post a JSON model without ajax by setting jx-method = post. This works by converting the model to a form and submitting it.

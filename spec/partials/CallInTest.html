@@ -1,11 +1,11 @@
 ﻿<div jx-panel="hidden-div">
     <input type="hidden" value="call-in-test" />
     <script>
-        lojax.onLoad( function () {
+        lojax.in( function () {
             val = $( this ).find( "input" ).val();
             window.callInTest( val );
         } );
-        lojax.onUnload( function () {
+        lojax.out( function () {
             val = $( this ).find( "input" ).val();
             window.callOutTest( val );
         } );
@@ -14,11 +14,11 @@
 <div jx-panel="hidden-div">
     <input type="hidden" value="call-in-test2" />
     <script>
-        lojax.onLoad( function () {
+        lojax.in( function () {
             val = $( this ).find( "input" ).val();
             window.callInTest2( val );
         } );
-        lojax.onUnload( function () {
+        lojax.out( function () {
             val = $( this ).find( "input" ).val();
             window.callOutTest( val );
         } );

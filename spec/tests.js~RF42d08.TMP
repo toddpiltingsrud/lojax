@@ -107,7 +107,7 @@ QUnit.test( 'emptyHashAction', function ( assert ) {
         done1();
     } );
     lojax.emptyHashAction = 'partials/RaiseEvent.html';
-    lojax.instance.handleHash();
+    lojax.Controller.handleHash();
 
     var done2 = assert.async();
     $( document ).one( 'customEvent', function ( evt, arg ) {
@@ -117,7 +117,7 @@ QUnit.test( 'emptyHashAction', function ( assert ) {
     lojax.emptyHashAction = function () {
         return 'partials/RaiseEvent.html';
     };
-    lojax.instance.handleHash();
+    lojax.Controller.handleHash();
 
     var done3 = assert.async();
     $( document ).one( 'customEvent', function ( evt, arg ) {
@@ -128,7 +128,7 @@ QUnit.test( 'emptyHashAction', function ( assert ) {
         action: 'partials/RaiseEvent.html',
         method: 'ajax-get'
     };
-    lojax.instance.handleHash();
+    lojax.Controller.handleHash();
 
 } );
 
@@ -679,7 +679,7 @@ QUnit.test( 'binding models 1', function ( assert ) {
 
     div.append( input );
 
-    lojax.instance.bindToModels( input );
+    lojax.Controller.bindToModels( input );
 
     var model = input.data( 'model' );
 
@@ -691,7 +691,7 @@ QUnit.test( 'binding models 1', function ( assert ) {
 
     div.append( input );
 
-    lojax.instance.bindToModels( input );
+    lojax.Controller.bindToModels( input );
 
     model = input.data( 'model' );
 
@@ -711,7 +711,7 @@ QUnit.test( 'binding models 2', function ( assert ) {
 
     lojax.logging = true;
 
-    lojax.instance.bindToModels( modelDiv );
+    lojax.Controller.bindToModels( modelDiv );
 
     lojax.logging = false;
 
@@ -826,7 +826,7 @@ QUnit.test( 'binding models 4', function ( assert ) {
     modelDiv.append( getForm() );
 
     // bind the inputs to the model
-    lojax.instance.bindToModels( modelDiv );
+    lojax.Controller.bindToModels( modelDiv );
 
     // grab the model
     var m = modelDiv.data( 'model' );
@@ -881,7 +881,7 @@ QUnit.test( 'loadSrc', function ( assert ) {
 
     div.append( '<div data-src="partials/ModelTest.html"><span id="replaceThis"></span></div>' );
 
-    lojax.instance.loadSrc( div );
+    lojax.Controller.loadSrc( div );
 
 } );
 
@@ -1066,7 +1066,7 @@ QUnit.test( 'posting models 2', function ( assert ) {
     modelDiv.append( getForm() );
 
     // bind the inputs to the model
-    lojax.instance.bindToModels( modelDiv );
+    lojax.Controller.bindToModels( modelDiv );
 
     // change some of the values
     modelDiv.find( '[name="daterange[0]"]' ).val( '2015-11-01' ).change();
@@ -1119,7 +1119,7 @@ QUnit.test( 'posting models 3', function ( assert ) {
     modelDiv.append( getForm() );
 
     // bind the inputs to the model
-    lojax.instance.bindToModels( modelDiv );
+    lojax.Controller.bindToModels( modelDiv );
 
     // change some of the values
     modelDiv.find( '[name="daterange[0]"]' ).val( '2015-11-13' ).change();
@@ -1145,7 +1145,6 @@ QUnit.test( 'posting models 3', function ( assert ) {
     submitBtn.click();
 
 } );
-
 
 QUnit.test( 'propagateChange', function ( assert ) {
 
@@ -1232,7 +1231,7 @@ QUnit.test( 'posting forms 1', function ( assert ) {
 
 } );
 
-QUnit.test( 'callOnLoad', function ( assert ) {
+QUnit.test( 'callIn', function ( assert ) {
 
     lojax.logging = true;
 
@@ -1250,19 +1249,19 @@ QUnit.test( 'callOnLoad', function ( assert ) {
     };
 
     window.callInTest2 = function ( val ) {
-        assert.ok( true, 'lojax.onLoad called' );
+        assert.ok( true, 'lojax.in called' );
         assert.equal( val, 'call-in-test2', '' );
         done2();
     };
 
     window.loadAsyncContentTest = function ( val ) {
-        assert.ok( true, 'lojax.onLoad called' );
+        assert.ok( true, 'lojax.in called' );
         assert.equal( val, 'load async content', '' );
         done3();
     };
 
     window.callOutTest = function ( val ) {
-        assert.ok( true, 'lojax.onUnload called' );
+        assert.ok( true, 'lojax.out called' );
         assert.equal( val, 'call-in-test', '' );
         done4();
     };
@@ -1423,14 +1422,14 @@ QUnit.test( 'preload', function ( assert ) {
     var done = assert.async();
 
     lojax.logging = false;
-    var store = lojax.instance.cache;
+    var store = lojax.Controller.cache;
     var prop;
 
     $( document ).one( lojax.events.afterRequest, function ( evt, arg ) {
         setTimeout( function () {
             prop = Object.getOwnPropertyNames( store )[0];
             assert.ok( /RaiseEvent/.test( prop ), 'make sure we have the right request' );
-            var request = lojax.instance.cache[prop];
+            var request = lojax.Controller.cache[prop];
             assert.ok( request != null, 'stuff should get cached' );
             // wait for it to return, then check the contents
             request.then( function ( response ) {

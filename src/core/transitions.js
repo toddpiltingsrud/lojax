@@ -3,7 +3,8 @@
  Transitions
 \***********/
 
-lojax.Transitions = {
+lojax.extend( lojax.Transitions, {
+
     'swap-content': function ( oldNode, newNode ) {
         var $old = $( oldNode ),
             $new = $( newNode );
@@ -36,5 +37,5 @@ lojax.Transitions = {
         $old.prepend( $new );
         return $new;
     }
-};
 
+} );
