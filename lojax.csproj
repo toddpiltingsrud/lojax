@@ -233,7 +233,7 @@
     <Content Include="src\core\logging.js" />
     <Content Include="src\core\controller.js" />
     <Content Include="src\core\api.js" />
-    <Content Include="src\modules\json-modeling.js" />
+    <Content Include="src\modules\modeling.js" />
     <Content Include="src\core\priv.js" />
     <Content Include="src\core\transitions.js" />
     <Content Include="src\core\request.js" />

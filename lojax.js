@@ -987,7 +987,7 @@ var lojax = lojax || {};
     } );
 	
 	/***********\
-	json modeling
+	  modeling
 	\***********/
 	
 	// bind an element to a JSON model
