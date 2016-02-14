@@ -110,27 +110,27 @@ var lojax = lojax || {};
     lojax.extend( lojax.Controller, {
     
         init: function () {
-            var self = this;
-            this.div = null;
-            this.modal = null;
-            this.currentTransition = null;
-            this.currentPanel = null;
-            this.cache = {};
-            this.isControl = false;
+        var self = this;
+        this.div = null;
+        this.modal = null;
+        this.currentTransition = null;
+        this.currentPanel = null;
+        this.cache = {};
+        this.isControl = false;
     
-            $( function () {
-                self.div = $( "<div style='display:none'></div>" ).appendTo( 'body' );
+        $( function () {
+            self.div = $( "<div style='display:none'></div>" ).appendTo( 'body' );
     
-                self.removeHandlers();
-                self.addHandlers();
-                self.loadSrc();
-                self.preloadAsync();
+            self.removeHandlers();
+            self.addHandlers();
+            self.loadSrc();
+            self.preloadAsync();
     
-                // check window.location.hash for valid hash
-                if ( priv.hasHash() ) {
-                    setTimeout( self.handleHash );
-                }
-            } );
+            // check window.location.hash for valid hash
+            if ( priv.hasHash() ) {
+                setTimeout( self.handleHash );
+            }
+        } );
         },
     
         addHandlers: function () {
@@ -316,7 +316,7 @@ var lojax = lojax || {};
                     result = transition( target, node );
                     // perform post-inject chores
                     instance.postInject( result, node, request );
-                }
+                    }
             };
     
             // create a list of nodes from the response
@@ -341,9 +341,9 @@ var lojax = lojax || {};
     
                     // don't create more than one modal at a time
                     if ( instance.modal === null && $node.is( '.modal' ) ) {
-                        instance.createModal( $node, request );
-                        continue;
-                    }
+                            instance.createModal( $node, request );
+                            continue;
+                        }
     
                     // find all the panels in the new content
                     if ( request.target || $node.is( priv.attrSelector( 'panel' ) ) ) {
@@ -514,7 +514,7 @@ var lojax = lojax || {};
             if ( console && console.error ) {
                 console.error( e );
             }
-        };
+    };
     
     } )(lojax);
     
@@ -569,14 +569,14 @@ var lojax = lojax || {};
             if ( priv.hasValue( params.action ) && params.action.length ) {
                 action = params.action;
             }
-                // check for a valid href
+            // check for a valid href
             else if ( priv.hasValue( params.source )
                 && priv.hasValue( params.source.href )
                 && params.source.href.length
                 && params.source.href.substr( 0, 11 ) !== 'javascript:' ) {
                 action = params.source.href;
             }
-                // if this is a submit button check for a form
+            // if this is a submit button check for a form
             else if ( $( params.source ).is( '[type=submit]' ) ) {
                 var closest = $( params.source ).closest( 'form,' + priv.attrSelector( 'model' ) );
                 // is submit button inside a form?
@@ -585,7 +585,7 @@ var lojax = lojax || {};
                     action = closest.attr( 'action' ) || window.location.href;
                 }
             }
-                // if this is a form use form.action or current page
+            // if this is a form use form.action or current page
             else if ( $( params.source ).is( 'form' ) ) {
                 action = $( params.source ).attr( 'action' ) || window.location.href;
             }
@@ -1079,8 +1079,8 @@ var lojax = lojax || {};
 	
 	        priv.propagateChange( model, $target );
 	    }
-	};
-	
+    };
+    
 	
 	lojax.extend( lojax.priv, {
 	
@@ -1445,7 +1445,7 @@ var lojax = lojax || {};
 	    },
 	
 	} );
-	
+
 	$( modeler.init );
 
 	lojax.Controller.init();
