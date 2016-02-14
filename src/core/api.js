@@ -30,30 +30,26 @@ lojax.exec = function ( params ) {
 // call this from a script that is located inside a jx-panel, div[data-src] or .modal
 // executes a callback with the context set to the injected node
 lojax.in = function ( callback ) {
-    lojax.log( 'lojax.in called' );
+    lojax.info( 'lojax.in called' );
     instance.in = callback;
 };
 
 lojax.out = function ( callback ) {
-    lojax.log( 'lojax.out called' );
+    lojax.info( 'lojax.out called' );
     instance.out = callback;
 };
 
 lojax.closeModal = function () {
-    // during testing the call to closeModal occurs
-    // before the modal has a change to initialize
-    // resulting in a modal that doesn't close
-    // so use a timeout to make this function run last
-    setTimeout( function () {
-        if ( priv.hasValue( instance.modal ) ) {
-            if ( $.fn.modal ) {
-                instance.modal.modal( 'hide' );
-            }
-            else if ( $.fn.kendoWindow ) {
-                instance.modal.data( 'kendoWindow' ).close();
-            }
+        lojax.info( 'createModal: closeModal called' );
+    if ( priv.hasValue( instance.modal ) ) {
+        if ( $.fn.modal ) {
+            instance.modal.modal( 'hide' );
         }
-    } );
+        else if ( $.fn.kendoWindow ) {
+            instance.modal.data( 'kendoWindow' ).close();
+        }
+        instance.modal = null;
+    }
 };
 
 // This action is executed when a browser nav button is clicked
@@ -71,23 +67,6 @@ lojax.events = {
     afterInject: 'afterInject',
     ajaxError: 'ajaxError'
 };
-
-lojax.logging = false;
-
-lojax.log = function ( arg ) {
-    try {
-        if ( lojax.logging && console && console.log ) {
-            console.log( arg );
-            return console;
-        }
-    }
-    catch ( ex ) { }
-    return {
-        log: function () { }
-    };
-};
-
-lojax.error = ( console && console.error ) ? console.error : function () { };
 
 lojax.config = {
     prefix: 'jx-',

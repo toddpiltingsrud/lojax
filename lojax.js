@@ -35,30 +35,26 @@ var lojax = lojax || {};
     // call this from a script that is located inside a jx-panel, div[data-src] or .modal
     // executes a callback with the context set to the injected node
     lojax.in = function ( callback ) {
-        lojax.log( 'lojax.in called' );
+        lojax.info( 'lojax.in called' );
         instance.in = callback;
     };
     
     lojax.out = function ( callback ) {
-        lojax.log( 'lojax.out called' );
+        lojax.info( 'lojax.out called' );
         instance.out = callback;
     };
     
     lojax.closeModal = function () {
-        // during testing the call to closeModal occurs
-        // before the modal has a change to initialize
-        // resulting in a modal that doesn't close
-        // so use a timeout to make this function run last
-        setTimeout( function () {
-            if ( priv.hasValue( instance.modal ) ) {
-                if ( $.fn.modal ) {
-                    instance.modal.modal( 'hide' );
-                }
-                else if ( $.fn.kendoWindow ) {
-                    instance.modal.data( 'kendoWindow' ).close();
-                }
+            lojax.info( 'createModal: closeModal called' );
+        if ( priv.hasValue( instance.modal ) ) {
+            if ( $.fn.modal ) {
+                instance.modal.modal( 'hide' );
             }
-        } );
+            else if ( $.fn.kendoWindow ) {
+                instance.modal.data( 'kendoWindow' ).close();
+            }
+            instance.modal = null;
+        }
     };
     
     // This action is executed when a browser nav button is clicked
@@ -76,23 +72,6 @@ var lojax = lojax || {};
         afterInject: 'afterInject',
         ajaxError: 'ajaxError'
     };
-    
-    lojax.logging = false;
-    
-    lojax.log = function ( arg ) {
-        try {
-            if ( lojax.logging && console && console.log ) {
-                console.log( arg );
-                return console;
-            }
-        }
-        catch ( ex ) { }
-        return {
-            log: function () { }
-        };
-    };
-    
-    lojax.error = ( console && console.error ) ? console.error : function () { };
     
     lojax.config = {
         prefix: 'jx-',
@@ -190,11 +169,11 @@ var lojax = lojax || {};
             var params = priv.getConfig( this ),
                 $this = $( this );
     
-            lojax.log( 'handleRequest: params: ' ).log( params );
+            lojax.info( 'handleRequest: params: ' , params );
     
             var request = new lojax.Request( params );
     
-            lojax.log( 'handleRequest: request: ' ).log( request );
+            lojax.log( 'handleRequest: request: ' , request );
     
             try {
                 // delegate hashes to handleHash
@@ -249,7 +228,7 @@ var lojax = lojax || {};
     
         handleHash: function () {
     
-            lojax.log( 'handleHash called' );
+            lojax.info( 'handleHash called' );
     
             if ( !lojax.config.navHistory ) return;
     
@@ -257,8 +236,8 @@ var lojax = lojax || {};
     
             var handler, request, hash = window.location.hash;
     
-            lojax.log( 'handleHash: hash:' ).log( hash );
-            lojax.log( 'handleHash: lojax.emptyHashAction:' ).log( lojax.emptyHashAction );
+            lojax.info( 'handleHash: hash:' , hash );
+            lojax.info( 'handleHash: lojax.emptyHashAction:' , lojax.emptyHashAction );
     
             if ( priv.hasHash() ) {
     
@@ -291,7 +270,7 @@ var lojax = lojax || {};
                 request = new lojax.Request( request );
             }
     
-            lojax.log( 'executeRequest: request: ' ).log( request );
+            lojax.log( 'executeRequest: request: ' , request );
     
             // no action? we're done here
             if ( request.action === null ) return;
@@ -300,7 +279,7 @@ var lojax = lojax || {};
             if ( request.action in this.cache ) {
                 request = this.cache[request.action];
                 delete this.cache[request.action];
-                lojax.log( 'executeRequest: retrieved from cache' );
+                lojax.info( 'executeRequest: retrieved from cache' );
             }
             else {
                 request.exec();
@@ -330,7 +309,7 @@ var lojax = lojax || {};
     
                 if ( target.length ) {
     
-                    lojax.log( 'injectContent: data-panel: ' + id );
+                    lojax.info( 'injectContent: data-panel: ' + id );
                     transition = priv.resolveTransition( request, node );
                     priv.callOut( target );
                     // swap out the content
@@ -351,27 +330,19 @@ var lojax = lojax || {};
             }
             else {
     
-                lojax.log( 'injectContent: nodes:' ).log( nodes );
+                lojax.info( 'injectContent: nodes:' , nodes );
     
                 for ( var i = 0; i < nodes.length; i++ ) {
                     $node = $( nodes[i] );
     
                     priv.triggerEvent( lojax.events.beforeInject, nodes, $node );
     
+                    lojax.info( 'createModal:' + $node.is( '.modal' ) );
+    
                     // don't create more than one modal at a time
-                    if ( instance.modal === null ) {
-                        // check if the node is a modal
-                        if ( $node.is( '.modal' ) ) {
-                            instance.createModal( $node, request );
-                            continue;
-                        }
-                        else {
-                            // check if the node contains a modal
-                            newModal = $node.find( '.modal' );
-                            if ( newModal.length ) {
-                                instance.createModal( newModal, request );
-                            }
-                        }
+                    if ( instance.modal === null && $node.is( '.modal' ) ) {
+                        instance.createModal( $node, request );
+                        continue;
                     }
     
                     // find all the panels in the new content
@@ -398,10 +369,12 @@ var lojax = lojax || {};
         createModal: function ( content, request ) {
             // injectContent delegates modals here
     
+            lojax.info( 'createModal.content', content );
+    
             // check for bootstrap
             if ( $.fn.modal ) {
                 instance.modal = $( content ).appendTo( 'body' ).modal( {
-                    show: false,
+                    show: true,
                     keyboard: true
                 } );
                 instance.modal.on( 'hidden.bs.modal', function () {
@@ -412,7 +385,6 @@ var lojax = lojax || {};
                         instance.modal = null;
                     }
                 } );
-                instance.modal.modal( 'show' );
             }
                 // check for kendo
             else if ( $.fn.kendoWindow ) {
@@ -473,7 +445,7 @@ var lojax = lojax || {};
                     if ( priv.hasValue( request.action ) && !self.cache[request.action] ) {
                         self.cache[request.action] = request;
                         request.exec();
-                        lojax.log( 'preloadAsync: request:' ).log( request );
+                        lojax.info( 'preloadAsync: request:' , request );
                     }
                 } );
             } );
@@ -502,11 +474,49 @@ var lojax = lojax || {};
                     error.push( response[name] );
                 }
             } );
-            lojax.log( 'handleError: response: ' ).log( response );
+            lojax.info( 'handleError: response: ' , response );
         }
     
     } );
     
+    
+    /***********\
+       logging
+    \***********/
+    
+    ( function (context) {
+    
+        var _logging = 'info';
+    
+        Object.defineProperty( context, 'logging', {
+            get: function () {
+                return _logging;
+            },
+            set: function ( val ) {
+                if ( val === true ) val = 'info';
+                _logging = val;
+                if ( val && console ) {
+                    context.log = console.log.bind( console );
+                    context.info = /info/.test( val ) && console.info ? console.info.bind( console ) : function () { };
+                    context.warn = /info|warn/.test( val ) && console.warn ? console.warn.bind( console ) : function () { };
+                    context.debug = /info|warn|debug/.test( val ) && console.debug ? console.debug.bind( console ) : function () { };
+                }
+                else {
+                    context.log = context.info = context.warn = context.debug = function () { };
+                }
+            }
+        } );
+    
+        // create context.log
+        context.logging = 'info';
+    
+        context.error = function ( e ) {
+            if ( console && console.error ) {
+                console.error( e );
+            }
+        };
+    
+    } )(lojax);
     
     /***************\
     private functions
@@ -720,7 +730,7 @@ var lojax = lojax || {};
     \***********/
     
     lojax.Request = function ( obj ) {
-        lojax.log( 'lojax.Request: obj:' ).log( obj );
+        lojax.info( 'lojax.Request: obj:' , obj );
         if ( typeof obj === 'function' ) {
             obj = obj();
         }
@@ -754,7 +764,7 @@ var lojax = lojax || {};
     
         getData: function () {
             var data;
-            lojax.log( 'resolveData: method:' ).log( this.method );
+            lojax.info( 'resolveData: method:' , this.method );
             switch ( this.method ) {
                 case 'get':
                 case 'ajax-get':
@@ -877,7 +887,7 @@ var lojax = lojax || {};
         exec: function () {
             this.reset();
     
-            lojax.log( 'request.exec: this:' ).log( this );
+            lojax.info( 'request.exec: this:' , this );
     
             if ( !priv.hasValue( this.methods[this.method] ) ) throw 'Unsupported method: ' + this.method;
     
@@ -886,7 +896,7 @@ var lojax = lojax || {};
                 if ( !this.cancel ) {
                     // execute the method function
                     this.methods[this.method].bind( this )();
-                    lojax.log( 'request.exec: executed' );
+                    lojax.info( 'request.exec: executed' );
                 }
                 else {
                     // always trigger afterRequest even if there was no request
@@ -1014,7 +1024,7 @@ var lojax = lojax || {};
 	        var $this, models = [];
 	        var dataModels = $( context ).find( lojax.select.model ).add( context ).filter( lojax.select.model );
 	
-	        lojax.log( 'bindToModels: dataModels:' ).log( dataModels );
+	        lojax.log( 'bindToModels: dataModels:' , dataModels );
 	
 	        // iterate over the models in context
 	        dataModels.each( function () {
@@ -1029,7 +1039,7 @@ var lojax = lojax || {};
 	                priv.setElementsFromModel( $this, model );
 	            }
 	            $this.data( 'model', model );
-	            lojax.log( 'bindToModels: model:' ).log( model );
+	            lojax.log( 'bindToModels: model:' , model );
 	        } );
 	    },
 	
@@ -1053,19 +1063,19 @@ var lojax = lojax || {};
 	            cancel: false
 	        };
 	
-	        lojax.log( 'updateModel: o:' ).log( o );
+	        lojax.log( 'updateModel: o:' , o );
 	
 	        priv.triggerEvent( lojax.events.beforeUpdateModel, o, $this );
 	        if ( o.cancel ) return;
 	
-	        lojax.log( 'updateModel: o.model: before:' ).log( o.model );
+	        lojax.log( 'updateModel: o.model: before:' , o.model );
 	
 	        priv.setModelProperty( $this, o.model, elems );
 	        // TODO: set an isDirty flag without corrupting the model
 	        // maybe use a wrapper class to observe the model
 	        priv.triggerEvent( lojax.events.afterUpdateModel, o, $this );
 	
-	        lojax.log( 'updateModel: o.model: after:' ).log( o.model );
+	        lojax.log( 'updateModel: o.model: after:' , o.model );
 	
 	        priv.propagateChange( model, $target );
 	    }
@@ -1099,7 +1109,7 @@ var lojax = lojax || {};
 	        return model;
 	    },
 	    resolveModel: function ( params ) {
-	        lojax.log( 'resolveModel: params:' ).log( params );
+	        lojax.log( 'resolveModel: params:' , params );
 	        var closest, model;
 	        if ( priv.hasValue( params.model ) ) model = params.model;
 	
@@ -1140,7 +1150,7 @@ var lojax = lojax || {};
 	    formFromModel: function ( model, method, action, rootName, form ) {
 	        var t, i, props, name;
 	
-	        lojax.log( 'formFromModel: model:' ).log( model );
+	        lojax.log( 'formFromModel: model:' , model );
 	
 	        if ( !priv.hasValue( form ) ) {
 	            // first time through
@@ -1239,7 +1249,7 @@ var lojax = lojax || {};
 	            val,
 	            segments;
 	
-	        lojax.log( 'setModelProperty: elems.length:' ).log( elems.length );
+	        lojax.log( 'setModelProperty: elems.length:' , elems.length );
 	
 	        // derive an object path from the input name
 	        segments = priv.getPathSegments( $( elems ).attr( 'name' ) );
@@ -1247,7 +1257,7 @@ var lojax = lojax || {};
 	        // get the raw value
 	        val = priv.getValue( elems );
 	
-	        lojax.log( 'setModelProperty: val:' ).log( val );
+	        lojax.log( 'setModelProperty: val:' , val );
 	
 	        // grab the object we're setting
 	        obj = priv.getObjectAtPath( model, segments, Array.isArray( val ) );
@@ -1283,7 +1293,7 @@ var lojax = lojax || {};
 	    buildModelFromElements: function ( context ) {
 	        var model = {};
 	
-	        lojax.log( 'buildModelFromElements: context:' ).log( context );
+	        lojax.log( 'buildModelFromElements: context:' , context );
 	
 	        // there may be multiple elements with the same name
 	        // so build a dictionary of names and elements
@@ -1300,7 +1310,7 @@ var lojax = lojax || {};
 	            priv.setModelProperty( context, model, names[name] );
 	        } );
 	
-	        lojax.log( 'buildModelFromElements: model:' ).log( model );
+	        lojax.log( 'buildModelFromElements: model:' , model );
 	
 	        return model;
 	    },
@@ -1310,7 +1320,7 @@ var lojax = lojax || {};
 	            name,
 	            $this = $( context );
 	
-	        lojax.log( 'setELementsFromModel: model:' ).log( model );
+	        lojax.log( 'setELementsFromModel: model:' , model );
 	
 	        // set the inputs to the model
 	        $this.find( '[name]' ).each( function () {

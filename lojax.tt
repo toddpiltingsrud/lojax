@@ -7,10 +7,9 @@
 <#@ import namespace="System.Text.RegularExpressions" #>
 <#@ output extension=".js" #>
 <#
-var path = "";
 var stripLogging = false;
-var coverage = false;
-var addModules = true;
+var coverage     = false;
+var addModules   = true;
 #>
 
 // namespace
@@ -29,18 +28,7 @@ lojax.cover = function(index) {
 
 (function($, lojax) { 
 <#
-if (Directory.Exists(@"C:\Users\kitntodd"))
-{
-    path = @"C:\Users\kitntodd\OneDrive\Documents\Code\Projects\lojax\src";
-}
-else if (Directory.Exists(@"C:\Users\tpiltingsrud"))
-{
-    path = @"C:\Users\tpiltingsrud\OneDrive\Documents\Code\Projects\lojax\src";
-}
-else
-{
-    path = @"C:\Users\Todd\OneDrive\Documents\Code\Projects\lojax\src";
-}
+var path = Host.ResolvePath("src");
 
 var files = new DirectoryInfo(path + @"\core").GetFiles("*.js", SearchOption.AllDirectories);
 

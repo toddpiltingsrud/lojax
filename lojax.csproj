@@ -230,6 +230,7 @@
     <Content Include="spec\SpecRunner.html" />
     <Content Include="spec\scripts\qunit-1.20.0.js" />
     <Content Include="spec\scripts\respond.js" />
+    <Content Include="src\core\logging.js" />
     <Content Include="src\core\controller.js" />
     <Content Include="src\core\api.js" />
     <Content Include="src\modules\json-modeling.js" />

@@ -6,19 +6,9 @@ Figure out how to hook into client-side validation. Can we copy validation attri
 You can also call the jQuery.validator.unobtrusive.parseElement() function to parse a single HTML element." 
 http://bradwilson.typepad.com/blog/2010/10/mvc3-unobtrusive-validation.html
 
-Add support for lojax.out to modals.
-
-Add support for sockets (SignalR). Use a publish/subscribe pattern.
-
-Add a way to capture an event of an entire section:
-
-<div jx-capture="click submit change enter" jx-request="{'method':'ajax-get','transition':'append'}">
-   ...
-</div>
-
-This is useful in situations where we don't have easy access to the markup inside the section (e.g. a third party component), 
-or when we want to treat all the sources inside a section in the same way without marking up every single one (e.g. a grid with many links).
-lojax intercepts the event and crafts a request using the union of the source's attributes and the jx-request attribute. The attributes in the source override jx-request.
+Add support for sockets. Add an attribute containing a URL to an element. lojax would open a socket and listen for messages on it. 
+It'd be ideal if we could detect the incoming message type (HTML or JSON) and either inject the result into the element, or bind it, respectively.
+http://socket.io/
 
 Add support for files. Was thinking specifically of input[type=file]. 
 Can these be cloned?
