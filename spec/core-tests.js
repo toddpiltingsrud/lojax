@@ -769,10 +769,11 @@ QUnit.test( 'posting forms 4', function ( assert ) {
 
 } );
 
-
 QUnit.test( 'modals2', function ( assert ) {
 
     lojax.logging = true;
+
+    lojax.log( 'createModal: modals2' );
 
     div.empty();
 
@@ -780,9 +781,10 @@ QUnit.test( 'modals2', function ( assert ) {
     //var done2 = assert.async();
 
     $( document ).one( 'modal2', function () {
+        console.log( 'createModal: modal2 raised' );
         assert.ok( true, 'inner modal was loaded' );
-        done1();
         lojax.closeModal();
+        done1();
     } );
 
     $( '<button data-method="ajax-get" data-action="partials/modal2.html">' ).appendTo( div ).click();

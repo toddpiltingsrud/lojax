@@ -4,7 +4,7 @@
 \***********/
 
 lojax.Request = function ( obj ) {
-    lojax.log( 'lojax.Request: obj:' ).log( obj );
+    lojax.info( 'lojax.Request: obj:' , obj );
     if ( typeof obj === 'function' ) {
         obj = obj();
     }
@@ -38,7 +38,7 @@ lojax.Request.prototype = {
 
     getData: function () {
         var data;
-        lojax.log( 'resolveData: method:' ).log( this.method );
+        lojax.info( 'resolveData: method:' , this.method );
         switch ( this.method ) {
             case 'get':
             case 'ajax-get':
@@ -161,7 +161,7 @@ lojax.Request.prototype = {
     exec: function () {
         this.reset();
 
-        lojax.log( 'request.exec: this:' ).log( this );
+        lojax.info( 'request.exec: this:' , this );
 
         if ( !priv.hasValue( this.methods[this.method] ) ) throw 'Unsupported method: ' + this.method;
 
@@ -170,7 +170,7 @@ lojax.Request.prototype = {
             if ( !this.cancel ) {
                 // execute the method function
                 this.methods[this.method].bind( this )();
-                lojax.log( 'request.exec: executed' );
+                lojax.info( 'request.exec: executed' );
             }
             else {
                 // always trigger afterRequest even if there was no request

@@ -65,11 +65,11 @@ lojax.extend( lojax.Controller, {
         var params = priv.getConfig( this ),
             $this = $( this );
 
-        lojax.log( 'handleRequest: params: ' ).log( params );
+        lojax.info( 'handleRequest: params: ' , params );
 
         var request = new lojax.Request( params );
 
-        lojax.log( 'handleRequest: request: ' ).log( request );
+        lojax.log( 'handleRequest: request: ' , request );
 
         try {
             // delegate hashes to handleHash
@@ -124,7 +124,7 @@ lojax.extend( lojax.Controller, {
 
     handleHash: function () {
 
-        lojax.log( 'handleHash called' );
+        lojax.info( 'handleHash called' );
 
         if ( !lojax.config.navHistory ) return;
 
@@ -132,8 +132,8 @@ lojax.extend( lojax.Controller, {
 
         var handler, request, hash = window.location.hash;
 
-        lojax.log( 'handleHash: hash:' ).log( hash );
-        lojax.log( 'handleHash: lojax.emptyHashAction:' ).log( lojax.emptyHashAction );
+        lojax.info( 'handleHash: hash:' , hash );
+        lojax.info( 'handleHash: lojax.emptyHashAction:' , lojax.emptyHashAction );
 
         if ( priv.hasHash() ) {
 
@@ -166,7 +166,7 @@ lojax.extend( lojax.Controller, {
             request = new lojax.Request( request );
         }
 
-        lojax.log( 'executeRequest: request: ' ).log( request );
+        lojax.log( 'executeRequest: request: ' , request );
 
         // no action? we're done here
         if ( request.action === null ) return;
@@ -175,7 +175,7 @@ lojax.extend( lojax.Controller, {
         if ( request.action in this.cache ) {
             request = this.cache[request.action];
             delete this.cache[request.action];
-            lojax.log( 'executeRequest: retrieved from cache' );
+            lojax.info( 'executeRequest: retrieved from cache' );
         }
         else {
             request.exec();
@@ -205,7 +205,7 @@ lojax.extend( lojax.Controller, {
 
             if ( target.length ) {
 
-                lojax.log( 'injectContent: data-panel: ' + id );
+                lojax.info( 'injectContent: data-panel: ' + id );
                 transition = priv.resolveTransition( request, node );
                 priv.callOut( target );
                 // swap out the content
@@ -226,27 +226,19 @@ lojax.extend( lojax.Controller, {
         }
         else {
 
-            lojax.log( 'injectContent: nodes:' ).log( nodes );
+            lojax.info( 'injectContent: nodes:' , nodes );
 
             for ( var i = 0; i < nodes.length; i++ ) {
                 $node = $( nodes[i] );
 
                 priv.triggerEvent( lojax.events.beforeInject, nodes, $node );
 
+                lojax.info( 'createModal:' + $node.is( '.modal' ) );
+
                 // don't create more than one modal at a time
-                if ( instance.modal === null ) {
-                    // check if the node is a modal
-                    if ( $node.is( '.modal' ) ) {
-                        instance.createModal( $node, request );
-                        continue;
-                    }
-                    else {
-                        // check if the node contains a modal
-                        newModal = $node.find( '.modal' );
-                        if ( newModal.length ) {
-                            instance.createModal( newModal, request );
-                        }
-                    }
+                if ( instance.modal === null && $node.is( '.modal' ) ) {
+                    instance.createModal( $node, request );
+                    continue;
                 }
 
                 // find all the panels in the new content
@@ -273,10 +265,12 @@ lojax.extend( lojax.Controller, {
     createModal: function ( content, request ) {
         // injectContent delegates modals here
 
+        lojax.info( 'createModal.content', content );
+
         // check for bootstrap
         if ( $.fn.modal ) {
             instance.modal = $( content ).appendTo( 'body' ).modal( {
-                show: false,
+                show: true,
                 keyboard: true
             } );
             instance.modal.on( 'hidden.bs.modal', function () {
@@ -287,7 +281,6 @@ lojax.extend( lojax.Controller, {
                     instance.modal = null;
                 }
             } );
-            instance.modal.modal( 'show' );
         }
             // check for kendo
         else if ( $.fn.kendoWindow ) {
@@ -348,7 +341,7 @@ lojax.extend( lojax.Controller, {
                 if ( priv.hasValue( request.action ) && !self.cache[request.action] ) {
                     self.cache[request.action] = request;
                     request.exec();
-                    lojax.log( 'preloadAsync: request:' ).log( request );
+                    lojax.info( 'preloadAsync: request:' , request );
                 }
             } );
         } );
@@ -377,7 +370,7 @@ lojax.extend( lojax.Controller, {
                 error.push( response[name] );
             }
         } );
-        lojax.log( 'handleError: response: ' ).log( response );
+        lojax.info( 'handleError: response: ' , response );
     }
 
 } );
