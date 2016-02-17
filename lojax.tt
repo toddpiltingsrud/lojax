@@ -7,7 +7,7 @@
 <#@ import namespace="System.Text.RegularExpressions" #>
 <#@ output extension=".js" #>
 <#
-var stripLogging = false;
+var stripLogging = true;
 var coverage     = false;
 var addModules   = true;
 #>

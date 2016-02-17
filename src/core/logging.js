@@ -14,7 +14,7 @@
         set: function ( val ) {
             if ( val === true ) val = 'info';
             _logging = val;
-            if ( val && console ) {
+            if ( val && window.console != undefined ) {
                 context.log = console.log.bind( console );
                 context.info = /info/.test( val ) && console.info ? console.info.bind( console ) : function () { };
                 context.warn = /info|warn/.test( val ) && console.warn ? console.warn.bind( console ) : function () { };

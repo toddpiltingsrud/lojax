@@ -83,6 +83,36 @@ var escapeHTML = function ( obj ) {
     return obj;
 };
 
+QUnit.test( 'polling', function ( assert ) {
+
+    div.empty();
+
+    lojax.logging = true;
+
+    $( div ).append( '<div jx-src="partials/RaiseEvent.html" jx-poll="1" />' );
+
+    var done1 = assert.async();
+
+    var count = 3;
+
+    $( document ).on( 'customEvent', function ( evt, arg ) {
+        assert.ok( true, 'should poll the url' );
+        if ( --count == 0 )
+        {
+            div.empty();
+            done1();
+        }
+        if ( count < 0 )
+        {
+            assert.ok( false, 'removing the jx-src element should stop the polling' )
+        }
+    } );
+
+
+    lojax.Controller.loadSrc();
+
+} );
+
 QUnit.test( 'emptyHashAction', function ( assert ) {
 
     div.empty();

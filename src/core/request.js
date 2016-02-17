@@ -23,6 +23,7 @@ lojax.Request = function ( obj ) {
     this.contentType = 'application/x-www-form-urlencoded; charset=UTF-8';
     this.transition = obj.transition;
     this.target = priv.resolveTarget( obj );
+    this.poll = priv.resolvePoll( obj );
     this.data = this.getData( obj );
     this.source = obj.source;
     this.preload = 'preload' in obj;

@@ -110,27 +110,27 @@ var lojax = lojax || {};
     lojax.extend( lojax.Controller, {
     
         init: function () {
-        var self = this;
-        this.div = null;
-        this.modal = null;
-        this.currentTransition = null;
-        this.currentPanel = null;
-        this.cache = {};
-        this.isControl = false;
+            var self = this;
+            this.div = null;
+            this.modal = null;
+            this.currentTransition = null;
+            this.currentPanel = null;
+            this.cache = {};
+            this.isControl = false;
     
-        $( function () {
-            self.div = $( "<div style='display:none'></div>" ).appendTo( 'body' );
+            $( function () {
+                self.div = $( "<div style='display:none'></div>" ).appendTo( 'body' );
     
-            self.removeHandlers();
-            self.addHandlers();
-            self.loadSrc();
-            self.preloadAsync();
+                self.removeHandlers();
+                self.addHandlers();
+                self.loadSrc();
+                self.preloadAsync();
     
-            // check window.location.hash for valid hash
-            if ( priv.hasHash() ) {
-                setTimeout( self.handleHash );
-            }
-        } );
+                // check window.location.hash for valid hash
+                if ( priv.hasHash() ) {
+                    setTimeout( self.handleHash );
+                }
+            } );
         },
     
         addHandlers: function () {
@@ -173,7 +173,6 @@ var lojax = lojax || {};
     
             var request = new lojax.Request( params );
     
-            lojax.log( 'handleRequest: request: ' , request );
     
             try {
                 // delegate hashes to handleHash
@@ -270,7 +269,6 @@ var lojax = lojax || {};
                 request = new lojax.Request( request );
             }
     
-            lojax.log( 'executeRequest: request: ' , request );
     
             // no action? we're done here
             if ( request.action === null ) return;
@@ -288,15 +286,14 @@ var lojax = lojax || {};
             request
                 .then( function ( response ) {
                     instance.injectContent( request, response );
+                    // if the request has a poll interval, handle it after the request has been successfully processed
+                    instance.handlePolling( request );
                 } )
                 .catch( instance.handleError );
         },
     
         injectContent: function ( request, response ) {
             var id, target, newModal, transition, $node, result;
-    
-            // empty response?
-            if ( !priv.hasValue( response ) ) return;
     
             // ensure any loose calls to lojax.in are ignored
             instance.in = null;
@@ -316,21 +313,20 @@ var lojax = lojax || {};
                     result = transition( target, node );
                     // perform post-inject chores
                     instance.postInject( result, node, request );
-                    }
+                }
             };
-    
-            // create a list of nodes from the response
-            var nodes = $.parseHTML( response, true );
-    
-            if ( !nodes ) return;
     
             if ( request.target ) {
                 // inject the entire response into the specified target
                 doPanel.call( $( response ) );
             }
             else {
+                // create a list of nodes from the response
+                var nodes = $.parseHTML( response, true );
     
-                lojax.info( 'injectContent: nodes:' , nodes );
+                if ( !nodes ) return;
+    
+                lojax.info( 'injectContent: nodes:', nodes );
     
                 for ( var i = 0; i < nodes.length; i++ ) {
                     $node = $( nodes[i] );
@@ -341,9 +337,9 @@ var lojax = lojax || {};
     
                     // don't create more than one modal at a time
                     if ( instance.modal === null && $node.is( '.modal' ) ) {
-                            instance.createModal( $node, request );
-                            continue;
-                        }
+                        instance.createModal( $node, request );
+                        continue;
+                    }
     
                     // find all the panels in the new content
                     if ( request.target || $node.is( priv.attrSelector( 'panel' ) ) ) {
@@ -354,16 +350,16 @@ var lojax = lojax || {};
                         $( nodes[i] ).find( priv.attrSelector( 'panel' ) ).each( doPanel );
                     }
                 }
-            }
     
-            // process any loose script or style nodes
-            instance.div.empty();
-            nodes.forEach( function ( node ) {
-                $node = $( node );
-                if ( $node.is( 'script,style' ) ) {
-                    instance.div.append( $node );
-                }
-            } );
+                // process any loose script or style nodes
+                instance.div.empty();
+                nodes.forEach( function ( node ) {
+                    $node = $( node );
+                    if ( $node.is( 'script,style' ) ) {
+                        instance.div.append( $node );
+                    }
+                } );
+            }
         },
     
         createModal: function ( content, request ) {
@@ -425,7 +421,7 @@ var lojax = lojax || {};
                 config.action = priv.noCache( config.src );
                 config.method = config.method || 'ajax-get';
                 config.target = $this;
-                config.transition = config.transition || 'swap-content';
+                config.transition = config.transition || 'replace-content';
                 config.suppressEvents = true;
                 instance.executeRequest( config );
             } );
@@ -449,6 +445,21 @@ var lojax = lojax || {};
                     }
                 } );
             } );
+        },
+    
+        handlePolling: function ( request ) {
+            // for polling to work, we must have a target and a numeric polling interval greater than 0
+            if ( !request.target || !$.isNumeric( request.poll ) || request.poll <= 0 ) return;
+    
+            // and the target still has to exist on the page
+            var target = $( request.target )[0];
+            var exists = target.ownerDocument.body.contains( target );
+    
+            if ( exists ) {
+                setTimeout( function () {
+                    instance.executeRequest( request );
+                }, request.poll * 1000 );
+            }
         },
     
         postInject: function(context, source, request) {
@@ -495,7 +506,7 @@ var lojax = lojax || {};
             set: function ( val ) {
                 if ( val === true ) val = 'info';
                 _logging = val;
-                if ( val && console ) {
+                if ( val && window.console != undefined ) {
                     context.log = console.log.bind( console );
                     context.info = /info/.test( val ) && console.info ? console.info.bind( console ) : function () { };
                     context.warn = /info|warn/.test( val ) && console.warn ? console.warn.bind( console ) : function () { };
@@ -514,7 +525,7 @@ var lojax = lojax || {};
             if ( console && console.error ) {
                 console.error( e );
             }
-    };
+        };
     
     } )(lojax);
     
@@ -539,7 +550,7 @@ var lojax = lojax || {};
         attrSelector: function ( name ) {
             return '[data-' + name + '],[' + lojax.config.prefix + name + ']';
         },
-        attributes: 'method action transition target form model preload src'.split( ' ' ),
+        attributes: 'method action transition target form model preload src poll'.split( ' ' ),
         getConfig: function ( elem ) {
             var name, config, $this = $( elem );
     
@@ -569,14 +580,14 @@ var lojax = lojax || {};
             if ( priv.hasValue( params.action ) && params.action.length ) {
                 action = params.action;
             }
-            // check for a valid href
+                // check for a valid href
             else if ( priv.hasValue( params.source )
                 && priv.hasValue( params.source.href )
                 && params.source.href.length
                 && params.source.href.substr( 0, 11 ) !== 'javascript:' ) {
                 action = params.source.href;
             }
-            // if this is a submit button check for a form
+                // if this is a submit button check for a form
             else if ( $( params.source ).is( '[type=submit]' ) ) {
                 var closest = $( params.source ).closest( 'form,' + priv.attrSelector( 'model' ) );
                 // is submit button inside a form?
@@ -585,7 +596,7 @@ var lojax = lojax || {};
                     action = closest.attr( 'action' ) || window.location.href;
                 }
             }
-            // if this is a form use form.action or current page
+                // if this is a form use form.action or current page
             else if ( $( params.source ).is( 'form' ) ) {
                 action = $( params.source ).attr( 'action' ) || window.location.href;
             }
@@ -641,6 +652,11 @@ var lojax = lojax || {};
             else {
                 // check for a transition on the target
                 return lojax.Transitions[priv.attr( target, 'transition' )] || lojax.Transitions[lojax.config.transition];
+            }
+        },
+        resolvePoll: function ( params ) {
+            if ( $.isNumeric( params.poll ) ) {
+                return parseInt( params.poll );
             }
         },
         formFromInputs: function ( forms, action, method ) {
@@ -749,6 +765,7 @@ var lojax = lojax || {};
         this.contentType = 'application/x-www-form-urlencoded; charset=UTF-8';
         this.transition = obj.transition;
         this.target = priv.resolveTarget( obj );
+        this.poll = priv.resolvePoll( obj );
         this.data = this.getData( obj );
         this.source = obj.source;
         this.preload = 'preload' in obj;
@@ -951,25 +968,39 @@ var lojax = lojax || {};
     
     lojax.extend( lojax.Transitions, {
     
+        'replace-content': function ( oldNode, newNode ) {
+            // empty->append->new
+            // inject newNode into oldNode
+            var $old = $( oldNode ),
+                $new = $( newNode );
+            $old.empty().append( $new );
+            return $old;
+        },
         'swap-content': function ( oldNode, newNode ) {
+            // empty->append->new.contents
             var $old = $( oldNode ),
                 $new = $( newNode );
             $old.empty().append( $new.contents() );
             return $old;
         },
         'fade-in': function ( oldNode, newNode ) {
+            // fadeOut->empty->append->new.contents->fadeIn
             var $old = $( oldNode ),
                 $new = $( newNode );
             $old.fadeOut( 0 ).empty().append( $new.contents() ).fadeIn();
             return $old;
         },
         'replace': function ( oldNode, newNode ) {
+            // old.replaceWidth(new)
+            // completely replace old node with new node
             var $old = $( oldNode ),
                 $new = $( newNode );
             $old.replaceWith( $new );
             return $new;
         },
         'append': function ( oldNode, newNode ) {
+            // old.append->new
+            // append new node to old node
             // useful for endless scrolling
             var $old = $( oldNode ),
                 $new = $( newNode );
@@ -977,6 +1008,8 @@ var lojax = lojax || {};
             return $new;
         },
         'prepend': function ( oldNode, newNode ) {
+            // old.prepend->new
+            // prepend new node to old node
             // useful for adding new rows to tables
             var $old = $( oldNode ),
                 $new = $( newNode );
@@ -1024,7 +1057,6 @@ var lojax = lojax || {};
 	        var $this, models = [];
 	        var dataModels = $( context ).find( lojax.select.model ).add( context ).filter( lojax.select.model );
 	
-	        lojax.log( 'bindToModels: dataModels:' , dataModels );
 	
 	        // iterate over the models in context
 	        dataModels.each( function () {
@@ -1039,7 +1071,6 @@ var lojax = lojax || {};
 	                priv.setElementsFromModel( $this, model );
 	            }
 	            $this.data( 'model', model );
-	            lojax.log( 'bindToModels: model:' , model );
 	        } );
 	    },
 	
@@ -1063,24 +1094,21 @@ var lojax = lojax || {};
 	            cancel: false
 	        };
 	
-	        lojax.log( 'updateModel: o:' , o );
 	
 	        priv.triggerEvent( lojax.events.beforeUpdateModel, o, $this );
 	        if ( o.cancel ) return;
 	
-	        lojax.log( 'updateModel: o.model: before:' , o.model );
 	
 	        priv.setModelProperty( $this, o.model, elems );
 	        // TODO: set an isDirty flag without corrupting the model
 	        // maybe use a wrapper class to observe the model
 	        priv.triggerEvent( lojax.events.afterUpdateModel, o, $this );
 	
-	        lojax.log( 'updateModel: o.model: after:' , o.model );
 	
 	        priv.propagateChange( model, $target );
 	    }
-    };
-    
+	};
+	
 	
 	lojax.extend( lojax.priv, {
 	
@@ -1109,7 +1137,6 @@ var lojax = lojax || {};
 	        return model;
 	    },
 	    resolveModel: function ( params ) {
-	        lojax.log( 'resolveModel: params:' , params );
 	        var closest, model;
 	        if ( priv.hasValue( params.model ) ) model = params.model;
 	
@@ -1150,7 +1177,6 @@ var lojax = lojax || {};
 	    formFromModel: function ( model, method, action, rootName, form ) {
 	        var t, i, props, name;
 	
-	        lojax.log( 'formFromModel: model:' , model );
 	
 	        if ( !priv.hasValue( form ) ) {
 	            // first time through
@@ -1249,7 +1275,6 @@ var lojax = lojax || {};
 	            val,
 	            segments;
 	
-	        lojax.log( 'setModelProperty: elems.length:' , elems.length );
 	
 	        // derive an object path from the input name
 	        segments = priv.getPathSegments( $( elems ).attr( 'name' ) );
@@ -1257,7 +1282,6 @@ var lojax = lojax || {};
 	        // get the raw value
 	        val = priv.getValue( elems );
 	
-	        lojax.log( 'setModelProperty: val:' , val );
 	
 	        // grab the object we're setting
 	        obj = priv.getObjectAtPath( model, segments, Array.isArray( val ) );
@@ -1293,7 +1317,6 @@ var lojax = lojax || {};
 	    buildModelFromElements: function ( context ) {
 	        var model = {};
 	
-	        lojax.log( 'buildModelFromElements: context:' , context );
 	
 	        // there may be multiple elements with the same name
 	        // so build a dictionary of names and elements
@@ -1310,7 +1333,6 @@ var lojax = lojax || {};
 	            priv.setModelProperty( context, model, names[name] );
 	        } );
 	
-	        lojax.log( 'buildModelFromElements: model:' , model );
 	
 	        return model;
 	    },
@@ -1320,7 +1342,6 @@ var lojax = lojax || {};
 	            name,
 	            $this = $( context );
 	
-	        lojax.log( 'setELementsFromModel: model:' , model );
 	
 	        // set the inputs to the model
 	        $this.find( '[name]' ).each( function () {
@@ -1445,7 +1466,7 @@ var lojax = lojax || {};
 	    },
 	
 	} );
-
+	
 	$( modeler.init );
 
 	lojax.Controller.init();

@@ -20,7 +20,7 @@ lojax.extend( priv, {
     attrSelector: function ( name ) {
         return '[data-' + name + '],[' + lojax.config.prefix + name + ']';
     },
-    attributes: 'method action transition target form model preload src'.split( ' ' ),
+    attributes: 'method action transition target form model preload src poll'.split( ' ' ),
     getConfig: function ( elem ) {
         var name, config, $this = $( elem );
 
@@ -122,6 +122,11 @@ lojax.extend( priv, {
         else {
             // check for a transition on the target
             return lojax.Transitions[priv.attr( target, 'transition' )] || lojax.Transitions[lojax.config.transition];
+        }
+    },
+    resolvePoll: function ( params ) {
+        if ( $.isNumeric( params.poll ) ) {
+            return parseInt( params.poll );
         }
     },
     formFromInputs: function ( forms, action, method ) {

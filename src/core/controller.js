@@ -184,15 +184,14 @@ lojax.extend( lojax.Controller, {
         request
             .then( function ( response ) {
                 instance.injectContent( request, response );
+                // if the request has a poll interval, handle it after the request has been successfully processed
+                instance.handlePolling( request );
             } )
             .catch( instance.handleError );
     },
 
     injectContent: function ( request, response ) {
         var id, target, newModal, transition, $node, result;
-
-        // empty response?
-        if ( !priv.hasValue( response ) ) return;
 
         // ensure any loose calls to lojax.in are ignored
         instance.in = null;
@@ -215,18 +214,17 @@ lojax.extend( lojax.Controller, {
             }
         };
 
-        // create a list of nodes from the response
-        var nodes = $.parseHTML( response, true );
-
-        if ( !nodes ) return;
-
         if ( request.target ) {
             // inject the entire response into the specified target
             doPanel.call( $( response ) );
         }
         else {
+            // create a list of nodes from the response
+            var nodes = $.parseHTML( response, true );
 
-            lojax.info( 'injectContent: nodes:' , nodes );
+            if ( !nodes ) return;
+
+            lojax.info( 'injectContent: nodes:', nodes );
 
             for ( var i = 0; i < nodes.length; i++ ) {
                 $node = $( nodes[i] );
@@ -250,16 +248,16 @@ lojax.extend( lojax.Controller, {
                     $( nodes[i] ).find( priv.attrSelector( 'panel' ) ).each( doPanel );
                 }
             }
-        }
 
-        // process any loose script or style nodes
-        instance.div.empty();
-        nodes.forEach( function ( node ) {
-            $node = $( node );
-            if ( $node.is( 'script,style' ) ) {
-                instance.div.append( $node );
-            }
-        } );
+            // process any loose script or style nodes
+            instance.div.empty();
+            nodes.forEach( function ( node ) {
+                $node = $( node );
+                if ( $node.is( 'script,style' ) ) {
+                    instance.div.append( $node );
+                }
+            } );
+        }
     },
 
     createModal: function ( content, request ) {
@@ -321,7 +319,7 @@ lojax.extend( lojax.Controller, {
             config.action = priv.noCache( config.src );
             config.method = config.method || 'ajax-get';
             config.target = $this;
-            config.transition = config.transition || 'swap-content';
+            config.transition = config.transition || 'replace-content';
             config.suppressEvents = true;
             instance.executeRequest( config );
         } );
@@ -345,6 +343,21 @@ lojax.extend( lojax.Controller, {
                 }
             } );
         } );
+    },
+
+    handlePolling: function ( request ) {
+        // for polling to work, we must have a target and a numeric polling interval greater than 0
+        if ( !request.target || !$.isNumeric( request.poll ) || request.poll <= 0 ) return;
+
+        // and the target still has to exist on the page
+        var target = $( request.target )[0];
+        var exists = target.ownerDocument.body.contains( target );
+
+        if ( exists ) {
+            setTimeout( function () {
+                instance.executeRequest( request );
+            }, request.poll * 1000 );
+        }
     },
 
     postInject: function(context, source, request) {
