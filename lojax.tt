@@ -9,7 +9,7 @@
 <#
 var stripLogging = true;
 var coverage     = false;
-var addModules   = true;
+var addModules   = false;
 #>
 
 // namespace
@@ -75,27 +75,33 @@ if (addModules)
 })(jQuery, lojax);
 
 <#+ 
-private bool IsLogExpression(string line)
-{
-    if (line.Trim().StartsWith("lojax.log(")) return true;
-    return false;
-}
 
 int coverageIndex = 0;
+System.Text.RegularExpressions.Regex comment = new System.Text.RegularExpressions.Regex(@"\s*//");
 System.Text.RegularExpressions.Regex function = new System.Text.RegularExpressions.Regex(@"function.+\{$");
+System.Text.RegularExpressions.Regex ifStatement = new System.Text.RegularExpressions.Regex(@"if.+\{$");
+System.Text.RegularExpressions.Regex elseStatement = new System.Text.RegularExpressions.Regex(@"else.+\{$");
 System.Text.RegularExpressions.Regex lineEnd = new System.Text.RegularExpressions.Regex(@"\{$|;$");
+System.Text.RegularExpressions.Regex rLog = new System.Text.RegularExpressions.Regex(@"lojax\.log\(|lojax\.verbose\(|lojax\.info\(|lojax\.warn\(");
+
+private bool IsLogExpression(string line)
+{
+	return rLog.IsMatch(line);
+}
+
 bool inQualifyingStatement = false;
 
 private string OutputCoverage(string line)
 {
-	if (function.IsMatch(line) || line.Trim().StartsWith("if ") || line.Trim().StartsWith("else "))
+	if (!comment.IsMatch(line) && 
+		(function.IsMatch(line) || ifStatement.IsMatch(line) || elseStatement.IsMatch(line)))
 	{
 		inQualifyingStatement = true;
 	}
 	if (inQualifyingStatement && lineEnd.IsMatch(line))
 	{
 		inQualifyingStatement = false;
-		return "lojax.cover("+ (coverageIndex++).ToString() + ");\r\n";
+		return "lojax.cover("+ (++coverageIndex).ToString() + ");\r\n";
 	}
 
 	return "";

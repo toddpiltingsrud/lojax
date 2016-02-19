@@ -5,8 +5,9 @@ private functions
 
 lojax.extend(rexp, {
     search: /\?.+(?=#)|\?.+$/,
-    hash: /#((.*)?[a-z]{2}(.*)?)/i
-});
+    hash: /#((.*)?[a-z]{2}(.*)?)/i,
+    json: /^\{.*\}$|^\[.*\]$/
+} );
 
 lojax.extend( priv, {
     noop: function () { },
@@ -108,6 +109,46 @@ lojax.extend( priv, {
         }
         return null;
     },
+    resolveModel: function ( params ) {
+        lojax.log( 'resolveModel: params:', params );
+        var closest, model;
+        if ( priv.hasValue( params.model ) ) {
+            model = params.model;
+        }
+        else if ( priv.hasValue( params.source ) && $( params.source ).is( lojax.select.model ) ) {
+            model = priv.getModel( params.source );
+        }
+
+            // only a submit button can submit an enclosing model
+        else if ( $( params.source ).is( 'input[type=submit],button[type=submit]' ) ) {
+            // don't return anything if closest is form
+            closest = $( params.source ).closest( 'form,' + lojax.select.model );
+            if ( closest.is( lojax.select.model ) ) {
+                model = priv.getModel( closest );
+            }
+        }
+
+        if ( typeof model === 'string' && model.length ) {
+            if ( priv.isJSON( model ) ) {
+                model = JSON.parse( model );
+            }
+            else {
+                // it's a URL, create a new request
+                model = new lojax.Request( {
+                    action: model,
+                    method: 'ajax-get'
+                } );
+            }
+        }
+
+        if ( params.source && model ) {
+            // store model in jQuery's data object
+            // reference it there from now on
+            $( params.source ).data( 'model', model );
+        }
+
+        return model;
+    },
     resolveTarget: function ( params ) {
         if ( priv.hasValue( params.target ) ) {
             return $( params.target );
@@ -144,6 +185,71 @@ lojax.extend( priv, {
             return form;
         }
         return forms;
+    },
+    formFromModel: function ( model, method, action, rootName, form ) {
+        var t, i, props, name;
+
+        lojax.log( 'formFromModel: model:', model );
+
+        if ( !priv.hasValue( form ) ) {
+            // first time through
+            method = method || 'POST';
+            action = action || window.location.href;
+            form = $( "<form method='" + method.toUpperCase() + "' action='" + action + "' style='display:none'></form>" );
+            rootName = '';
+        }
+
+        // this is a recursive function
+        // so we have to detect the type on every iteration
+        t = $.type( model );
+        switch ( t ) {
+            case 'null':
+            case 'undefined':
+                $( "<input type='hidden' />" ).appendTo( form ).prop( 'name', rootName );
+                break;
+            case 'date':
+                $( "<input type='hidden' />" ).appendTo( form ).prop( 'name', rootName ).val( model.toISOString() );
+                break;
+            case 'array':
+                model.forEach( function ( item ) {
+                    priv.formFromModel( item, method, action, rootName, form );
+                } );
+                break;
+            case 'object':
+                props = Object.getOwnPropertyNames( model );
+                props.forEach( function ( prop ) {
+                    name = rootName === '' ? prop : rootName + '.' + prop;
+                    priv.formFromModel( model[prop], method, action, name, form );
+                } );
+                break;
+            default:
+                $( "<input type='hidden' />" ).appendTo( form ).prop( 'name', rootName ).val( model.toString() );
+        }
+        return form;
+    },
+    getModel: function ( elem ) {
+        var $elem = $( elem );
+        var model = $elem.data( 'model' );
+        if ( !priv.hasValue( model ) && $( elem ).is( lojax.select.jxModelAttribute ) ) {
+            model = $elem.attr( lojax.select.jxModel );
+
+            if ( !model ) return null;
+
+            if ( priv.isJSON( model ) ) {
+                model = JSON.parse( model );
+            }
+            else {
+                // it's a URL, create a new request
+                model = new lojax.Request( {
+                    action: model,
+                    method: 'ajax-get'
+                } );
+            }
+            // store model in jQuery's data object
+            // reference it there from now on
+            $elem.data( 'model', model );
+        }
+        return model;
     },
     triggerEvent: function ( name, arg, src ) {
         try {
@@ -207,6 +313,9 @@ lojax.extend( priv, {
         var a = ( url.indexOf( '?' ) != -1 ? '&_=' : '?_=' ) + priv.nonce++;
         var s = url.match( /\?.+(?=#)|\?.+$|.+(?=#)|.+/ );
         return url.replace( s, s + a );
+    },
+    isJSON: function ( str ) {
+        return rexp.json.test( str );
     }
 
 } );

@@ -131,37 +131,6 @@ if ( lojax.bindAllModels ) {
 
     } );
 
-    QUnit.test( 'isJSON', function ( assert ) {
-
-        assert.equal( lojax.priv.isJSON( '{"number":5}' ), true, 'should detect objects' );
-
-        assert.equal( lojax.priv.isJSON( '[1,2,3]' ), true, 'should detect arrays' );
-
-        assert.equal( lojax.priv.isJSON( 'partials/ModelTest.html' ), false, 'should detect urls' );
-
-        assert.equal( lojax.priv.isJSON( 'http://10.4.9.149:8080/lojax/spec/SpecRunner.html' ), false, 'should detect urls' );
-
-    } );
-
-    QUnit.test( 'formFromModel', function ( assert ) {
-
-        lojax.logging = true;
-
-        var form = lojax.priv.formFromModel( getModel() );
-
-        lojax.logging = false;
-
-        assert.strictEqual( form.find( '[name=number]' ).val(), '3.14' );
-        assert.strictEqual( form.find( '[name=daterange]:first' ).val(), '2015-11-13' );
-        assert.strictEqual( form.find( '[name=daterange]:last' ).val(), '2016-01-01T06:00:00.000Z' );
-        assert.strictEqual( form.find( '[name=bool]' ).val(), 'false' );
-        assert.strictEqual( form.find( '[name="no.value"]' ).val(), '' );
-        assert.strictEqual( form.find( '[name="arrays.names"]:first' ).val(), 'Anders' );
-        assert.strictEqual( form.find( '[name="arrays.names"]:last' ).val(), 'Kaleb' );
-        assert.strictEqual( form.find( '[name=select]' ).val(), 'a' );
-        assert.strictEqual( form.find( '[name=color]' ).val(), 'green' );
-
-    } );
 
     QUnit.test( 'castValue', function ( assert ) {
 
