@@ -319,7 +319,7 @@ lojax.extend( lojax.Controller, {
             config.action = priv.noCache( config.src );
             config.method = config.method || 'ajax-get';
             config.target = $this;
-            config.transition = config.transition || 'replace-content';
+            config.transition = config.transition || 'empty-append-node';
             config.suppressEvents = true;
             instance.executeRequest( config );
         } );

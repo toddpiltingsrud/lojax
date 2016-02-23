@@ -59,6 +59,7 @@ lojax.closeModal = function () {
 lojax.emptyHashAction = null;
 
 lojax.events = {
+    beforeSubmit: 'beforeSubmit',
     beforeRequest: 'beforeRequest',
     afterRequest: 'afterRequest',
     beforeUpdateModel: 'beforeUpdateModel',

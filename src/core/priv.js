@@ -264,6 +264,14 @@ lojax.extend( priv, {
             }
         }
     },
+    beforeSubmit: function ( request ) {
+        // if the request source is a submit button and the method is 'post' or 'ajax-post', raise a submit event
+        if (priv.hasValue(request.source) 
+            && $(request.source).is('[type=submit]') 
+            && /post/.test( request.method ) ) {
+            priv.triggerEvent( lojax.events.beforeSubmit, request );
+        }
+    },
     beforeRequest: function ( arg, suppress ) {
         if ( !suppress ) priv.triggerEvent( lojax.events.beforeRequest, arg );
     },
@@ -295,12 +303,18 @@ lojax.extend( priv, {
         return out.join( '' );
     },
     callIn: function ( panel, context ) {
-        if ( panel && instance.in ) {
-            instance.in.call( panel, context );
-        }
         // ensure in is called only once
         // and that calls to lojax.in outside of a container are ignored
+        var fn = instance.in;
         instance.in = null;
+        if ( panel && fn ) {
+            try {
+                fn.call( panel, context );
+            }
+            catch (ex) {
+                lojax.error( ex );
+            }
+        }
     },
     callOut: function ( panel ) {
         if ( panel && typeof panel[0].out == 'function' ) {

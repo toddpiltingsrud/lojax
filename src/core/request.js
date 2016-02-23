@@ -160,6 +160,7 @@ lojax.Request.prototype = {
     },
 
     exec: function () {
+        var cancel = false;
         this.reset();
 
         lojax.info( 'request.exec: this:' , this );
@@ -167,6 +168,8 @@ lojax.Request.prototype = {
         if ( !priv.hasValue( this.methods[this.method] ) ) throw 'Unsupported method: ' + this.method;
 
         if ( priv.hasValue( this.action ) && this.action !== '' ) {
+            priv.beforeSubmit( this );
+            if ( this.cancel ) return;
             priv.beforeRequest( this, this.suppressEvents );
             if ( !this.cancel ) {
                 // execute the method function

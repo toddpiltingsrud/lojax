@@ -9,7 +9,7 @@
 <#
 var stripLogging = true;
 var coverage     = false;
-var addModules   = false;
+var addModules   = true;
 #>
 
 // namespace

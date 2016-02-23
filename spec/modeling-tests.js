@@ -66,7 +66,7 @@ if ( lojax.bindAllModels ) {
             lojax.closeModal();
         };
 
-        $( '<button data-method="ajax-get" data-action="partials/modal.html?_=1">' ).appendTo( div ).click().remove();
+        $( '<button data-method="ajax-get" data-action="partials/modal.html?_=2">' ).appendTo( div ).click().remove();
 
     } );
 

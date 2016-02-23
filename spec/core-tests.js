@@ -83,6 +83,41 @@ var escapeHTML = function ( obj ) {
     return obj;
 };
 
+QUnit.test( 'submit event', function ( assert ) {
+
+    div.empty();
+
+    // create a form with a submit button
+    var form = $( '<form></form>' );
+    var submitBtn = $( '<input type="submit" data-method="ajax-post" data-action="partials/EmptyResponse.html#withhash" />' );
+
+    div.append( form );
+
+    // add some inputs
+    form.append( getForm() );
+    form.append( submitBtn );
+
+    var done1 = assert.async();
+
+    $( document ).on( lojax.events.beforeSubmit, function ( evt, arg ) {
+        arg.cancel = true; 
+        assert.ok( arg != null );
+        $( document ).off( lojax.events.beforeSubmit );
+        done1();
+        lojax.logging = false;
+    } );
+
+    $( document ).on( lojax.events.beforeRequest, function ( evt, arg ) {
+        assert.ok( false, 'the request should have been canceled' );
+        done1();
+    } );
+
+    lojax.logging = true;
+
+    submitBtn.click();
+
+} );
+
 QUnit.test( 'polling', function ( assert ) {
 
     div.empty();
