@@ -164,7 +164,6 @@
     <None Include=".git\refs\remotes\origin\master" />
     <None Include=".idea\.name" />
     <None Include=".idea\lojax.iml" />
-    <None Include="demo\styles.less" />
     <None Include="fonts\glyphicons-halflings-regular.eot" />
     <None Include="fonts\glyphicons-halflings-regular.ttf" />
     <None Include="fonts\glyphicons-halflings-regular.woff" />
@@ -187,16 +186,6 @@
     <Content Include=".idea\vcs.xml" />
     <Content Include=".idea\watcherTasks.xml" />
     <Content Include=".idea\workspace.xml" />
-    <Content Include="demo\default.html" />
-    <Content Include="demo\howitworks.html" />
-    <Content Include="demo\injectingcontent.html" />
-    <Content Include="demo\intro.html" />
-    <Content Include="demo\modal.html" />
-    <Content Include="demo\modals.html" />
-    <Content Include="demo\navigationhistory.html" />
-    <Content Include="demo\styles.css" />
-    <Content Include="demo\table2.html" />
-    <Content Include="demo\tables.html" />
     <Content Include="fonts\glyphicons-halflings-regular.svg" />
     <Content Include="lojax.js">
       <AutoGen>True</AutoGen>
