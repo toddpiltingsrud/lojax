@@ -16,6 +16,8 @@
     <script src="scripts/respond.js"></script>
     <script src="core-tests.js"></script>
     <script src="modeling-tests.js"></script>
+    <!-- make sure lojax doesn't bork if/when it's loaded twice -->
+    <link href="../src/lojax.min.css" rel="stylesheet">
     <style type="text/css">
         .coverage-bar {
             width: 100%;
@@ -24,18 +26,6 @@
             border: solid 1px #ccc;
             border-radius: 16px;
             margin: 0 auto;
-        }
-
-        .cov-segment {
-            /* Permalink - use to edit and share this gradient: http://colorzilla.com/gradient-editor/#c9de96+0,8ab66b+44,398235+100;Green+3D+%233 */
-            background: rgb(201,222,150); /* Old browsers */
-            background: -moz-linear-gradient(top, rgba(201,222,150,1) 0%, rgba(138,182,107,1) 44%, rgba(57,130,53,1) 100%); /* FF3.6-15 */
-            background: -webkit-linear-gradient(top, rgba(201,222,150,1) 0%,rgba(138,182,107,1) 44%,rgba(57,130,53,1) 100%); /* Chrome10-25,Safari5.1-6 */
-            background: linear-gradient(to bottom, rgba(201,222,150,1) 0%,rgba(138,182,107,1) 44%,rgba(57,130,53,1) 100%); /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */
-            filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#c9de96', endColorstr='#398235',GradientType=0 ); /* IE6-9 */
-            position: absolute;
-            height: 100%;
-            top: 0;
         }
     </style>
 </head>
@@ -70,34 +60,6 @@
 
     <div id="background"></div>
     <script src="scripts/bootstrap.min.js"></script>
-    <script>
-        //var cov = cov || {};
-        //$( function () {
-        //    var boxWidth = $( '#coverage .box' ).width() - 2;
-        //    $( '#coverage .box' ).first().html( '<canvas id="coverage-bar" class="coverage-bar" width="' + boxWidth + '" height="30"></canvas>' );
-
-        //    // calculate width of segments in coverage-bar based on cov.maxCoverage
-
-        //    var canvas = document.getElementById( 'coverage-bar' );
-        //    var ctx = canvas.getContext( '2d' );
-
-        //    var lineargradient = ctx.createLinearGradient( 0, 0, 0, 30 );
-        //    lineargradient.addColorStop( 0, '#55FF55' );
-        //    lineargradient.addColorStop( 1, '#00AA00' );
-
-        //    ctx.fillStyle = lineargradient;
-
-        //    var barWidth = $( canvas ).width();
-
-        //    //var barWidth = bar.width();
-        //    var segmentWidth = barWidth / cov.maxCoverage;
-
-        //    cov.callout = function ( index ) {
-        //        var left = ((index - 1) / cov.maxCoverage) * barWidth;
-        //        ctx.fillRect( left, 0, segmentWidth, 30 );
-        //    }
-        //} );
-    </script>
 
 </body>
 </html>

@@ -32,7 +32,7 @@
     context.logging = 'info';
 
     context.error = function ( e ) {
-        if ( console && console.error ) {
+        if ( window.console != undefined && window.console.error != undefined ) {
             console.error( e );
         }
     };

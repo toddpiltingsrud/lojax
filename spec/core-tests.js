@@ -100,14 +100,14 @@ QUnit.test( 'submit event', function ( assert ) {
     var done1 = assert.async();
 
     $( document ).on( lojax.events.beforeSubmit, function ( evt, arg ) {
-        arg.cancel = true; 
-        assert.ok( arg != null );
         $( document ).off( lojax.events.beforeSubmit );
+        assert.ok( arg != null );
+        arg.cancel = true; 
         done1();
         lojax.logging = false;
     } );
 
-    $( document ).on( lojax.events.beforeRequest, function ( evt, arg ) {
+    $( document ).one( lojax.events.beforeRequest, function ( evt, arg ) {
         assert.ok( false, 'the request should have been canceled' );
         done1();
     } );

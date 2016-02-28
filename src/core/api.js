@@ -39,6 +39,22 @@ lojax.out = function ( callback ) {
     instance.out = callback;
 };
 
+lojax.createModal = function ( content ) {
+    lojax.closeModal();
+    instance.modal = $( content ).modal( {
+        show: true,
+        keyboard: true
+    } );
+    instance.modal.on( 'hidden.bs.modal', function () {
+        if ( priv.hasValue( instance.modal ) ) {
+            instance.modal.off( 'hidden.bs.modal', instance.onModalClose );
+            instance.modal.modal( 'hide' );
+            $( instance.modal ).remove();
+            instance.modal = null;
+        }
+    } );
+};
+
 lojax.closeModal = function () {
         lojax.info( 'createModal: closeModal called' );
     if ( priv.hasValue( instance.modal ) ) {

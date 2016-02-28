@@ -8,6 +8,11 @@ lojax.bind = function ( elem, model ) {
     var $elem = $( elem );
     $elem.data( 'model', model );
     priv.setElementsFromModel( $elem, model );
+    // lojax listens for changes from elements that have a jx-model or data-model attribute
+    // so if it doesn't have one, add one
+    if ( !$elem.is( lojax.select.model ) ) {
+        $elem.attr( lojax.select.jxModel, "" );
+    }
     return model;
 };
 

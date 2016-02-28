@@ -42,6 +42,22 @@ var lojax = lojax || {};
         instance.out = callback;
     };
     
+    lojax.createModal = function ( content ) {
+        lojax.closeModal();
+        instance.modal = $( content ).modal( {
+            show: true,
+            keyboard: true
+        } );
+        instance.modal.on( 'hidden.bs.modal', function () {
+            if ( priv.hasValue( instance.modal ) ) {
+                instance.modal.off( 'hidden.bs.modal', instance.onModalClose );
+                instance.modal.modal( 'hide' );
+                $( instance.modal ).remove();
+                instance.modal = null;
+            }
+        } );
+    };
+    
     lojax.closeModal = function () {
         if ( priv.hasValue( instance.modal ) ) {
             if ( $.fn.modal ) {
@@ -511,7 +527,7 @@ var lojax = lojax || {};
         context.logging = 'info';
     
         context.error = function ( e ) {
-            if ( console && console.error ) {
+            if ( window.console != undefined && window.console.error != undefined ) {
                 console.error( e );
             }
         };
@@ -1126,6 +1142,11 @@ var lojax = lojax || {};
 	    var $elem = $( elem );
 	    $elem.data( 'model', model );
 	    priv.setElementsFromModel( $elem, model );
+	    // lojax listens for changes from elements that have a jx-model or data-model attribute
+	    // so if it doesn't have one, add one
+	    if ( !$elem.is( lojax.select.model ) ) {
+	        $elem.attr( lojax.select.jxModel, "" );
+	    }
 	    return model;
 	};
 	
