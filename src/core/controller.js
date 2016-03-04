@@ -191,7 +191,7 @@ lojax.extend( lojax.Controller, {
     },
 
     injectContent: function ( request, response ) {
-        var id, target, newModal, transition, $node, result;
+        var id, target, newModal, transition, $node, result, root;
 
         // ensure any loose calls to lojax.in are ignored
         instance.in = null;
@@ -224,19 +224,23 @@ lojax.extend( lojax.Controller, {
 
             if ( !nodes ) return;
 
-            lojax.info( 'injectContent: nodes:', nodes );
-
             for ( var i = 0; i < nodes.length; i++ ) {
                 $node = $( nodes[i] );
 
+                root = document;
+
                 priv.triggerEvent( lojax.events.beforeInject, nodes, $node );
 
-                lojax.info( 'createModal:' + $node.is( '.modal' ) );
-
                 // don't create more than one modal at a time
-                if ( instance.modal === null && $node.is( '.modal' ) ) {
-                    instance.createModal( $node, request );
-                    continue;
+                if ( $node.is( '.modal' ) ) {
+                    if ( instance.modal !== null ) {
+                        // set the root to the current modal so its panels will be replaced
+                        root = instance.modal;
+                    }
+                    else {
+                        instance.createModal( $node, request );
+                        continue;
+                    }
                 }
 
                 // find all the panels in the new content
@@ -245,7 +249,9 @@ lojax.extend( lojax.Controller, {
                 }
                 else {
                     // iterate through the panels
-                    $( nodes[i] ).find( priv.attrSelector( 'panel' ) ).each( doPanel );
+                    $( nodes[i] ).find( priv.attrSelector( 'panel' ) ).each( function () {
+                        doPanel.call( this, root );
+                    } );
                 }
             }
 

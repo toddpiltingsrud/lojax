@@ -302,7 +302,7 @@ var lojax = lojax || {};
         },
     
         injectContent: function ( request, response ) {
-            var id, target, newModal, transition, $node, result;
+            var id, target, newModal, transition, $node, result, root;
     
             // ensure any loose calls to lojax.in are ignored
             instance.in = null;
@@ -334,17 +334,22 @@ var lojax = lojax || {};
     
                 if ( !nodes ) return;
     
-    
                 for ( var i = 0; i < nodes.length; i++ ) {
                     $node = $( nodes[i] );
     
+                    root = document;
+    
                     priv.triggerEvent( lojax.events.beforeInject, nodes, $node );
     
-    
                     // don't create more than one modal at a time
-                    if ( instance.modal === null && $node.is( '.modal' ) ) {
-                        instance.createModal( $node, request );
-                        continue;
+                    if ( $node.is( '.modal' ) ) {
+                        if ( instance.modal !== null ) {
+                            root = instance.modal;
+                        }
+                        else {
+                            instance.createModal( $node, request );
+                            continue;
+                        }
                     }
     
                     // find all the panels in the new content
@@ -353,7 +358,9 @@ var lojax = lojax || {};
                     }
                     else {
                         // iterate through the panels
-                        $( nodes[i] ).find( priv.attrSelector( 'panel' ) ).each( doPanel );
+                        $( nodes[i] ).find( priv.attrSelector( 'panel' ) ).each( function () {
+                            doPanel.call( this, root );
+                        } );
                     }
                 }
     
