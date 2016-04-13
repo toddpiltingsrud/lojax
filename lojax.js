@@ -2,7 +2,7 @@
 // namespace
 var lojax = lojax || {};
 
-(function($, lojax) { 
+(function($, jx) { 
     
     /***********\
         API
@@ -10,40 +10,40 @@ var lojax = lojax || {};
     
     var priv = {};
     var rexp = {};
-    lojax.Controller = {};
-    lojax.Transitions = {};
-    var instance = lojax.Controller;
-    lojax.priv = priv;
+    jx.Controller = {};
+    jx.Transitions = {};
+    var instance = jx.Controller;
+    jx.priv = priv;
     
     // handle an arbitrary event and execute a request
-    lojax.on = function ( event, params ) {
+    jx.on = function ( event, params ) {
         $( document ).on( event, function () {
             instance.executeRequest( params );
         } );
     };
     
     // remove event handler
-    lojax.off = function ( event ) {
+    jx.off = function ( event ) {
         $( document ).off( event );
     };
     
     // execute a request
-    lojax.exec = function ( params ) {
+    jx.exec = function ( params ) {
         instance.executeRequest( params );
     };
     
     // call this from a script that is located inside a jx-panel, div[data-src] or .modal
     // executes a callback with the context set to the injected node
-    lojax.in = function ( callback ) {
+    jx.in = function ( callback ) {
         instance.in = callback;
     };
     
-    lojax.out = function ( callback ) {
+    jx.out = function ( callback ) {
         instance.out = callback;
     };
     
-    lojax.createModal = function ( content ) {
-        lojax.closeModal();
+    jx.createModal = function ( content ) {
+        jx.closeModal();
         instance.modal = $( content ).modal( {
             show: true,
             keyboard: true
@@ -58,7 +58,7 @@ var lojax = lojax || {};
         } );
     };
     
-    lojax.closeModal = function () {
+    jx.closeModal = function () {
         if ( priv.hasValue( instance.modal ) ) {
             if ( $.fn.modal ) {
                 instance.modal.modal( 'hide' );
@@ -74,9 +74,9 @@ var lojax = lojax || {};
     // which changes window.location.hash to an empty string.
     // This can be a url, a config object for creating a new request, 
     // or a function which returns a url or config object.
-    lojax.emptyHashAction = null;
+    jx.emptyHashAction = null;
     
-    lojax.events = {
+    jx.events = {
         beforeSubmit: 'beforeSubmit',
         beforeRequest: 'beforeRequest',
         afterRequest: 'afterRequest',
@@ -87,20 +87,20 @@ var lojax = lojax || {};
         ajaxError: 'ajaxError'
     };
     
-    lojax.config = {
+    jx.config = {
         prefix: 'jx-',
         transition: 'fade-in',
         navHistory: true
     };
     
-    lojax.select = {
+    jx.select = {
         methodOrRequest: '[data-request],[jx-request],[data-method]:not([data-trigger]),[jx-method]:not([jx-trigger])',
         methodWithChange: '[data-method][data-trigger*=change],[jx-method][jx-trigger*=change]',
         methodWithEnterOrModel: '[data-method][data-trigger*=enter],[jx-method][jx-trigger*=enter],[data-model],[jx-model]',
         formWithMethod: 'form[data-method],form[jx-method]',
         model: '[data-model],[jx-model]',
         panel: function ( id ) {
-            return '[' + lojax.config.prefix + 'panel="' + id + '"],[data-panel="' + id + '"]';
+            return '[' + jx.config.prefix + 'panel="' + id + '"],[data-panel="' + id + '"]';
         },
         src: '[data-src],[jx-src]',
         preload: '[data-preload],[jx-preload]',
@@ -109,19 +109,11 @@ var lojax = lojax || {};
         inputTriggerChangeOrEnter: ':input[name][jx-trigger*=change],:input[name][data-trigger*=change],:input[name][jx-trigger*=enter],:input[name][data-trigger*=enter]'
     };
     
-    lojax.extend = function ( target, source ) {
-        target = target || {};
-        Object.getOwnPropertyNames( source ).forEach( function ( prop ) {
-            target[prop] = source[prop];
-        } );
-        return target;
-    };
-    
     /***********\
      Controller
     \***********/
     
-    lojax.extend( lojax.Controller, {
+    $.extend( jx.Controller, {
     
         init: function () {
             var self = this;
@@ -149,15 +141,15 @@ var lojax = lojax || {};
     
         addHandlers: function () {
             $( document )
-                .on( 'click', lojax.select.methodOrRequest, this.handleRequest )
-                .on( 'change', lojax.select.methodWithChange, this.handleRequest )
+                .on( 'click', jx.select.methodOrRequest, this.handleRequest )
+                .on( 'change', jx.select.methodWithChange, this.handleRequest )
                 // allows executing a request on a single input element without wrapping it in a form (e.g. data-trigger="change enter")
                 // also submits an element with a model attribute if enter key is pressed
-                .on( 'keydown', lojax.select.methodWithEnterOrModel, this.handleEnterKey )
-                .on( 'submit', lojax.select.formWithMethod, this.handleRequest )
+                .on( 'keydown', jx.select.methodWithEnterOrModel, this.handleEnterKey )
+                .on( 'submit', jx.select.formWithMethod, this.handleRequest )
                 // handle the control key
                 .on( 'keydown', this.handleControlKey ).on( 'keyup', this.handleControlKey );
-            if ( lojax.config.navHistory ) {
+            if ( jx.config.navHistory ) {
                 window.addEventListener( "hashchange", this.handleHash, false );
             }
         },
@@ -170,7 +162,7 @@ var lojax = lojax || {};
                 .off( 'submit', this.handleRequest )
                 .off( 'keydown', this.handleControlKey )
                 .off( 'keyup', this.handleControlKey );
-            if ( lojax.config.navHistory ) {
+            if ( jx.config.navHistory ) {
                 window.removeEventListener( "hashchange", this.handleHash, false );
             }
         },
@@ -184,7 +176,7 @@ var lojax = lojax || {};
                 $this = $( this );
     
     
-            var request = new lojax.Request( params );
+            var request = new jx.Request( params );
     
     
             try {
@@ -220,7 +212,7 @@ var lojax = lojax || {};
                 }
             }
             catch ( ex ) {
-                lojax.error( ex );
+                jx.error( ex );
             }
     
             evt.preventDefault();
@@ -241,7 +233,7 @@ var lojax = lojax || {};
         handleHash: function () {
     
     
-            if ( !lojax.config.navHistory ) return;
+            if ( !jx.config.navHistory ) return;
     
             // grab the current hash and request it with ajax-get
     
@@ -265,18 +257,18 @@ var lojax = lojax || {};
                 }
                 instance.currentTransition = null;
             }
-            else if ( hash === '' && lojax.emptyHashAction ) {
+            else if ( hash === '' && jx.emptyHashAction ) {
                 // we got here because a browser navigation button 
                 // was clicked which changed the hash to an empty string
                 // so execute the configured action if present, else do nothing
-                instance.executeRequest( lojax.emptyHashAction );
+                instance.executeRequest( jx.emptyHashAction );
             }
         },
     
         executeRequest: function ( request ) {
     
-            if ( !( request instanceof lojax.Request ) ) {
-                request = new lojax.Request( request );
+            if ( !( request instanceof jx.Request ) ) {
+                request = new jx.Request( request );
             }
     
     
@@ -302,16 +294,17 @@ var lojax = lojax || {};
         },
     
         injectContent: function ( request, response ) {
-            var id, target, newModal, transition, $node, result, root;
+            var id, target, transition, $node, result, root;
     
-            // ensure any loose calls to lojax.in are ignored
+            // ensure any loose calls to jx.in are ignored
             instance.in = null;
     
-            var doPanel = function () {
-                var node = $( this );
+            var swapPanel = function ( panel, root ) {
+                root = root || document;
+                var node = $( panel );
                 // match up with panels on the page
                 id = priv.attr( node, 'panel' );
-                target = request.target || $( lojax.select.panel( id ) ).first();
+                target = request.target || $( root ).find( jx.select.panel( id ) ).first();
     
                 if ( target.length ) {
     
@@ -326,7 +319,7 @@ var lojax = lojax || {};
     
             if ( request.target ) {
                 // inject the entire response into the specified target
-                doPanel.call( $( response ) );
+                swapPanel( $( response ) );
             }
             else {
                 // create a list of nodes from the response
@@ -339,11 +332,12 @@ var lojax = lojax || {};
     
                     root = document;
     
-                    priv.triggerEvent( lojax.events.beforeInject, nodes, $node );
+                    priv.triggerEvent( jx.events.beforeInject, nodes, $node );
     
                     // don't create more than one modal at a time
                     if ( $node.is( '.modal' ) ) {
                         if ( instance.modal !== null ) {
+                            // set the root to the current modal so its panels will be replaced
                             root = instance.modal;
                         }
                         else {
@@ -354,12 +348,12 @@ var lojax = lojax || {};
     
                     // find all the panels in the new content
                     if ( request.target || $node.is( priv.attrSelector( 'panel' ) ) ) {
-                        doPanel.call( $node );
+                        swapPanel( $node, root );
                     }
                     else {
                         // iterate through the panels
                         $( nodes[i] ).find( priv.attrSelector( 'panel' ) ).each( function () {
-                            doPanel.call( this, root );
+                            swapPanel( this, root );
                         } );
                     }
                 }
@@ -413,8 +407,12 @@ var lojax = lojax || {};
                         }
                     }
                 } );
-                instance.modal.data( 'kendoWindow' ).center().open();
-                instance.modal.find( '[data-dismiss=modal]' ).click( function () {
+                instance.modal.find( '.modal-header' ).remove();
+                instance.modal.data( 'kendoWindow' ).center();
+                instance.modal.closest( '.k-window' ).css( { top: '20px', position: 'fixed' } );
+                instance.modal.data( 'kendoWindow' ).open();
+                // attach this handler to the top element in case the footer is replaced
+                instance.modal.one( 'click', '[data-dismiss=modal]', function () {
                     instance.modal.data( 'kendoWindow' ).close();
                 } );
             }
@@ -426,7 +424,7 @@ var lojax = lojax || {};
         // an AJAX alternative to iframes
         loadSrc: function ( root ) {
             root = root || document;
-            $( root ).find( lojax.select.src ).each( function () {
+            $( root ).find( jx.select.src ).each( function () {
                 var $this = $( this );
                 var url = priv.attr( $this, 'src' );
                 var config = priv.getConfig( $this );
@@ -445,10 +443,10 @@ var lojax = lojax || {};
             // do this after everything else
             setTimeout( function () {
                 // find elements that are supposed to be pre-loaded
-                $( root ).find( lojax.select.preload ).each( function () {
+                $( root ).find( jx.select.preload ).each( function () {
                     config = priv.getConfig( this );
                     config.suppressEvents = true;
-                    request = new lojax.Request( config );
+                    request = new jx.Request( config );
                     // if it's got a valid action that hasn't already been cached, cache and execute
                     if ( priv.hasValue( request.action ) && !self.cache[request.action] ) {
                         self.cache[request.action] = request;
@@ -478,7 +476,7 @@ var lojax = lojax || {};
                 $( context )[0].out = instance.out;
                 instance.out = null;
             }
-            priv.triggerEvent( lojax.events.afterInject, context, source );
+            priv.triggerEvent( jx.events.afterInject, context, source );
             priv.callIn( context, request );
             if ( priv.hasValue( request ) ) {
                 context.refresh = request.exec.bind( request );
@@ -488,14 +486,15 @@ var lojax = lojax || {};
         },
     
         handleError: function ( response ) {
-            priv.triggerEvent( lojax.events.ajaxError, response );
+            priv.triggerEvent( jx.events.ajaxError, response );
             if ( response.handled ) return;
-            var error = [];
-            Object.getOwnPropertyNames( response ).forEach( function ( name ) {
-                if ( typeof response[name] !== 'function' ) {
-                    error.push( response[name] );
-                }
-            } );
+            // filter out authentication errors, those are usually handled by the browser
+            if ( response.status
+                && /^(4\d\d|5\d\d)/.test( response.status )
+                && /401|403|407/.test( response.status ) == false ) {
+                alert( 'An error occurred while processing your request.' );
+                if ( window.console && window.console.error ) window.console.error( response );
+            }
         }
     
     } );
@@ -539,29 +538,29 @@ var lojax = lojax || {};
             }
         };
     
-    } )(lojax);
+    } )(jx);
     
     /***************\
     private functions
     \***************/
     
-    lojax.extend(rexp, {
+    $.extend(rexp, {
         search: /\?.+(?=#)|\?.+$/,
         hash: /#((.*)?[a-z]{2}(.*)?)/i,
         json: /^\{.*\}$|^\[.*\]$/
     } );
     
-    lojax.extend( priv, {
+    $.extend( priv, {
         noop: function () { },
         hasValue: function ( val ) {
             return val !== undefined && val !== null;
         },
         attr: function ( elem, name ) {
             // use attr instead of data function to account for changing attribute values
-            return $( elem ).attr( 'data-' + name ) || $( elem ).attr( lojax.config.prefix + name );
+            return $( elem ).attr( 'data-' + name ) || $( elem ).attr( jx.config.prefix + name );
         },
         attrSelector: function ( name ) {
-            return '[data-' + name + '],[' + lojax.config.prefix + name + ']';
+            return '[data-' + name + '],[' + jx.config.prefix + name + ']';
         },
         attributes: 'method action transition target form model preload src poll'.split( ' ' ),
         getConfig: function ( elem ) {
@@ -635,18 +634,18 @@ var lojax = lojax || {};
                 // account for selectors that either select a top element with inputs inside (e.g. 'form')
                 // or that select specific input elements (e.g. '#div1 [name]')
                 // or both (e.g. 'form,#div1 [name]')
-                return $( params.form ).find( ':input' ).add( $( params.form ).filter( ':input' ) );
+                return $( params.form );//.find( ':input' ).add( $( params.form ).filter( ':input' ) );
             }
             // only a submit button can submit an enclosing form
             if ( $( params.source ).is( '[type=submit]' ) ) {
-                closest = $( params.source ).closest( 'form,' + lojax.select.model );
+                closest = $( params.source ).closest( 'form,' + jx.select.model );
                 if ( closest.is( 'form' ) ) {
                     return closest;
                 }
             }
             // check for a form or a single named input with a trigger
             if ( $( params.source ).is( 'form' )
-                || $( params.source ).is( lojax.select.inputTriggerChangeOrEnter ) ) {
+                || $( params.source ).is( jx.select.inputTriggerChangeOrEnter ) ) {
                 return params.source;
             }
             return null;
@@ -656,15 +655,15 @@ var lojax = lojax || {};
             if ( priv.hasValue( params.model ) ) {
                 model = params.model;
             }
-            else if ( priv.hasValue( params.source ) && $( params.source ).is( lojax.select.model ) ) {
+            else if ( priv.hasValue( params.source ) && $( params.source ).is( jx.select.model ) ) {
                 model = priv.getModel( params.source );
             }
     
                 // only a submit button can submit an enclosing model
             else if ( $( params.source ).is( 'input[type=submit],button[type=submit]' ) ) {
                 // don't return anything if closest is form
-                closest = $( params.source ).closest( 'form,' + lojax.select.model );
-                if ( closest.is( lojax.select.model ) ) {
+                closest = $( params.source ).closest( 'form,' + jx.select.model );
+                if ( closest.is( jx.select.model ) ) {
                     model = priv.getModel( closest );
                 }
             }
@@ -675,7 +674,7 @@ var lojax = lojax || {};
                 }
                 else {
                     // it's a URL, create a new request
-                    model = new lojax.Request( {
+                    model = new jx.Request( {
                         action: model,
                         method: 'ajax-get'
                     } );
@@ -699,11 +698,11 @@ var lojax = lojax || {};
         resolveTransition: function ( request, target ) {
             // check for a transition in the request first
             if ( request.transition ) {
-                return lojax.Transitions[request.transition] || lojax.Transitions[lojax.config.transition];
+                return jx.Transitions[request.transition] || jx.Transitions[jx.config.transition];
             }
             else {
                 // check for a transition on the target
-                return lojax.Transitions[priv.attr( target, 'transition' )] || lojax.Transitions[lojax.config.transition];
+                return jx.Transitions[priv.attr( target, 'transition' )] || jx.Transitions[jx.config.transition];
             }
         },
         resolvePoll: function ( params ) {
@@ -712,14 +711,23 @@ var lojax = lojax || {};
             }
         },
         formFromInputs: function ( forms, action, method ) {
+            var $forms = $( forms );
+    
+            // if forms is a single form element, just use that instead of building a new one
+            // this will come in handy for doing client-side validation
+            if ( $forms.is( 'form' )
+                && $forms.length == 1
+                && ( action == '' || action == $forms.attr( 'action' ) )
+                && ( method == '' || method == $forms.attr( 'method' ) ) ) return $forms;
+    
             // Trying to use jQuery's clone function here fails for select elements.
             // The clone function doesn't preserve select element values.
             // So copy everything manually instead.
-            if ( $( forms ).length ) {
+            if ( $forms.length ) {
                 action = action || window.location.href;
                 method = method || 'POST';
                 var form = $( "<form method='" + method.toUpperCase() + "' action='" + action + "' style='display:none'></form>" );
-                var inputs = $( forms ).serializeArray();
+                var inputs = $forms.serializeArray();
                 inputs.forEach( function ( input ) {
                     $( "<input type='hidden' />" ).appendTo( form ).prop( 'name', input.name ).val( input.value );
                 } );
@@ -770,8 +778,8 @@ var lojax = lojax || {};
         getModel: function ( elem ) {
             var $elem = $( elem );
             var model = $elem.data( 'model' );
-            if ( !priv.hasValue( model ) && $( elem ).is( lojax.select.jxModelAttribute ) ) {
-                model = $elem.attr( lojax.select.jxModel );
+            if ( !priv.hasValue( model ) && $( elem ).is( jx.select.jxModelAttribute ) ) {
+                model = $elem.attr( jx.select.jxModel );
     
                 if ( !model ) return null;
     
@@ -780,7 +788,7 @@ var lojax = lojax || {};
                 }
                 else {
                     // it's a URL, create a new request
-                    model = new lojax.Request( {
+                    model = new jx.Request( {
                         action: model,
                         method: 'ajax-get'
                     } );
@@ -809,14 +817,14 @@ var lojax = lojax || {};
             if (priv.hasValue(request.source) 
                 && $(request.source).is('[type=submit]') 
                 && /post/.test( request.method ) ) {
-                priv.triggerEvent( lojax.events.beforeSubmit, request );
+                priv.triggerEvent( jx.events.beforeSubmit, request );
             }
         },
         beforeRequest: function ( arg, suppress ) {
-            if ( !suppress ) priv.triggerEvent( lojax.events.beforeRequest, arg );
+            if ( !suppress ) priv.triggerEvent( jx.events.beforeRequest, arg );
         },
         afterRequest: function ( arg, suppress ) {
-            if ( !suppress ) priv.triggerEvent( lojax.events.afterRequest, arg );
+            if ( !suppress ) priv.triggerEvent( jx.events.afterRequest, arg );
         },
         hasHash: function ( url ) {
             url = url || window.location.href;
@@ -844,7 +852,7 @@ var lojax = lojax || {};
         },
         callIn: function ( panel, context ) {
             // ensure in is called only once
-            // and that calls to lojax.in outside of a container are ignored
+            // and that calls to jx.in outside of a container are ignored
             var fn = instance.in;
             instance.in = null;
             if ( panel && fn ) {
@@ -852,7 +860,7 @@ var lojax = lojax || {};
                     fn.call( panel, context );
                 }
                 catch (ex) {
-                    lojax.error( ex );
+                    jx.error( ex );
                 }
             }
         },
@@ -878,7 +886,7 @@ var lojax = lojax || {};
        Request
     \***********/
     
-    lojax.Request = function ( obj ) {
+    jx.Request = function ( obj ) {
         if ( typeof obj === 'function' ) {
             obj = obj();
         }
@@ -909,7 +917,7 @@ var lojax = lojax || {};
         this.suppressEvents = obj.suppressEvents || false;
     };
     
-    lojax.Request.prototype = {
+    jx.Request.prototype = {
     
         getData: function () {
             var data;
@@ -924,7 +932,7 @@ var lojax = lojax || {};
                         data = priv.formFromModel( this.model ).serialize();
                     }
                     else if ( this.form ) {
-                        data = priv.formFromInputs( this.form, this.action, this.method ).serialize();
+                        data = priv.formFromInputs( this.form, '', '' ).serialize();
                     }
                     break;
                 case 'post':
@@ -948,7 +956,7 @@ var lojax = lojax || {};
                         this.contentType = 'application/json';
                     }
                     else if ( this.form ) {
-                        data = priv.formFromInputs( this.form, this.action, this.method ).serialize();
+                        data = priv.formFromInputs( this.form, '', '' ).serialize();
                     }
                     break;
             }
@@ -1098,7 +1106,7 @@ var lojax = lojax || {};
      Transitions
     \***********/
     
-    lojax.extend( lojax.Transitions, {
+    $.extend( jx.Transitions, {
     
         'empty-append-node': function ( oldNode, newNode ) {
             var $old = $( oldNode ),
@@ -1140,30 +1148,64 @@ var lojax = lojax || {};
     
     } );
 	
+	/***************\
+	 jQuery validate
+	\***************/
+	
+	$( function () {
+	
+	    var canValidate = $.validator
+	        && $.validator.unobtrusive
+	        && $.validator.unobtrusive.parse;
+	
+	    function addRules( evt, context ) {
+	        context.filter( 'form' ).add(context.find('form')).each( function () {
+	            $.validator.unobtrusive.parse( this );
+	        } );
+	    }
+	
+	    function validate( evt, request ) {
+	        request.form.filter( 'form' ).add( request.form.find( 'form' ) ).each( function () {
+	            $( this ).validate();
+	            if ( $( this ).valid() == false ) {
+	                request.cancel = true;
+	            }
+	        } );
+	    }
+	
+	    if ( canValidate ) {
+	        $( document ).off( lojax.events.afterInject, addRules );
+	        $( document ).on( lojax.events.afterInject, addRules );
+	        $( document ).off( lojax.events.beforeRequest, validate );
+	        $( document ).on( lojax.events.beforeRequest, validate );
+	    }
+	
+	} );
+	
 	/***********\
 	  modeling
 	\***********/
 	
 	// bind an element to a JSON model
-	lojax.bind = function ( elem, model ) {
+	jx.bind = function ( elem, model ) {
 	    var $elem = $( elem );
 	    $elem.data( 'model', model );
 	    priv.setElementsFromModel( $elem, model );
-	    // lojax listens for changes from elements that have a jx-model or data-model attribute
+	    // jx listens for changes from elements that have a jx-model or data-model attribute
 	    // so if it doesn't have one, add one
-	    if ( !$elem.is( lojax.select.model ) ) {
-	        $elem.attr( lojax.select.jxModel, "" );
+	    if ( !$elem.is( jx.select.model ) ) {
+	        $elem.attr( jx.select.jxModel, "" );
 	    }
 	    return model;
 	};
 	
-	lojax.bindAllModels = function ( context ) {
+	jx.bindAllModels = function ( context ) {
 	    modeler.bindToModels(null, context);
 	};
 	
-	lojax.extend( rexp, {
-	    segments: /[^\[\]\.\s]+|\[\d+\]/g,
-	    indexer: /\[\d+\]/
+	$.extend( rexp, {
+	  segments: /[^\[\]\.\s]+|\[\d+\]/g,
+	  indexer: /\[\d+\]/
 	} );
 	
 	var modeler = {
@@ -1171,16 +1213,16 @@ var lojax = lojax || {};
 	    init: function () {
 	        modeler.bindToModels();
 	        $( document )
-	            .off( 'change', lojax.select.model, modeler.updateModel )
-	            .off( lojax.events.afterInject, modeler.bindToModels );
+	            .off( 'change', jx.select.model, modeler.updateModel )
+	            .off( jx.events.afterInject, modeler.bindToModels );
 	        $( document )
-	            .on( 'change', lojax.select.model, modeler.updateModel )
-	            .on( lojax.events.afterInject, modeler.bindToModels );
+	            .on( 'change', jx.select.model, modeler.updateModel )
+	            .on( jx.events.afterInject, modeler.bindToModels );
 	    },
 	    bindToModels: function ( evt, context ) {
 	        context = context || document;
 	        var $this, models = [];
-	        var dataModels = $( context ).find( lojax.select.model ).add( context ).filter( lojax.select.model );
+	        var dataModels = $( context ).find( jx.select.model ).add( context ).filter( jx.select.model );
 	
 	
 	        // iterate over the models in context
@@ -1220,14 +1262,14 @@ var lojax = lojax || {};
 	        };
 	
 	
-	        priv.triggerEvent( lojax.events.beforeUpdateModel, o, $this );
+	        priv.triggerEvent( jx.events.beforeUpdateModel, o, $this );
 	        if ( o.cancel ) return;
 	
 	
 	        priv.setModelProperty( $this, o.model, elems );
 	        // TODO: set an isDirty flag without corrupting the model
 	        // maybe use a wrapper class to observe the model
-	        priv.triggerEvent( lojax.events.afterUpdateModel, o, $this );
+	        priv.triggerEvent( jx.events.afterUpdateModel, o, $this );
 	
 	
 	        priv.propagateChange( model, $target );
@@ -1235,7 +1277,7 @@ var lojax = lojax || {};
 	};
 	
 	
-	lojax.extend( lojax.priv, {
+	$.extend( jx.priv, {
 	
 	    getPathSegments: function ( path ) {
 	        return path.match( rexp.segments );
@@ -1371,7 +1413,7 @@ var lojax = lojax || {};
 	            name = this.name || $( this ).attr( 'name' );
 	            value = priv.getModelValue( model, name );
 	            type = $.type( value );
-	            // lojax assumes ISO 8601 date serialization format
+	            // jx assumes ISO 8601 date serialization format
 	            // ISO 8601 is easy to parse
 	            // making it possible to skip the problem of converting 
 	            // date strings to Date objects and back again in most cases
@@ -1475,9 +1517,9 @@ var lojax = lojax || {};
 	    },
 	    propagateChange: function ( model, elem ) {
 	        var $e = $( elem );
-	        var closest = $e.closest( lojax.select.model );
+	        var closest = $e.closest( jx.select.model );
 	        // find elements that are bound to the same model
-	        $( document ).find( lojax.select.model ).not( closest ).each( function () {
+	        $( document ).find( jx.select.model ).not( closest ).each( function () {
 	            var m = $( this ).data( 'model' );
 	            if ( m === model ) {
 	                priv.setElementsFromModel( this, model );
@@ -1489,7 +1531,7 @@ var lojax = lojax || {};
 	
 	$( modeler.init );
 
-	lojax.Controller.init();
+	jx.Controller.init();
 
 })(jQuery, lojax);
 

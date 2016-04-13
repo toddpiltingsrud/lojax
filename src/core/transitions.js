@@ -3,7 +3,7 @@
  Transitions
 \***********/
 
-lojax.extend( lojax.Transitions, {
+$.extend( jx.Transitions, {
 
     'empty-append-node': function ( oldNode, newNode ) {
         var $old = $( oldNode ),

@@ -3,7 +3,7 @@
  Controller
 \***********/
 
-lojax.extend( lojax.Controller, {
+$.extend( jx.Controller, {
 
     init: function () {
         var self = this;
@@ -31,15 +31,15 @@ lojax.extend( lojax.Controller, {
 
     addHandlers: function () {
         $( document )
-            .on( 'click', lojax.select.methodOrRequest, this.handleRequest )
-            .on( 'change', lojax.select.methodWithChange, this.handleRequest )
+            .on( 'click', jx.select.methodOrRequest, this.handleRequest )
+            .on( 'change', jx.select.methodWithChange, this.handleRequest )
             // allows executing a request on a single input element without wrapping it in a form (e.g. data-trigger="change enter")
             // also submits an element with a model attribute if enter key is pressed
-            .on( 'keydown', lojax.select.methodWithEnterOrModel, this.handleEnterKey )
-            .on( 'submit', lojax.select.formWithMethod, this.handleRequest )
+            .on( 'keydown', jx.select.methodWithEnterOrModel, this.handleEnterKey )
+            .on( 'submit', jx.select.formWithMethod, this.handleRequest )
             // handle the control key
             .on( 'keydown', this.handleControlKey ).on( 'keyup', this.handleControlKey );
-        if ( lojax.config.navHistory ) {
+        if ( jx.config.navHistory ) {
             window.addEventListener( "hashchange", this.handleHash, false );
         }
     },
@@ -52,7 +52,7 @@ lojax.extend( lojax.Controller, {
             .off( 'submit', this.handleRequest )
             .off( 'keydown', this.handleControlKey )
             .off( 'keyup', this.handleControlKey );
-        if ( lojax.config.navHistory ) {
+        if ( jx.config.navHistory ) {
             window.removeEventListener( "hashchange", this.handleHash, false );
         }
     },
@@ -65,11 +65,10 @@ lojax.extend( lojax.Controller, {
         var params = priv.getConfig( this ),
             $this = $( this );
 
-        lojax.info( 'handleRequest: params: ' , params );
+        // prevent users from double-clicking
+        priv.disable( $this, 2 );
 
-        var request = new lojax.Request( params );
-
-        lojax.log( 'handleRequest: request: ' , request );
+        var request = new jx.Request( params );
 
         try {
             // delegate hashes to handleHash
@@ -104,7 +103,8 @@ lojax.extend( lojax.Controller, {
             }
         }
         catch ( ex ) {
-            lojax.error( ex );
+            priv.enable( $this );
+            jx.error( ex );
         }
 
         evt.preventDefault();
@@ -124,16 +124,16 @@ lojax.extend( lojax.Controller, {
 
     handleHash: function () {
 
-        lojax.info( 'handleHash called' );
+        jx.info( 'handleHash called' );
 
-        if ( !lojax.config.navHistory ) return;
+        if ( !jx.config.navHistory ) return;
 
         // grab the current hash and request it with ajax-get
 
         var handler, request, hash = window.location.hash;
 
-        lojax.info( 'handleHash: hash:' , hash );
-        lojax.info( 'handleHash: lojax.emptyHashAction:' , lojax.emptyHashAction );
+        jx.info( 'handleHash: hash:' , hash );
+        jx.info( 'handleHash: jx.emptyHashAction:' , jx.emptyHashAction );
 
         if ( priv.hasHash() ) {
 
@@ -152,21 +152,21 @@ lojax.extend( lojax.Controller, {
             }
             instance.currentTransition = null;
         }
-        else if ( hash === '' && lojax.emptyHashAction ) {
+        else if ( hash === '' && jx.emptyHashAction ) {
             // we got here because a browser navigation button 
             // was clicked which changed the hash to an empty string
             // so execute the configured action if present, else do nothing
-            instance.executeRequest( lojax.emptyHashAction );
+            instance.executeRequest( jx.emptyHashAction );
         }
     },
 
     executeRequest: function ( request ) {
 
-        if ( !( request instanceof lojax.Request ) ) {
-            request = new lojax.Request( request );
+        if ( !( request instanceof jx.Request ) ) {
+            request = new jx.Request( request );
         }
 
-        lojax.log( 'executeRequest: request: ' , request );
+        jx.log( 'executeRequest: request: ' , request );
 
         // no action? we're done here
         if ( request.action === null ) return;
@@ -175,7 +175,7 @@ lojax.extend( lojax.Controller, {
         if ( request.action in this.cache ) {
             request = this.cache[request.action];
             delete this.cache[request.action];
-            lojax.info( 'executeRequest: retrieved from cache' );
+            jx.info( 'executeRequest: retrieved from cache' );
         }
         else {
             request.exec();
@@ -186,25 +186,29 @@ lojax.extend( lojax.Controller, {
                 instance.injectContent( request, response );
                 // if the request has a poll interval, handle it after the request has been successfully processed
                 instance.handlePolling( request );
+                priv.enable( $( request.source ) );
             } )
-            .catch( instance.handleError );
+            .catch( function ( e ) {
+                priv.enable( $( request.source ) );
+                instance.handleError( e );
+            } );
     },
 
     injectContent: function ( request, response ) {
-        var id, target, newModal, transition, $node, result, root;
+        var id, target, transition, $node, result, root;
 
-        // ensure any loose calls to lojax.in are ignored
+        // ensure any loose calls to jx.in are ignored
         instance.in = null;
 
-        var doPanel = function () {
-            var node = $( this );
+        var swapPanel = function ( panel, root ) {
+            root = root || document;
+            var node = $( panel );
             // match up with panels on the page
             id = priv.attr( node, 'panel' );
-            target = request.target || $( lojax.select.panel( id ) ).first();
+            target = request.target || $( root ).find( jx.select.panel( id ) ).first();
 
             if ( target.length ) {
 
-                lojax.info( 'injectContent: data-panel: ' + id );
                 transition = priv.resolveTransition( request, node );
                 priv.callOut( target );
                 // swap out the content
@@ -216,7 +220,7 @@ lojax.extend( lojax.Controller, {
 
         if ( request.target ) {
             // inject the entire response into the specified target
-            doPanel.call( $( response ) );
+            swapPanel( $( response ) );
         }
         else {
             // create a list of nodes from the response
@@ -229,7 +233,7 @@ lojax.extend( lojax.Controller, {
 
                 root = document;
 
-                priv.triggerEvent( lojax.events.beforeInject, nodes, $node );
+                priv.triggerEvent( jx.events.beforeInject, nodes, $node );
 
                 // don't create more than one modal at a time
                 if ( $node.is( '.modal' ) ) {
@@ -245,12 +249,12 @@ lojax.extend( lojax.Controller, {
 
                 // find all the panels in the new content
                 if ( request.target || $node.is( priv.attrSelector( 'panel' ) ) ) {
-                    doPanel.call( $node );
+                    swapPanel( $node, root );
                 }
                 else {
                     // iterate through the panels
                     $( nodes[i] ).find( priv.attrSelector( 'panel' ) ).each( function () {
-                        doPanel.call( this, root );
+                        swapPanel( this, root );
                     } );
                 }
             }
@@ -269,7 +273,7 @@ lojax.extend( lojax.Controller, {
     createModal: function ( content, request ) {
         // injectContent delegates modals here
 
-        lojax.info( 'createModal.content', content );
+        jx.info( 'createModal.content', content );
 
         // check for bootstrap
         if ( $.fn.modal ) {
@@ -305,8 +309,12 @@ lojax.extend( lojax.Controller, {
                     }
                 }
             } );
-            instance.modal.data( 'kendoWindow' ).center().open();
-            instance.modal.find( '[data-dismiss=modal]' ).click( function () {
+            instance.modal.find( '.modal-header' ).remove();
+            instance.modal.data( 'kendoWindow' ).center();
+            instance.modal.closest( '.k-window' ).css( { top: '20px', position: 'fixed' } );
+            instance.modal.data( 'kendoWindow' ).open();
+            // attach this handler to the top element in case the footer is replaced
+            instance.modal.one( 'click', '[data-dismiss=modal]', function () {
                 instance.modal.data( 'kendoWindow' ).close();
             } );
         }
@@ -318,7 +326,7 @@ lojax.extend( lojax.Controller, {
     // an AJAX alternative to iframes
     loadSrc: function ( root ) {
         root = root || document;
-        $( root ).find( lojax.select.src ).each( function () {
+        $( root ).find( jx.select.src ).each( function () {
             var $this = $( this );
             var url = priv.attr( $this, 'src' );
             var config = priv.getConfig( $this );
@@ -337,15 +345,16 @@ lojax.extend( lojax.Controller, {
         // do this after everything else
         setTimeout( function () {
             // find elements that are supposed to be pre-loaded
-            $( root ).find( lojax.select.preload ).each( function () {
+            $( root ).find( jx.select.preload ).each( function () {
                 config = priv.getConfig( this );
+                config.method = config.method || 'ajax-get';
                 config.suppressEvents = true;
-                request = new lojax.Request( config );
+                request = new jx.Request( config );
                 // if it's got a valid action that hasn't already been cached, cache and execute
                 if ( priv.hasValue( request.action ) && !self.cache[request.action] ) {
                     self.cache[request.action] = request;
                     request.exec();
-                    lojax.info( 'preloadAsync: request:' , request );
+                    jx.info( 'preloadAsync: request:' , request );
                 }
             } );
         } );
@@ -371,7 +380,7 @@ lojax.extend( lojax.Controller, {
             $( context )[0].out = instance.out;
             instance.out = null;
         }
-        priv.triggerEvent( lojax.events.afterInject, context, source );
+        priv.triggerEvent( jx.events.afterInject, context, source );
         priv.callIn( context, request );
         if ( priv.hasValue( request ) ) {
             context.refresh = request.exec.bind( request );
@@ -381,15 +390,15 @@ lojax.extend( lojax.Controller, {
     },
 
     handleError: function ( response ) {
-        priv.triggerEvent( lojax.events.ajaxError, response );
+        priv.triggerEvent( jx.events.ajaxError, response );
         if ( response.handled ) return;
-        var error = [];
-        Object.getOwnPropertyNames( response ).forEach( function ( name ) {
-            if ( typeof response[name] !== 'function' ) {
-                error.push( response[name] );
-            }
-        } );
-        lojax.info( 'handleError: response: ' , response );
+        // filter out authentication errors, those are usually handled by the browser
+        if ( response.status
+            && /^(4\d\d|5\d\d)/.test( response.status )
+            && /401|403|407/.test( response.status ) == false ) {
+            alert( 'An error occurred while processing your request.' );
+            if ( window.console && window.console.error ) window.console.error( response );
+        }
     }
 
 } );

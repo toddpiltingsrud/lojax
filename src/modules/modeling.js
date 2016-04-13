@@ -4,25 +4,25 @@
 \***********/
 
 // bind an element to a JSON model
-lojax.bind = function ( elem, model ) {
+jx.bind = function ( elem, model ) {
     var $elem = $( elem );
     $elem.data( 'model', model );
     priv.setElementsFromModel( $elem, model );
-    // lojax listens for changes from elements that have a jx-model or data-model attribute
+    // jx listens for changes from elements that have a jx-model or data-model attribute
     // so if it doesn't have one, add one
-    if ( !$elem.is( lojax.select.model ) ) {
-        $elem.attr( lojax.select.jxModel, "" );
+    if ( !$elem.is( jx.select.model ) ) {
+        $elem.attr( jx.select.jxModel, "" );
     }
     return model;
 };
 
-lojax.bindAllModels = function ( context ) {
+jx.bindAllModels = function ( context ) {
     modeler.bindToModels(null, context);
 };
 
-lojax.extend( rexp, {
-    segments: /[^\[\]\.\s]+|\[\d+\]/g,
-    indexer: /\[\d+\]/
+$.extend( rexp, {
+  segments: /[^\[\]\.\s]+|\[\d+\]/g,
+  indexer: /\[\d+\]/
 } );
 
 var modeler = {
@@ -30,18 +30,18 @@ var modeler = {
     init: function () {
         modeler.bindToModels();
         $( document )
-            .off( 'change', lojax.select.model, modeler.updateModel )
-            .off( lojax.events.afterInject, modeler.bindToModels );
+            .off( 'change', jx.select.model, modeler.updateModel )
+            .off( jx.events.afterInject, modeler.bindToModels );
         $( document )
-            .on( 'change', lojax.select.model, modeler.updateModel )
-            .on( lojax.events.afterInject, modeler.bindToModels );
+            .on( 'change', jx.select.model, modeler.updateModel )
+            .on( jx.events.afterInject, modeler.bindToModels );
     },
     bindToModels: function ( evt, context ) {
         context = context || document;
         var $this, models = [];
-        var dataModels = $( context ).find( lojax.select.model ).add( context ).filter( lojax.select.model );
+        var dataModels = $( context ).find( jx.select.model ).add( context ).filter( jx.select.model );
 
-        lojax.log( 'bindToModels: dataModels:' , dataModels );
+        jx.log( 'bindToModels: dataModels:' , dataModels );
 
         // iterate over the models in context
         dataModels.each( function () {
@@ -56,7 +56,7 @@ var modeler = {
                 priv.setElementsFromModel( $this, model );
             }
             $this.data( 'model', model );
-            lojax.log( 'bindToModels: model:' , model );
+            jx.log( 'bindToModels: model:' , model );
         } );
     },
 
@@ -80,26 +80,26 @@ var modeler = {
             cancel: false
         };
 
-        lojax.log( 'updateModel: o:' , o );
+        jx.log( 'updateModel: o:' , o );
 
-        priv.triggerEvent( lojax.events.beforeUpdateModel, o, $this );
+        priv.triggerEvent( jx.events.beforeUpdateModel, o, $this );
         if ( o.cancel ) return;
 
-        lojax.log( 'updateModel: o.model: before:' , o.model );
+        jx.log( 'updateModel: o.model: before:' , o.model );
 
         priv.setModelProperty( $this, o.model, elems );
         // TODO: set an isDirty flag without corrupting the model
         // maybe use a wrapper class to observe the model
-        priv.triggerEvent( lojax.events.afterUpdateModel, o, $this );
+        priv.triggerEvent( jx.events.afterUpdateModel, o, $this );
 
-        lojax.log( 'updateModel: o.model: after:' , o.model );
+        jx.log( 'updateModel: o.model: after:' , o.model );
 
         priv.propagateChange( model, $target );
     }
 };
 
 
-lojax.extend( lojax.priv, {
+$.extend( jx.priv, {
 
     getPathSegments: function ( path ) {
         return path.match( rexp.segments );
@@ -162,7 +162,7 @@ lojax.extend( lojax.priv, {
             val,
             segments;
 
-        lojax.log( 'setModelProperty: elems.length:' , elems.length );
+        jx.log( 'setModelProperty: elems.length:' , elems.length );
 
         // derive an object path from the input name
         segments = priv.getPathSegments( $( elems ).attr( 'name' ) );
@@ -170,7 +170,7 @@ lojax.extend( lojax.priv, {
         // get the raw value
         val = priv.getValue( elems );
 
-        lojax.log( 'setModelProperty: val:' , val );
+        jx.log( 'setModelProperty: val:' , val );
 
         // grab the object we're setting
         obj = priv.getObjectAtPath( model, segments, Array.isArray( val ) );
@@ -206,7 +206,7 @@ lojax.extend( lojax.priv, {
     buildModelFromElements: function ( context ) {
         var model = {};
 
-        lojax.log( 'buildModelFromElements: context:' , context );
+        jx.log( 'buildModelFromElements: context:' , context );
 
         // there may be multiple elements with the same name
         // so build a dictionary of names and elements
@@ -223,7 +223,7 @@ lojax.extend( lojax.priv, {
             priv.setModelProperty( context, model, names[name] );
         } );
 
-        lojax.log( 'buildModelFromElements: model:' , model );
+        jx.log( 'buildModelFromElements: model:' , model );
 
         return model;
     },
@@ -233,14 +233,14 @@ lojax.extend( lojax.priv, {
             name,
             $this = $( context );
 
-        lojax.log( 'setELementsFromModel: model:' , model );
+        jx.log( 'setELementsFromModel: model:' , model );
 
         // set the inputs to the model
         $this.find( '[name]' ).each( function () {
             name = this.name || $( this ).attr( 'name' );
             value = priv.getModelValue( model, name );
             type = $.type( value );
-            // lojax assumes ISO 8601 date serialization format
+            // jx assumes ISO 8601 date serialization format
             // ISO 8601 is easy to parse
             // making it possible to skip the problem of converting 
             // date strings to Date objects and back again in most cases
@@ -344,9 +344,9 @@ lojax.extend( lojax.priv, {
     },
     propagateChange: function ( model, elem ) {
         var $e = $( elem );
-        var closest = $e.closest( lojax.select.model );
+        var closest = $e.closest( jx.select.model );
         // find elements that are bound to the same model
-        $( document ).find( lojax.select.model ).not( closest ).each( function () {
+        $( document ).find( jx.select.model ).not( closest ).each( function () {
             var m = $( this ).data( 'model' );
             if ( m === model ) {
                 priv.setElementsFromModel( this, model );

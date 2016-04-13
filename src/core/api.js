@@ -1,46 +1,46 @@
-﻿
+﻿var priv = {};
+var rexp = {};
+jx.Controller = {};
+jx.Transitions = {};
+var instance = jx.Controller;
+jx.priv = priv;
+
+
 /***********\
     API
 \***********/
 
-var priv = {};
-var rexp = {};
-lojax.Controller = {};
-lojax.Transitions = {};
-var instance = lojax.Controller;
-lojax.priv = priv;
-
 // handle an arbitrary event and execute a request
-lojax.on = function ( event, params ) {
+jx.on = function ( event, params ) {
     $( document ).on( event, function () {
         instance.executeRequest( params );
     } );
 };
 
 // remove event handler
-lojax.off = function ( event ) {
+jx.off = function ( event ) {
     $( document ).off( event );
 };
 
 // execute a request
-lojax.exec = function ( params ) {
+jx.exec = function ( params ) {
     instance.executeRequest( params );
 };
 
 // call this from a script that is located inside a jx-panel, div[data-src] or .modal
 // executes a callback with the context set to the injected node
-lojax.in = function ( callback ) {
-    lojax.info( 'lojax.in called' );
+jx.in = function ( callback ) {
+    jx.info( 'jx.in called' );
     instance.in = callback;
 };
 
-lojax.out = function ( callback ) {
-    lojax.info( 'lojax.out called' );
+jx.out = function ( callback ) {
+    jx.info( 'jx.out called' );
     instance.out = callback;
 };
 
-lojax.createModal = function ( content ) {
-    lojax.closeModal();
+jx.createModal = function ( content ) {
+    jx.closeModal();
     instance.modal = $( content ).modal( {
         show: true,
         keyboard: true
@@ -49,14 +49,12 @@ lojax.createModal = function ( content ) {
         if ( priv.hasValue( instance.modal ) ) {
             instance.modal.off( 'hidden.bs.modal', instance.onModalClose );
             instance.modal.modal( 'hide' );
-            $( instance.modal ).remove();
             instance.modal = null;
         }
     } );
 };
 
-lojax.closeModal = function () {
-        lojax.info( 'createModal: closeModal called' );
+jx.closeModal = function () {
     if ( priv.hasValue( instance.modal ) ) {
         if ( $.fn.modal ) {
             instance.modal.modal( 'hide' );
@@ -64,17 +62,11 @@ lojax.closeModal = function () {
         else if ( $.fn.kendoWindow ) {
             instance.modal.data( 'kendoWindow' ).close();
         }
-        instance.modal = null;
+        // don't set instance.modal to null here or the close handlers in controller won't fire
     }
 };
 
-// This action is executed when a browser nav button is clicked
-// which changes window.location.hash to an empty string.
-// This can be a url, a config object for creating a new request, 
-// or a function which returns a url or config object.
-lojax.emptyHashAction = null;
-
-lojax.events = {
+jx.events = {
     beforeSubmit: 'beforeSubmit',
     beforeRequest: 'beforeRequest',
     afterRequest: 'afterRequest',
@@ -85,32 +77,45 @@ lojax.events = {
     ajaxError: 'ajaxError'
 };
 
-lojax.config = {
+jx.config = {
     prefix: 'jx-',
     transition: 'fade-in',
-    navHistory: true
+    navHistory: false,
+    // This action is executed when a browser nav button is clicked
+    // which changes window.location.hash to an empty string.
+    // This can be a url, a config object for creating a new request, 
+    // or a function which returns a url or config object.
+    emptyHashAction: null
 };
 
-lojax.select = {
-    methodOrRequest: '[data-request],[jx-request],[data-method]:not([data-trigger]),[jx-method]:not([jx-trigger])',
-    methodWithChange: '[data-method][data-trigger*=change],[jx-method][jx-trigger*=change]',
-    methodWithEnterOrModel: '[data-method][data-trigger*=enter],[jx-method][jx-trigger*=enter],[data-model],[jx-model]',
+jx.select = {
+    methodOrRequest: [
+        '[data-request]:not([disabled])',
+        '[data-method][data-trigger*=change]:not([disabled])',
+        '[jx-request]:not([disabled])',
+        '[data-method]:not([data-trigger],[disabled])',
+        '[jx-method]:not([jx-trigger],[disabled])'
+    ].join( ',' ),
+    methodWithChange: ',[jx-method][jx-trigger*=change]:not([disabled]',
+    methodWithEnterOrModel: [
+        '[data-method][data-trigger*=enter]:not([disabled])',
+        '[jx-method][jx-trigger*=enter]:not([disabled])',
+        '[data-model]:not([disabled])',
+        '[jx-model]:not([disabled])',
+    ].join( ',' ),
     formWithMethod: 'form[data-method],form[jx-method]',
     model: '[data-model],[jx-model]',
-    panel: function ( id ) {
-        return '[' + lojax.config.prefix + 'panel="' + id + '"],[data-panel="' + id + '"]';
-    },
     src: '[data-src],[jx-src]',
     preload: '[data-preload],[jx-preload]',
     jxModelAttribute: '[jx-model]',
     jxModel: 'jx-model',
-    inputTriggerChangeOrEnter: ':input[name][jx-trigger*=change],:input[name][data-trigger*=change],:input[name][jx-trigger*=enter],:input[name][data-trigger*=enter]'
-};
-
-lojax.extend = function ( target, source ) {
-    target = target || {};
-    Object.getOwnPropertyNames( source ).forEach( function ( prop ) {
-        target[prop] = source[prop];
-    } );
-    return target;
+    inputTriggerChangeOrEnter: [
+        ':input[name][jx-trigger*=change]',
+        ':input[name][data-trigger*=change]',
+        ':input[name][jx-trigger*=enter]',
+        ':input[name][data-trigger*=enter]'
+    ].join( ',' ),
+    panel: function ( id ) {
+        return '[' + jx.config.prefix + 'panel="' + id + '"],[data-panel="' + id + '"]';
+    }
 };

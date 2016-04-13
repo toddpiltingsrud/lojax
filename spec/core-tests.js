@@ -83,6 +83,16 @@ var escapeHTML = function ( obj ) {
     return obj;
 };
 
+QUnit.test( 'serializeArray', function ( assert ) {
+
+    var form = $( '<form><input type="checkbox" name="in" checked value="inside"/></form><input type="checkbox" name="out" checked value="outside"/>' );
+
+    var inputs = form.serializeArray();
+
+    assert.ok( inputs.length == 2 );
+
+} );
+
 QUnit.test( 'submit event', function ( assert ) {
 
     div.empty();

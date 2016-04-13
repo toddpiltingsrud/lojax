@@ -3,8 +3,8 @@
    Request
 \***********/
 
-lojax.Request = function ( obj ) {
-    lojax.info( 'lojax.Request: obj:' , obj );
+jx.Request = function ( obj ) {
+    jx.info( 'jx.Request: obj:' , obj );
     if ( typeof obj === 'function' ) {
         obj = obj();
     }
@@ -35,11 +35,11 @@ lojax.Request = function ( obj ) {
     this.suppressEvents = obj.suppressEvents || false;
 };
 
-lojax.Request.prototype = {
+jx.Request.prototype = {
 
     getData: function () {
         var data;
-        lojax.info( 'resolveData: method:' , this.method );
+        jx.info( 'resolveData: method:' , this.method );
         switch ( this.method ) {
             case 'get':
             case 'ajax-get':
@@ -51,7 +51,7 @@ lojax.Request.prototype = {
                     data = priv.formFromModel( this.model ).serialize();
                 }
                 else if ( this.form ) {
-                    data = priv.formFromInputs( this.form, this.action, this.method ).serialize();
+                    data = priv.formFromInputs( this.form, '', '' ).serialize();
                 }
                 break;
             case 'post':
@@ -75,7 +75,7 @@ lojax.Request.prototype = {
                     this.contentType = 'application/json';
                 }
                 else if ( this.form ) {
-                    data = priv.formFromInputs( this.form, this.action, this.method ).serialize();
+                    data = priv.formFromInputs( this.form, '', '' ).serialize();
                 }
                 break;
         }
@@ -163,7 +163,7 @@ lojax.Request.prototype = {
         var cancel = false;
         this.reset();
 
-        lojax.info( 'request.exec: this:' , this );
+        jx.info( 'request.exec: this:' , this );
 
         if ( !priv.hasValue( this.methods[this.method] ) ) throw 'Unsupported method: ' + this.method;
 
@@ -174,7 +174,7 @@ lojax.Request.prototype = {
             if ( !this.cancel ) {
                 // execute the method function
                 this.methods[this.method].bind( this )();
-                lojax.info( 'request.exec: executed' );
+                jx.info( 'request.exec: executed' );
             }
             else {
                 // always trigger afterRequest even if there was no request

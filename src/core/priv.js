@@ -3,23 +3,23 @@
 private functions
 \***************/
 
-lojax.extend(rexp, {
+$.extend(rexp, {
     search: /\?.+(?=#)|\?.+$/,
-    hash: /#((.*)?[a-z]{2}(.*)?)/i,
+    hash: /#((.*)?[a-z]{2}\/[a-z]{2}(.*)?)/i,
     json: /^\{.*\}$|^\[.*\]$/
 } );
 
-lojax.extend( priv, {
+$.extend( priv, {
     noop: function () { },
     hasValue: function ( val ) {
         return val !== undefined && val !== null;
     },
     attr: function ( elem, name ) {
         // use attr instead of data function to account for changing attribute values
-        return $( elem ).attr( 'data-' + name ) || $( elem ).attr( lojax.config.prefix + name );
+        return $( elem ).attr( 'data-' + name ) || $( elem ).attr( jx.config.prefix + name );
     },
     attrSelector: function ( name ) {
-        return '[data-' + name + '],[' + lojax.config.prefix + name + ']';
+        return '[data-' + name + '],[' + jx.config.prefix + name + ']';
     },
     attributes: 'method action transition target form model preload src poll'.split( ' ' ),
     getConfig: function ( elem ) {
@@ -44,6 +44,17 @@ lojax.extend( priv, {
         config.source = elem;
 
         return config;
+    },
+    disable: function ( $elem, seconds ) {
+        $elem.attr( 'disabled', 'disabled' ).addClass( 'disabled' );
+        if ( typeof seconds == 'number' && seconds > 0 ) {
+            setTimeout( function () {
+                priv.enable( $elem );
+            }, seconds * 1000 );
+        }
+    },
+    enable: function ( $elem ) {
+        $elem.removeAttr( 'disabled' ).removeClass( 'disabled' );
     },
     resolveAction: function ( params ) {
         var action;
@@ -93,37 +104,37 @@ lojax.extend( priv, {
             // account for selectors that either select a top element with inputs inside (e.g. 'form')
             // or that select specific input elements (e.g. '#div1 [name]')
             // or both (e.g. 'form,#div1 [name]')
-            return $( params.form ).find( ':input' ).add( $( params.form ).filter( ':input' ) );
+            return $( params.form );//.find( ':input' ).add( $( params.form ).filter( ':input' ) );
         }
         // only a submit button can submit an enclosing form
         if ( $( params.source ).is( '[type=submit]' ) ) {
-            closest = $( params.source ).closest( 'form,' + lojax.select.model );
+            closest = $( params.source ).closest( 'form,' + jx.select.model );
             if ( closest.is( 'form' ) ) {
                 return closest;
             }
         }
         // check for a form or a single named input with a trigger
         if ( $( params.source ).is( 'form' )
-            || $( params.source ).is( lojax.select.inputTriggerChangeOrEnter ) ) {
+            || $( params.source ).is( jx.select.inputTriggerChangeOrEnter ) ) {
             return params.source;
         }
         return null;
     },
     resolveModel: function ( params ) {
-        lojax.log( 'resolveModel: params:', params );
+        jx.log( 'resolveModel: params:', params );
         var closest, model;
         if ( priv.hasValue( params.model ) ) {
             model = params.model;
         }
-        else if ( priv.hasValue( params.source ) && $( params.source ).is( lojax.select.model ) ) {
+        else if ( priv.hasValue( params.source ) && $( params.source ).is( jx.select.model ) ) {
             model = priv.getModel( params.source );
         }
 
             // only a submit button can submit an enclosing model
         else if ( $( params.source ).is( 'input[type=submit],button[type=submit]' ) ) {
             // don't return anything if closest is form
-            closest = $( params.source ).closest( 'form,' + lojax.select.model );
-            if ( closest.is( lojax.select.model ) ) {
+            closest = $( params.source ).closest( 'form,' + jx.select.model );
+            if ( closest.is( jx.select.model ) ) {
                 model = priv.getModel( closest );
             }
         }
@@ -134,7 +145,7 @@ lojax.extend( priv, {
             }
             else {
                 // it's a URL, create a new request
-                model = new lojax.Request( {
+                model = new jx.Request( {
                     action: model,
                     method: 'ajax-get'
                 } );
@@ -158,11 +169,11 @@ lojax.extend( priv, {
     resolveTransition: function ( request, target ) {
         // check for a transition in the request first
         if ( request.transition ) {
-            return lojax.Transitions[request.transition] || lojax.Transitions[lojax.config.transition];
+            return jx.Transitions[request.transition] || jx.Transitions[jx.config.transition];
         }
         else {
             // check for a transition on the target
-            return lojax.Transitions[priv.attr( target, 'transition' )] || lojax.Transitions[lojax.config.transition];
+            return jx.Transitions[priv.attr( target, 'transition' )] || jx.Transitions[jx.config.transition];
         }
     },
     resolvePoll: function ( params ) {
@@ -171,14 +182,23 @@ lojax.extend( priv, {
         }
     },
     formFromInputs: function ( forms, action, method ) {
+        var $forms = $( forms );
+
+        // if forms is a single form element, just use that instead of building a new one
+        // this will come in handy for doing client-side validation
+        if ( $forms.is( 'form' )
+            && $forms.length == 1
+            && ( action == '' || action == $forms.attr( 'action' ) )
+            && ( method == '' || method == $forms.attr( 'method' ) ) ) return $forms;
+
         // Trying to use jQuery's clone function here fails for select elements.
         // The clone function doesn't preserve select element values.
         // So copy everything manually instead.
-        if ( $( forms ).length ) {
+        if ( $forms.length ) {
             action = action || window.location.href;
             method = method || 'POST';
             var form = $( "<form method='" + method.toUpperCase() + "' action='" + action + "' style='display:none'></form>" );
-            var inputs = $( forms ).serializeArray();
+            var inputs = $forms.serializeArray();
             inputs.forEach( function ( input ) {
                 $( "<input type='hidden' />" ).appendTo( form ).prop( 'name', input.name ).val( input.value );
             } );
@@ -189,7 +209,7 @@ lojax.extend( priv, {
     formFromModel: function ( model, method, action, rootName, form ) {
         var t, i, props, name;
 
-        lojax.log( 'formFromModel: model:', model );
+        jx.log( 'formFromModel: model:', model );
 
         if ( !priv.hasValue( form ) ) {
             // first time through
@@ -230,8 +250,8 @@ lojax.extend( priv, {
     getModel: function ( elem ) {
         var $elem = $( elem );
         var model = $elem.data( 'model' );
-        if ( !priv.hasValue( model ) && $( elem ).is( lojax.select.jxModelAttribute ) ) {
-            model = $elem.attr( lojax.select.jxModel );
+        if ( !priv.hasValue( model ) && $( elem ).is( jx.select.jxModelAttribute ) ) {
+            model = $elem.attr( jx.select.jxModel );
 
             if ( !model ) return null;
 
@@ -240,7 +260,7 @@ lojax.extend( priv, {
             }
             else {
                 // it's a URL, create a new request
-                model = new lojax.Request( {
+                model = new jx.Request( {
                     action: model,
                     method: 'ajax-get'
                 } );
@@ -269,14 +289,14 @@ lojax.extend( priv, {
         if (priv.hasValue(request.source) 
             && $(request.source).is('[type=submit]') 
             && /post/.test( request.method ) ) {
-            priv.triggerEvent( lojax.events.beforeSubmit, request );
+            priv.triggerEvent( jx.events.beforeSubmit, request );
         }
     },
     beforeRequest: function ( arg, suppress ) {
-        if ( !suppress ) priv.triggerEvent( lojax.events.beforeRequest, arg );
+        if ( !suppress ) priv.triggerEvent( jx.events.beforeRequest, arg );
     },
     afterRequest: function ( arg, suppress ) {
-        if ( !suppress ) priv.triggerEvent( lojax.events.afterRequest, arg );
+        if ( !suppress ) priv.triggerEvent( jx.events.afterRequest, arg );
     },
     hasHash: function ( url ) {
         url = url || window.location.href;
@@ -304,7 +324,7 @@ lojax.extend( priv, {
     },
     callIn: function ( panel, context ) {
         // ensure in is called only once
-        // and that calls to lojax.in outside of a container are ignored
+        // and that calls to jx.in outside of a container are ignored
         var fn = instance.in;
         instance.in = null;
         if ( panel && fn ) {
@@ -312,7 +332,7 @@ lojax.extend( priv, {
                 fn.call( panel, context );
             }
             catch (ex) {
-                lojax.error( ex );
+                jx.error( ex );
             }
         }
     },
