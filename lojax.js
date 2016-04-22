@@ -107,38 +107,34 @@ var lojax = lojax || {};
         emptyHashAction: null
     };
     
-    /*
-    
-        methodOrRequest: '[data-request],[jx-request],[data-method]:not([data-trigger]),[jx-method]:not([jx-trigger])',
-        methodWithChange: '[data-method][data-trigger*=change],[jx-method][jx-trigger*=change]',
-        methodWithEnterOrModel: '[data-method][data-trigger*=enter],[jx-method][jx-trigger*=enter],[data-model],[jx-model]',
-        formWithMethod: 'form[data-method],form[jx-method]',
-        model: '[data-model],[jx-model]',
-        panel: function ( id ) {
-            return '[' + lojax.config.prefix + 'panel="' + id + '"],[data-panel="' + id + '"]';
-        },
-        src: '[data-src],[jx-src]',
-        preload: '[data-preload],[jx-preload]',
-        jxModelAttribute: '[jx-model]',
-        jxModel: 'jx-model',
-        inputTriggerChangeOrEnter: ':input[name][jx-trigger*=change],:input[name][data-trigger*=change],:input[name][jx-trigger*=enter],:input[name][data-trigger*=enter]'
-    */
-    
-    
     jx.select = {
-        methodOrRequest: '[data-request],[jx-request],[data-method]:not([data-trigger]),[jx-method]:not([jx-trigger])',
-        methodWithChange: '[data-method][data-trigger*=change],[jx-method][jx-trigger*=change]',
-        methodWithEnterOrModel: '[data-method][data-trigger*=enter],[jx-method][jx-trigger*=enter],[data-model],[jx-model]',
+        methodOrRequest: [
+            '[data-request]',
+            '[jx-request]',
+            '[data-method]:not([data-trigger])',
+            '[jx-method]:not([jx-trigger])'].join(','),
+        methodWithChange: [
+            '[data-method][data-trigger*=change]',
+            '[jx-method][jx-trigger*=change]'].join(','),
+        methodWithEnterOrModel: [
+            '[data-method][data-trigger*=enter]',
+            '[jx-method][jx-trigger*=enter]',
+            '[data-model]',
+            '[jx-model]'].join(','),
         formWithMethod: 'form[data-method],form[jx-method]',
         model: '[data-model],[jx-model]',
-        panel: function ( id ) {
-            return '[' + lojax.config.prefix + 'panel="' + id + '"],[data-panel="' + id + '"]';
-        },
         src: '[data-src],[jx-src]',
         preload: '[data-preload],[jx-preload]',
         jxModelAttribute: '[jx-model]',
         jxModel: 'jx-model',
-        inputTriggerChangeOrEnter: ':input[name][jx-trigger*=change],:input[name][data-trigger*=change],:input[name][jx-trigger*=enter],:input[name][data-trigger*=enter]'
+        inputTriggerChangeOrEnter: [
+            ':input[name][jx-trigger*=change]',
+            ':input[name][data-trigger*=change]',
+            ':input[name][jx-trigger*=enter]',
+            ':input[name][data-trigger*=enter]'].join(','),
+        panel: function ( id ) {
+            return '[' + lojax.config.prefix + 'panel="' + id + '"],[data-panel="' + id + '"]';
+        }
     };
     
     /***********\
