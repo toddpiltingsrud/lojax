@@ -45,16 +45,18 @@ $.extend( priv, {
 
         return config;
     },
-    disable: function ( $elem, seconds ) {
-        $elem.attr( 'disabled', 'disabled' ).addClass( 'disabled' );
+    disable: function ( elem, seconds ) {
+        elem = $( elem );
+        elem.attr( 'disabled', 'disabled' ).addClass( 'disabled busy' );
         if ( typeof seconds == 'number' && seconds > 0 ) {
             setTimeout( function () {
-                priv.enable( $elem );
+                priv.enable( elem );
             }, seconds * 1000 );
         }
     },
-    enable: function ( $elem ) {
-        $elem.removeAttr( 'disabled' ).removeClass( 'disabled' );
+    enable: function ( elem ) {
+        elem = $( elem );
+        elem.removeAttr( 'disabled' ).removeClass( 'disabled busy' );
     },
     resolveAction: function ( params ) {
         var action;

@@ -168,6 +168,9 @@ jx.Request.prototype = {
         if ( !priv.hasValue( this.methods[this.method] ) ) throw 'Unsupported method: ' + this.method;
 
         if ( priv.hasValue( this.action ) && this.action !== '' ) {
+            // don't trigger any events for beforeSubmit
+            // it's typically used as a validation hook
+            // if validation fails we want lojax to take no action at all
             priv.beforeSubmit( this );
             if ( this.cancel ) return;
             priv.beforeRequest( this, this.suppressEvents );

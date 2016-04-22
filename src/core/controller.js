@@ -23,7 +23,7 @@ $.extend( jx.Controller, {
             self.preloadAsync();
 
             // check window.location.hash for valid hash
-            if ( priv.hasHash() ) {
+            if ( jx.config.navHistory && priv.hasHash() ) {
                 setTimeout( self.handleHash );
             }
         } );
@@ -38,7 +38,8 @@ $.extend( jx.Controller, {
             .on( 'keydown', jx.select.methodWithEnterOrModel, this.handleEnterKey )
             .on( 'submit', jx.select.formWithMethod, this.handleRequest )
             // handle the control key
-            .on( 'keydown', this.handleControlKey ).on( 'keyup', this.handleControlKey );
+            .on( 'keydown', this.handleControlKey ).on( 'keyup', this.handleControlKey )
+            .on( lojax.events.afterRequest, this.enableButton );
         if ( jx.config.navHistory ) {
             window.addEventListener( "hashchange", this.handleHash, false );
         }
@@ -51,10 +52,15 @@ $.extend( jx.Controller, {
             .off( 'keydown', this.handleEnterKey )
             .off( 'submit', this.handleRequest )
             .off( 'keydown', this.handleControlKey )
-            .off( 'keyup', this.handleControlKey );
+            .off( 'keyup', this.handleControlKey )
+            .off( lojax.events.afterRequest, this.enableButton );
         if ( jx.config.navHistory ) {
             window.removeEventListener( "hashchange", this.handleHash, false );
         }
+    },
+
+    enableButton: function ( evt, arg ) {
+        priv.enable( arg.source );
     },
 
     handleRequest: function ( evt ) {
@@ -65,8 +71,8 @@ $.extend( jx.Controller, {
         var params = priv.getConfig( this ),
             $this = $( this );
 
-        // prevent users from double-clicking
-        priv.disable( $this, 2 );
+        // prevent users from double-clicking, timeout of 30 seconds
+        if (evt.type == 'click') priv.disable( $this, 30 );
 
         var request = new jx.Request( params );
 
@@ -124,16 +130,11 @@ $.extend( jx.Controller, {
 
     handleHash: function () {
 
-        jx.info( 'handleHash called' );
-
         if ( !jx.config.navHistory ) return;
 
         // grab the current hash and request it with ajax-get
 
         var handler, request, hash = window.location.hash;
-
-        jx.info( 'handleHash: hash:' , hash );
-        jx.info( 'handleHash: jx.emptyHashAction:' , jx.emptyHashAction );
 
         if ( priv.hasHash() ) {
 

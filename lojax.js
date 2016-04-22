@@ -3,10 +3,8 @@
 var lojax = lojax || {};
 
 (function($, jx) { 
-    
-    /***********\
-        API
-    \***********/
+    // prevent this script from running more than once
+    if ( jx.Controller ) return;
     
     var priv = {};
     var rexp = {};
@@ -14,6 +12,11 @@ var lojax = lojax || {};
     jx.Transitions = {};
     var instance = jx.Controller;
     jx.priv = priv;
+    
+    
+    /***********\
+        API
+    \***********/
     
     // handle an arbitrary event and execute a request
     jx.on = function ( event, params ) {
@@ -52,7 +55,6 @@ var lojax = lojax || {};
             if ( priv.hasValue( instance.modal ) ) {
                 instance.modal.off( 'hidden.bs.modal', instance.onModalClose );
                 instance.modal.modal( 'hide' );
-                $( instance.modal ).remove();
                 instance.modal = null;
             }
         } );
@@ -66,15 +68,9 @@ var lojax = lojax || {};
             else if ( $.fn.kendoWindow ) {
                 instance.modal.data( 'kendoWindow' ).close();
             }
-            instance.modal = null;
+            // don't set instance.modal to null here or the close handlers in controller won't fire
         }
     };
-    
-    // This action is executed when a browser nav button is clicked
-    // which changes window.location.hash to an empty string.
-    // This can be a url, a config object for creating a new request, 
-    // or a function which returns a url or config object.
-    jx.emptyHashAction = null;
     
     jx.events = {
         beforeSubmit: 'beforeSubmit',
@@ -87,11 +83,47 @@ var lojax = lojax || {};
         ajaxError: 'ajaxError'
     };
     
+    Object.getOwnPropertyNames( jx.events ).forEach( function ( prop ) {
+        jx[prop] = function ( handler ) {
+            if ( typeof handler == 'function' ) {
+                $( document ).on( lojax.events[prop], handler );
+            }
+        };
+    } );
+    
     jx.config = {
         prefix: 'jx-',
         transition: 'fade-in',
-        navHistory: true
+        navHistory: false,
+        setNavHistory: function(b) {
+            jx.config.navHistory = b;
+            b ? window.addEventListener( "hashchange", jx.Controller.handleHash, false )
+              : window.removeEventListener( "hashchange", jx.Controller.handleHash, false );
+        },
+        // This action is executed when a browser nav button is clicked
+        // which changes window.location.hash to an empty string.
+        // This can be a url, a config object for creating a new request, 
+        // or a function which returns a url or config object.
+        emptyHashAction: null
     };
+    
+    /*
+    
+        methodOrRequest: '[data-request],[jx-request],[data-method]:not([data-trigger]),[jx-method]:not([jx-trigger])',
+        methodWithChange: '[data-method][data-trigger*=change],[jx-method][jx-trigger*=change]',
+        methodWithEnterOrModel: '[data-method][data-trigger*=enter],[jx-method][jx-trigger*=enter],[data-model],[jx-model]',
+        formWithMethod: 'form[data-method],form[jx-method]',
+        model: '[data-model],[jx-model]',
+        panel: function ( id ) {
+            return '[' + lojax.config.prefix + 'panel="' + id + '"],[data-panel="' + id + '"]';
+        },
+        src: '[data-src],[jx-src]',
+        preload: '[data-preload],[jx-preload]',
+        jxModelAttribute: '[jx-model]',
+        jxModel: 'jx-model',
+        inputTriggerChangeOrEnter: ':input[name][jx-trigger*=change],:input[name][data-trigger*=change],:input[name][jx-trigger*=enter],:input[name][data-trigger*=enter]'
+    */
+    
     
     jx.select = {
         methodOrRequest: '[data-request],[jx-request],[data-method]:not([data-trigger]),[jx-method]:not([jx-trigger])',
@@ -100,7 +132,7 @@ var lojax = lojax || {};
         formWithMethod: 'form[data-method],form[jx-method]',
         model: '[data-model],[jx-model]',
         panel: function ( id ) {
-            return '[' + jx.config.prefix + 'panel="' + id + '"],[data-panel="' + id + '"]';
+            return '[' + lojax.config.prefix + 'panel="' + id + '"],[data-panel="' + id + '"]';
         },
         src: '[data-src],[jx-src]',
         preload: '[data-preload],[jx-preload]',
@@ -133,7 +165,7 @@ var lojax = lojax || {};
                 self.preloadAsync();
     
                 // check window.location.hash for valid hash
-                if ( priv.hasHash() ) {
+                if ( jx.config.navHistory && priv.hasHash() ) {
                     setTimeout( self.handleHash );
                 }
             } );
@@ -148,7 +180,8 @@ var lojax = lojax || {};
                 .on( 'keydown', jx.select.methodWithEnterOrModel, this.handleEnterKey )
                 .on( 'submit', jx.select.formWithMethod, this.handleRequest )
                 // handle the control key
-                .on( 'keydown', this.handleControlKey ).on( 'keyup', this.handleControlKey );
+                .on( 'keydown', this.handleControlKey ).on( 'keyup', this.handleControlKey )
+                .on( lojax.events.afterRequest, this.enableButton );
             if ( jx.config.navHistory ) {
                 window.addEventListener( "hashchange", this.handleHash, false );
             }
@@ -161,10 +194,15 @@ var lojax = lojax || {};
                 .off( 'keydown', this.handleEnterKey )
                 .off( 'submit', this.handleRequest )
                 .off( 'keydown', this.handleControlKey )
-                .off( 'keyup', this.handleControlKey );
+                .off( 'keyup', this.handleControlKey )
+                .off( lojax.events.afterRequest, this.enableButton );
             if ( jx.config.navHistory ) {
                 window.removeEventListener( "hashchange", this.handleHash, false );
             }
+        },
+    
+        enableButton: function ( evt, arg ) {
+            priv.enable( arg.source );
         },
     
         handleRequest: function ( evt ) {
@@ -175,9 +213,10 @@ var lojax = lojax || {};
             var params = priv.getConfig( this ),
                 $this = $( this );
     
+            // prevent users from double-clicking, timeout of 30 seconds
+            if (evt.type == 'click') priv.disable( $this, 30 );
     
             var request = new jx.Request( params );
-    
     
             try {
                 // delegate hashes to handleHash
@@ -212,6 +251,7 @@ var lojax = lojax || {};
                 }
             }
             catch ( ex ) {
+                priv.enable( $this );
                 jx.error( ex );
             }
     
@@ -232,13 +272,11 @@ var lojax = lojax || {};
     
         handleHash: function () {
     
-    
             if ( !jx.config.navHistory ) return;
     
             // grab the current hash and request it with ajax-get
     
             var handler, request, hash = window.location.hash;
-    
     
             if ( priv.hasHash() ) {
     
@@ -289,8 +327,12 @@ var lojax = lojax || {};
                     instance.injectContent( request, response );
                     // if the request has a poll interval, handle it after the request has been successfully processed
                     instance.handlePolling( request );
+                    priv.enable( $( request.source ) );
                 } )
-                .catch( instance.handleError );
+                .catch( function ( e ) {
+                    priv.enable( $( request.source ) );
+                    instance.handleError( e );
+                } );
         },
     
         injectContent: function ( request, response ) {
@@ -445,6 +487,7 @@ var lojax = lojax || {};
                 // find elements that are supposed to be pre-loaded
                 $( root ).find( jx.select.preload ).each( function () {
                     config = priv.getConfig( this );
+                    config.method = config.method || 'ajax-get';
                     config.suppressEvents = true;
                     request = new jx.Request( config );
                     // if it's got a valid action that hasn't already been cached, cache and execute
@@ -546,7 +589,7 @@ var lojax = lojax || {};
     
     $.extend(rexp, {
         search: /\?.+(?=#)|\?.+$/,
-        hash: /#((.*)?[a-z]{2}(.*)?)/i,
+        hash: /#((.*)?[a-z]{2}\/[a-z]{2}(.*)?)/i,
         json: /^\{.*\}$|^\[.*\]$/
     } );
     
@@ -585,6 +628,19 @@ var lojax = lojax || {};
             config.source = elem;
     
             return config;
+        },
+        disable: function ( elem, seconds ) {
+            elem = $( elem );
+            elem.attr( 'disabled', 'disabled' ).addClass( 'disabled busy' );
+            if ( typeof seconds == 'number' && seconds > 0 ) {
+                setTimeout( function () {
+                    priv.enable( elem );
+                }, seconds * 1000 );
+            }
+        },
+        enable: function ( elem ) {
+            elem = $( elem );
+            elem.removeAttr( 'disabled' ).removeClass( 'disabled busy' );
         },
         resolveAction: function ( params ) {
             var action;
@@ -1048,6 +1104,9 @@ var lojax = lojax || {};
             if ( !priv.hasValue( this.methods[this.method] ) ) throw 'Unsupported method: ' + this.method;
     
             if ( priv.hasValue( this.action ) && this.action !== '' ) {
+                // don't trigger any events for beforeSubmit
+                // it's typically used as a validation hook
+                // if validation fails we want lojax to take no action at all
                 priv.beforeSubmit( this );
                 if ( this.cancel ) return;
                 priv.beforeRequest( this, this.suppressEvents );

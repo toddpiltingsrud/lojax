@@ -1,4 +1,7 @@
-﻿var priv = {};
+﻿// prevent this script from running more than once
+if ( jx.Controller ) return;
+
+var priv = {};
 var rexp = {};
 jx.Controller = {};
 jx.Transitions = {};
@@ -77,10 +80,23 @@ jx.events = {
     ajaxError: 'ajaxError'
 };
 
+Object.getOwnPropertyNames( jx.events ).forEach( function ( prop ) {
+    jx[prop] = function ( handler ) {
+        if ( typeof handler == 'function' ) {
+            $( document ).on( lojax.events[prop], handler );
+        }
+    };
+} );
+
 jx.config = {
     prefix: 'jx-',
     transition: 'fade-in',
     navHistory: false,
+    setNavHistory: function(b) {
+        jx.config.navHistory = b;
+        b ? window.addEventListener( "hashchange", jx.Controller.handleHash, false )
+          : window.removeEventListener( "hashchange", jx.Controller.handleHash, false );
+    },
     // This action is executed when a browser nav button is clicked
     // which changes window.location.hash to an empty string.
     // This can be a url, a config object for creating a new request, 
@@ -89,33 +105,17 @@ jx.config = {
 };
 
 jx.select = {
-    methodOrRequest: [
-        '[data-request]:not([disabled])',
-        '[data-method][data-trigger*=change]:not([disabled])',
-        '[jx-request]:not([disabled])',
-        '[data-method]:not([data-trigger],[disabled])',
-        '[jx-method]:not([jx-trigger],[disabled])'
-    ].join( ',' ),
-    methodWithChange: ',[jx-method][jx-trigger*=change]:not([disabled]',
-    methodWithEnterOrModel: [
-        '[data-method][data-trigger*=enter]:not([disabled])',
-        '[jx-method][jx-trigger*=enter]:not([disabled])',
-        '[data-model]:not([disabled])',
-        '[jx-model]:not([disabled])',
-    ].join( ',' ),
+    methodOrRequest: '[data-request],[jx-request],[data-method]:not([data-trigger]),[jx-method]:not([jx-trigger])',
+    methodWithChange: '[data-method][data-trigger*=change],[jx-method][jx-trigger*=change]',
+    methodWithEnterOrModel: '[data-method][data-trigger*=enter],[jx-method][jx-trigger*=enter],[data-model],[jx-model]',
     formWithMethod: 'form[data-method],form[jx-method]',
     model: '[data-model],[jx-model]',
+    panel: function ( id ) {
+        return '[' + lojax.config.prefix + 'panel="' + id + '"],[data-panel="' + id + '"]';
+    },
     src: '[data-src],[jx-src]',
     preload: '[data-preload],[jx-preload]',
     jxModelAttribute: '[jx-model]',
     jxModel: 'jx-model',
-    inputTriggerChangeOrEnter: [
-        ':input[name][jx-trigger*=change]',
-        ':input[name][data-trigger*=change]',
-        ':input[name][jx-trigger*=enter]',
-        ':input[name][data-trigger*=enter]'
-    ].join( ',' ),
-    panel: function ( id ) {
-        return '[' + jx.config.prefix + 'panel="' + id + '"],[data-panel="' + id + '"]';
-    }
+    inputTriggerChangeOrEnter: ':input[name][jx-trigger*=change],:input[name][data-trigger*=change],:input[name][jx-trigger*=enter],:input[name][data-trigger*=enter]'
 };

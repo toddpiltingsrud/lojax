@@ -1,10 +1,3 @@
-Better error handling. Currently if a request fails, afterRequest doesn't fire, leaving everybody hanging. 
-Create a customizable error snippet that can be injected into a modal or jx-src.
-
-Add support for sockets. Add an attribute containing a URL to an element. lojax would open a socket and listen for messages on it. 
-It'd be ideal if we could detect the incoming message type (HTML or JSON) and either inject the result into the element, or bind it, respectively.
-http://socket.io/
-
 Add a preload API function.
 
 Add support for files. Was thinking specifically of input[type=file]. 
@@ -13,17 +6,14 @@ Can these be cloned?
 Create an interface for modals. Create implementations for bootstrap and kendo.
 Register them with lojax.
 
-Expand the capability of events. Make it possible to subscribe to events from specific panels.
-Will this work?
-$( document ).on( lojax.events.beforeRequest, '[jx-panel=thePanel]', function () { } );
-
 If multiple elements are bound to an empty model or a model with missing properties, 
 use the input elements to supply the missing properties.
 If lojax.bind is used on two elements without jx-model attributes, propagateChange will not work.
 
 Support callback parameters for JSONP.
 
-One of the patterns I'd like to do away with is the inclusion of hidden inputs to post back values that are needed to save entity state. It's something that's easy to overlook.
+One of the patterns I'd like to do away with is the inclusion of hidden inputs to post back values that are needed to save entity state. 
+It's easy to overlook.
 
 
 

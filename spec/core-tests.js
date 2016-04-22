@@ -115,6 +115,7 @@ QUnit.test( 'submit event', function ( assert ) {
         arg.cancel = true; 
         done1();
         lojax.logging = false;
+        $( document ).off( lojax.events.beforeRequest );
     } );
 
     $( document ).one( lojax.events.beforeRequest, function ( evt, arg ) {
@@ -164,7 +165,9 @@ QUnit.test( 'emptyHashAction', function ( assert ) {
 
     lojax.logging = true;
 
-    window.location.hash = '';
+    lojax.config.setNavHistory( true );
+
+    //window.location.hash = '';
 
     var done1 = assert.async();
     $( document ).one( 'customEvent', function ( evt, arg ) {
@@ -444,54 +447,22 @@ QUnit.test( 'methods1', function ( assert ) {
         // mongoose doesn't support put or delete :(
         if ( /get|post|ajax-put|ajax-delete/.test( arg.method ) ) arg.cancel = true;
         done();
+    } );
+
+    $( document ).on( lojax.events.afterRequest, function ( evt, arg ) {
         if ( ++i < methods.length ) {
             done = assert.async();
+            // change the link and trigger the event again
             link.attr( 'data-method', methods[i] ).click();
         }
         else {
+            // done
             $( document ).off( lojax.events.beforeRequest );
+            $( document ).off( lojax.events.afterRequest );
         }
     } );
 
-    link.attr( 'data-method', methods[i] ).click();
-
-} );
-
-QUnit.test( 'methods3', function ( assert ) {
-
-    //lojax.logging = true;
-
-    var link = $( '<a href="partials/EmptyResponse.html"></a>' );
-
-    div.append( getForm() );
-
-    div.append( link );
-
-    var done = assert.async();
-
-    var i = 0;
-
-    $( document ).on( lojax.events.beforeRequest, function ( evt, arg ) {
-
-        switch ( arg.method ) {
-            case 'post':
-                assert.ok( arg.data.is( 'form' ), 'post should use a form' );
-                break;
-            default:
-                assert.equal( arg.data, undefined, arg.method );
-                break;
-        }
-        arg.cancel = true;
-        done();
-        if ( ++i < methods.length ) {
-            done = assert.async();
-            link.attr( 'data-method', methods[i] ).click();
-        }
-        else {
-            $( document ).off( lojax.events.beforeRequest );
-        }
-    } );
-
+    // start the loop
     link.attr( 'data-method', methods[i] ).click();
 
 } );
@@ -511,6 +482,8 @@ QUnit.test( 'standardDateFormat', function ( assert ) {
 } );
 
 QUnit.test( 'enter key event handler', function ( assert ) {
+
+    $( document ).off( lojax.events.beforeRequest );
 
     var done = assert.async();
     var modelDiv = $( '<div data-model data-action="partials/RaiseEvent.html" data-method="ajax-post"></div>' );
