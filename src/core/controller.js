@@ -192,13 +192,15 @@ $.extend( jx.Controller, {
         request
             .then( function ( response ) {
                 instance.injectContent( request, response );
-                // if the request has a poll interval, handle it after the request has been successfully processed
+                // if the request has a poll interval, handle it after the request has been processed
                 instance.handlePolling( request );
                 priv.enable( $( request.source ) );
             } )
             .catch( function ( e ) {
                 priv.enable( $( request.source ) );
                 instance.handleError( e, request );
+                // handle polling even if there was an error
+                instance.handlePolling( request );
             } );
     },
 
