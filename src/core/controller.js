@@ -39,6 +39,7 @@ $.extend( jx.Controller, {
             .on( 'submit', jx.select.formWithMethod, this.handleRequest )
             // handle the control key
             .on( 'keydown', this.handleControlKey ).on( 'keyup', this.handleControlKey )
+            .on( lojax.events.beforeRequest, this.disableButton )
             .on( lojax.events.afterRequest, this.enableButton );
         if ( jx.config.navHistory ) {
             window.addEventListener( "hashchange", this.handleHash, false );
@@ -53,10 +54,16 @@ $.extend( jx.Controller, {
             .off( 'submit', this.handleRequest )
             .off( 'keydown', this.handleControlKey )
             .off( 'keyup', this.handleControlKey )
+            .off( lojax.events.beforeRequest, this.disableButton )
             .off( lojax.events.afterRequest, this.enableButton );
         if ( jx.config.navHistory ) {
             window.removeEventListener( "hashchange", this.handleHash, false );
         }
+    },
+
+    disableButton: function ( evt, arg ) {
+        // prevent users from double-clicking, timeout of 30 seconds
+        if ( arg.eventType == 'click' ) priv.disable( arg.source, 30 );
     },
 
     enableButton: function ( evt, arg ) {
@@ -71,8 +78,8 @@ $.extend( jx.Controller, {
         var params = priv.getConfig( this ),
             $this = $( this );
 
-        // prevent users from double-clicking, timeout of 30 seconds
-        if (evt.type == 'click') priv.disable( $this, 30 );
+        // preserve the event type so we can disable buttons
+        params.eventType = evt.type;
 
         var request = new jx.Request( params );
 
@@ -191,7 +198,7 @@ $.extend( jx.Controller, {
             } )
             .catch( function ( e ) {
                 priv.enable( $( request.source ) );
-                instance.handleError( e );
+                instance.handleError( e, request );
             } );
     },
 
@@ -390,14 +397,16 @@ $.extend( jx.Controller, {
         instance.preloadAsync( context );
     },
 
-    handleError: function ( response ) {
+    handleError: function ( response, request ) {
         priv.triggerEvent( jx.events.ajaxError, response );
         if ( response.handled ) return;
         // filter out authentication errors, those are usually handled by the browser
         if ( response.status
             && /^(4\d\d|5\d\d)/.test( response.status )
             && /401|403|407/.test( response.status ) == false ) {
-            alert( 'An error occurred while processing your request.' );
+            if ( !request || !request.suppressEvents ) {
+                alert( 'An error occurred while processing your request.' );
+            }
             if ( window.console && window.console.error ) window.console.error( response );
         }
     }

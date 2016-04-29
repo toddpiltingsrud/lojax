@@ -162,15 +162,11 @@ $.extend( jx.priv, {
             val,
             segments;
 
-        jx.log( 'setModelProperty: elems.length:' , elems.length );
-
         // derive an object path from the input name
         segments = priv.getPathSegments( $( elems ).attr( 'name' ) );
 
         // get the raw value
         val = priv.getValue( elems );
-
-        jx.log( 'setModelProperty: val:' , val );
 
         // grab the object we're setting
         obj = priv.getObjectAtPath( model, segments, Array.isArray( val ) );

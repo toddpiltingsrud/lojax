@@ -27,6 +27,7 @@ jx.Request = function ( obj ) {
     this.data = this.getData( obj );
     this.source = obj.source;
     this.preload = 'preload' in obj;
+    this.eventType = obj.eventType;
     this.cancel = false;
     this.resolve = null;
     this.reject = null;

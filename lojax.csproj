@@ -222,7 +222,7 @@
     <Content Include="src\core\logging.js" />
     <Content Include="src\core\controller.js" />
     <Content Include="src\core\api.js" />
-    <Content Include="src\modules\jQuery.validate.js" />
+    <Content Include="src\modules\jQuery.validate.txt" />
     <Content Include="src\modules\modeling.js" />
     <Content Include="src\core\priv.js" />
     <Content Include="src\core\transitions.js" />

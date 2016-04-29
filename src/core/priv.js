@@ -55,6 +55,7 @@ $.extend( priv, {
         }
     },
     enable: function ( elem ) {
+        elem = elem || $( '[disabled].disabled.busy' );
         elem = $( elem );
         elem.removeAttr( 'disabled' ).removeClass( 'disabled busy' );
     },
