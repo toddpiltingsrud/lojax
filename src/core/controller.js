@@ -201,7 +201,8 @@ $.extend( jx.Controller, {
                 instance.handleError( e, request );
                 // handle polling even if there was an error
                 instance.handlePolling( request );
-            } );
+            } )
+            .then( request.callbacks.then, request.callbacks['catch'] );
     },
 
     injectContent: function ( request, response ) {

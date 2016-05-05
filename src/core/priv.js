@@ -6,7 +6,10 @@ private functions
 $.extend(rexp, {
     search: /\?.+(?=#)|\?.+$/,
     hash: /#((.*)?[a-z]{2}\/[a-z]{2}(.*)?)/i,
-    json: /^\{.*\}$|^\[.*\]$/
+    json: /^\{.*\}$|^\[.*\]$/,
+    splitPath: /[^\[\]\.\s]+|\[\d+\]/g,
+    indexer: /\[\d+\]/,
+    quoted: /^['"].+['"]$/
 } );
 
 $.extend( priv, {
@@ -21,7 +24,7 @@ $.extend( priv, {
     attrSelector: function ( name ) {
         return '[data-' + name + '],[' + jx.config.prefix + name + ']';
     },
-    attributes: 'method action transition target form model preload src poll'.split( ' ' ),
+    attributes: 'method action transition target form model preload src poll then catch'.split( ' ' ),
     getConfig: function ( elem ) {
         var name, config, $this = $( elem );
 
@@ -353,6 +356,48 @@ $.extend( priv, {
     },
     isJSON: function ( str ) {
         return rexp.json.test( str );
+    },
+    getFunctionAtPath: function ( path, root ) {
+        if ( !path ) return path;
+
+        path = Array.isArray( path ) ? path : path.match( rexp.splitPath );
+
+        if ( path[0] === 'window' ) path = path.splice( 1 );
+
+        // o is our placeholder
+        var o = root || window,
+            segment;
+
+        for ( var i = 0; i < path.length; i++ ) {
+            // is this segment an array index?
+            segment = path[i];
+            if ( rexp.indexer.test( segment ) ) {
+                // convert to int
+                segment = parseInt( /\d+/.exec( segment ) );
+            }
+            else if ( rexp.quoted.test( segment ) ) {
+                segment = segment.slice( 1, -1 );
+            }
+
+            o = o[segment];
+
+            if ( o === undefined ) return;
+        }
+
+        return o;
+    },
+    callFunctionArray: function ( functions, context, arg ) {
+        if ( Array.isArray( functions ) ) {
+            functions.forEach( function (fn) {
+                if ( typeof fn === 'function' ) {
+                    try {
+                        fn.call( context, arg );
+                    } catch ( e ) {
+                        jx.error( e );
+                    }
+                }
+            } );
+        }
     }
 
 } );

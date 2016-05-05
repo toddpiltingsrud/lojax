@@ -337,7 +337,8 @@ var lojax = lojax || {};
                     instance.handleError( e, request );
                     // handle polling even if there was an error
                     instance.handlePolling( request );
-                } );
+                } )
+                .then( request.callbacks.then, request.callbacks['catch'] );
         },
     
         injectContent: function ( request, response ) {
@@ -597,7 +598,10 @@ var lojax = lojax || {};
     $.extend(rexp, {
         search: /\?.+(?=#)|\?.+$/,
         hash: /#((.*)?[a-z]{2}\/[a-z]{2}(.*)?)/i,
-        json: /^\{.*\}$|^\[.*\]$/
+        json: /^\{.*\}$|^\[.*\]$/,
+        splitPath: /[^\[\]\.\s]+|\[\d+\]/g,
+        indexer: /\[\d+\]/,
+        quoted: /^['"].+['"]$/
     } );
     
     $.extend( priv, {
@@ -612,7 +616,7 @@ var lojax = lojax || {};
         attrSelector: function ( name ) {
             return '[data-' + name + '],[' + jx.config.prefix + name + ']';
         },
-        attributes: 'method action transition target form model preload src poll'.split( ' ' ),
+        attributes: 'method action transition target form model preload src poll then catch'.split( ' ' ),
         getConfig: function ( elem ) {
             var name, config, $this = $( elem );
     
@@ -942,6 +946,48 @@ var lojax = lojax || {};
         },
         isJSON: function ( str ) {
             return rexp.json.test( str );
+        },
+        getFunctionAtPath: function ( path, root ) {
+            if ( !path ) return path;
+    
+            path = Array.isArray( path ) ? path : path.match( rexp.splitPath );
+    
+            if ( path[0] === 'window' ) path = path.splice( 1 );
+    
+            // o is our placeholder
+            var o = root || window,
+                segment;
+    
+            for ( var i = 0; i < path.length; i++ ) {
+                // is this segment an array index?
+                segment = path[i];
+                if ( rexp.indexer.test( segment ) ) {
+                    // convert to int
+                    segment = parseInt( /\d+/.exec( segment ) );
+                }
+                else if ( rexp.quoted.test( segment ) ) {
+                    segment = segment.slice( 1, -1 );
+                }
+    
+                o = o[segment];
+    
+                if ( o === undefined ) return;
+            }
+    
+            return o;
+        },
+        callFunctionArray: function ( functions, context, arg ) {
+            if ( Array.isArray( functions ) ) {
+                functions.forEach( function (fn) {
+                    if ( typeof fn === 'function' ) {
+                        try {
+                            fn.call( context, arg );
+                        } catch ( e ) {
+                            jx.error( e );
+                        }
+                    }
+                } );
+            }
         }
     
     } );
@@ -951,6 +997,7 @@ var lojax = lojax || {};
     \***********/
     
     jx.Request = function ( obj ) {
+    
         if ( typeof obj === 'function' ) {
             obj = obj();
         }
@@ -975,11 +1022,15 @@ var lojax = lojax || {};
         this.preload = 'preload' in obj;
         this.eventType = obj.eventType;
         this.cancel = false;
-        this.resolve = null;
-        this.reject = null;
+        this.resolve = [];
+        this.reject = [];
         this.result = null;
         this.error = null;
         this.suppressEvents = obj.suppressEvents || false;
+        this.callbacks = {
+            then: priv.getFunctionAtPath( obj.then ),
+            'catch': priv.getFunctionAtPath( obj['catch'] )
+        };
     };
     
     jx.Request.prototype = {
@@ -1051,12 +1102,12 @@ var lojax = lojax || {};
         },
         done: function ( response ) {
             this.result = response;
-            if ( this.resolve ) this.resolve( response );
+            priv.callFunctionArray( this.resolve, this, response );
             priv.afterRequest( this, this.suppressEvents );
         },
         fail: function ( error ) {
             this.error = error;
-            if ( this.reject ) this.reject( error );
+            priv.callFunctionArray( this.reject, this, error );
             priv.afterRequest( this, this.suppressEvents );
         },
         methods: {
@@ -1129,24 +1180,24 @@ var lojax = lojax || {};
                     priv.afterRequest( this, this.suppressEvents );
                 }
             }
+    
             return this;
         },
     
         // fake promise
         then: function ( resolve, reject ) {
-            var self = this;
             if ( typeof resolve === 'function' ) {
-                this.resolve = resolve;
+                this.resolve.push( resolve );
                 if ( this.result !== null ) {
                     // the response came before calling this function
-                    resolve( self.result );
+                    resolve.call( this, this.result );
                 }
             }
             if ( typeof reject === 'function' ) {
-                this.reject = reject;
+                this.reject.push( reject );
                 if ( this.error !== null ) {
                     // the response came before calling this function
-                    reject( self.error );
+                    reject.call( this, this.error );
                 }
             }
             return this;
@@ -1163,8 +1214,8 @@ var lojax = lojax || {};
                 this.error = null;
             }
             this.cancel = false;
-            this.resolve = null;
-            this.reject = null;
+            this.resolve = [];
+            this.reject = [];
         }
     
     };

@@ -4,7 +4,7 @@
 \***********/
 
 jx.Request = function ( obj ) {
-    jx.info( 'jx.Request: obj:' , obj );
+
     if ( typeof obj === 'function' ) {
         obj = obj();
     }
@@ -29,11 +29,15 @@ jx.Request = function ( obj ) {
     this.preload = 'preload' in obj;
     this.eventType = obj.eventType;
     this.cancel = false;
-    this.resolve = null;
-    this.reject = null;
+    this.resolve = [];
+    this.reject = [];
     this.result = null;
     this.error = null;
     this.suppressEvents = obj.suppressEvents || false;
+    this.callbacks = {
+        then: priv.getFunctionAtPath( obj.then ),
+        'catch': priv.getFunctionAtPath( obj['catch'] )
+    };
 };
 
 jx.Request.prototype = {
@@ -106,12 +110,12 @@ jx.Request.prototype = {
     },
     done: function ( response ) {
         this.result = response;
-        if ( this.resolve ) this.resolve( response );
+        priv.callFunctionArray( this.resolve, this, response );
         priv.afterRequest( this, this.suppressEvents );
     },
     fail: function ( error ) {
         this.error = error;
-        if ( this.reject ) this.reject( error );
+        priv.callFunctionArray( this.reject, this, error );
         priv.afterRequest( this, this.suppressEvents );
     },
     methods: {
@@ -186,24 +190,24 @@ jx.Request.prototype = {
                 priv.afterRequest( this, this.suppressEvents );
             }
         }
+
         return this;
     },
 
     // fake promise
     then: function ( resolve, reject ) {
-        var self = this;
         if ( typeof resolve === 'function' ) {
-            this.resolve = resolve;
+            this.resolve.push( resolve );
             if ( this.result !== null ) {
                 // the response came before calling this function
-                resolve( self.result );
+                resolve.call( this, this.result );
             }
         }
         if ( typeof reject === 'function' ) {
-            this.reject = reject;
+            this.reject.push( reject );
             if ( this.error !== null ) {
                 // the response came before calling this function
-                reject( self.error );
+                reject.call( this, this.error );
             }
         }
         return this;
@@ -220,8 +224,8 @@ jx.Request.prototype = {
             this.error = null;
         }
         this.cancel = false;
-        this.resolve = null;
-        this.reject = null;
+        this.resolve = [];
+        this.reject = [];
     }
 
 };

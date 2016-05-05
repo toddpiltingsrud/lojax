@@ -83,6 +83,30 @@ var escapeHTML = function ( obj ) {
     return obj;
 };
 
+QUnit.test( 'then and catch', function ( assert ) {
+
+    var done1 = assert.async();
+    var done2 = assert.async();
+
+    div.empty()
+        .append( '<div jx-src="partials/RaiseEvent.html" jx-then="tests.onSuccess" />' )
+        .append( '<div jx-src="partials/doesnotexist.html" jx-catch="tests.onFail" />' );
+
+    tests.onSuccess = function () {
+        assert.ok( true, 'jx-then should resolve to a function which should be called on a successful ajax call' );
+        done1();
+    };
+
+    tests.onFail = function () {
+        assert.ok( true, 'jx-catch should resolve to a function which should be called on a failed ajax call' );
+        div.empty();
+        done2();
+    };
+
+    lojax.Controller.loadSrc();
+
+} );
+
 QUnit.test( 'serializeArray', function ( assert ) {
 
     var form = $( '<form><input type="checkbox" name="in" checked value="inside"/></form><input type="checkbox" name="out" checked value="outside"/>' );
@@ -486,7 +510,7 @@ QUnit.test( 'enter key event handler', function ( assert ) {
     $( document ).off( lojax.events.beforeRequest );
 
     var done = assert.async();
-    var modelDiv = $( '<div data-model data-action="partials/RaiseEvent.html" data-method="ajax-post"></div>' );
+    var modelDiv = $( '<div data-model data-action="partials/RaiseEvent.html" data-method="ajax-get"></div>' );
     div.append( modelDiv );
     modelDiv.data( 'model', getModel() ).append( getForm() );
 
