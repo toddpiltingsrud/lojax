@@ -33,6 +33,59 @@ if ( lojax.bindAllModels ) {
         };
     };
 
+    QUnit.test( 'propagateChange', function ( assert ) {
+
+        div.empty();
+
+        var model = getModel();
+
+        var form = $( '<form jx-model></form>' );
+        form.append( getForm() );
+        form.data( 'model', model );
+        div.append( form );
+
+        var detail = $( '<div jx-model></div>' );
+        detail.append( getDetail() );
+        detail.data( 'model', model );
+        div.append( detail );
+
+        // bind both areas to the same model
+        lojax.bind( form, model );
+        lojax.bind( detail, model );
+
+        function verifyDetail() {
+            assert.equal( detail.find( '[name="daterange[0]"]' ).text(), model.daterange[0] );
+            assert.equal( detail.find( '[name="daterange[1]"]' ).text(), model.daterange[1].toString() );
+            assert.equal( detail.find( '[name=bool]' ).text(), model.bool.toString() );
+            assert.equal( detail.find( '[name="arrays.names"]' ).text(), model.arrays.names.toString() );
+            assert.equal( detail.find( '[name=color]' ).text(), 'green' );
+            assert.equal( detail.find( '[name="jx-quoted"]' ).text(), '"' );
+            assert.equal( detail.find( '[name="no.value"]' ).text(), '' );
+            assert.equal( detail.find( '[name=number]' ).text(), model.number.toString() );
+            assert.equal( detail.find( '[name=select]' ).text(), model.select );
+        }
+
+        verifyDetail();
+
+        lojax.logging = true;
+
+        // change some of the form inputs
+        form.find( '[name="daterange[0]"]' ).val( '2015-11-13' ).change();
+        form.find( '[name="daterange[1]"]' ).val( '2015-11-15' ).change();
+        form.find( '[name=bool]' ).prop( 'checked', true ).change();
+        form.find( '[value=Kaleb]' ).prop( 'checked', false ).change();
+
+        assert.equal( model.daterange[0], '2015-11-13' );
+        assert.equal( model.daterange[1], '2015-11-15' );
+        assert.equal( model.bool, true );
+        assert.equal( model.arrays.names.length, 1 );
+
+        lojax.logging = false;
+
+        verifyDetail();
+
+    } );
+
     QUnit.test( 'modals1', function ( assert ) {
 
         div.empty();
@@ -80,7 +133,11 @@ if ( lojax.bindAllModels ) {
 
         div.append( link );
 
-        var done = assert.async();
+        var dones = [];
+
+        for ( var method in methods ) {
+            dones.push( assert.async() );
+        }
 
         var i = 0;
 
@@ -101,17 +158,19 @@ if ( lojax.bindAllModels ) {
                     break;
             }
             arg.cancel = true;
-            done();
-            if ( ++i < methods.length ) {
-                done = assert.async();
-                link.attr( 'data-method', methods[i] ).click();
-            }
-            else {
+            dones[i++]();
+
+            if ( i == methods.length ) {
                 $( document ).off( lojax.events.beforeRequest );
             }
+
         } );
 
-        link.attr( 'data-method', methods[i] ).click();
+        for ( var i in methods ) {
+            link.attr( 'data-method', methods[i] ).click();
+        }
+
+        div.empty();
 
     } );
 
@@ -585,59 +644,6 @@ if ( lojax.bindAllModels ) {
         lojax.logging = true;
 
         submitBtn.click();
-
-    } );
-
-    QUnit.test( 'propagateChange', function ( assert ) {
-
-        div.empty();
-
-        var model = getModel();
-
-        var form = $( '<form jx-model></form>' );
-        form.append( getForm() );
-        form.data( 'model', model );
-        div.append( form );
-
-        var detail = $( '<div jx-model></div>' );
-        detail.append( getDetail() );
-        detail.data( 'model', model );
-        div.append( detail );
-
-        // bind both areas to the same model
-        lojax.bind( form, model );
-        lojax.bind( detail, model );
-
-        function verifyDetail() {
-            assert.equal( detail.find( '[name="daterange[0]"]' ).text(), model.daterange[0] );
-            assert.equal( detail.find( '[name="daterange[1]"]' ).text(), model.daterange[1].toString() );
-            assert.equal( detail.find( '[name=bool]' ).text(), model.bool.toString() );
-            assert.equal( detail.find( '[name="arrays.names"]' ).text(), model.arrays.names.toString() );
-            assert.equal( detail.find( '[name=color]' ).text(), 'green' );
-            assert.equal( detail.find( '[name="jx-quoted"]' ).text(), '"' );
-            assert.equal( detail.find( '[name="no.value"]' ).text(), '' );
-            assert.equal( detail.find( '[name=number]' ).text(), model.number.toString() );
-            assert.equal( detail.find( '[name=select]' ).text(), model.select );
-        }
-
-        verifyDetail();
-
-        lojax.logging = true;
-
-        // change some of the form inputs
-        form.find( '[name="daterange[0]"]' ).val( '2015-11-13' ).change();
-        form.find( '[name="daterange[1]"]' ).val( '2015-11-15' ).change();
-        form.find( '[name=bool]' ).prop( 'checked', true ).change();
-        form.find( '[value=Kaleb]' ).prop( 'checked', false ).change();
-
-        assert.equal( model.daterange[0], '2015-11-13' );
-        assert.equal( model.daterange[1], '2015-11-15' );
-        assert.equal( model.bool, true );
-        assert.equal( model.arrays.names.length, 1 );
-
-        lojax.logging = false;
-
-        verifyDetail();
 
     } );
 

@@ -83,6 +83,75 @@ var escapeHTML = function ( obj ) {
     return obj;
 };
 
+QUnit.test( 'resolveForm', function ( assert ) {
+
+    div.empty();
+
+    var params = {
+        form: null,
+        source: null
+    };
+
+    // test a single form element
+    var form = $( '<form></form>' ).appendTo( div );
+
+    form.append( getForm() );
+
+    params.form = '#div1 form';
+
+    var resolvedForm = lojax.priv.resolveForm( params );
+
+    assert.ok( resolvedForm.length == 1 && resolvedForm.is( 'form' ), 'should resolve a single form' );
+
+    div.empty();
+
+    // test a single div
+    div.append( getForm() );
+
+    params.form = '#div1';
+
+    var resolvedForm = lojax.priv.resolveForm( params );
+
+    assert.ok( resolvedForm.length == 16, 'should resolve a top-level element that is not a form to the inputs inside it' );
+
+    div.empty();
+
+    // test a compound selector
+    form = $( '<form></form>' ).appendTo( div );
+
+    form.append( getForm() );
+
+    form = $( '<div></div>' ).appendTo( div );
+
+    form.append( getForm() );
+
+    params.form = '#div1 form, #div1 div';
+
+    var resolvedForm = lojax.priv.resolveForm( params );
+
+    assert.strictEqual( resolvedForm.length, 32, 'compound form selectors should resolve to the inputs inside each selector' );
+
+    div.empty();
+
+    // test a compound selector
+    form = $( '<form></form>' ).appendTo( div );
+
+    form.append( getForm() );
+
+    form = $( '<div></div>' ).appendTo( div );
+
+    form.append( getForm() );
+
+    params.form = '#div1 form, #div1 div :input';
+
+    var resolvedForm = lojax.priv.resolveForm( params );
+
+    assert.strictEqual( resolvedForm.length, 32, 'compound form selectors should resolve to the inputs inside each selector' );
+
+    div.empty();
+
+} );
+
 QUnit.test( 'then and catch', function ( assert ) {
 
     var done1 = assert.async();

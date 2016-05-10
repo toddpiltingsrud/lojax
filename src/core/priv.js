@@ -107,10 +107,14 @@ $.extend( priv, {
         var closest;
         // use the jQuery selector if present
         if ( priv.hasValue( params.form ) ) {
+            $form = $( params.form );
+
+            if ( $form.is( 'form' ) && $form.length == 1 ) return $form;
+
             // account for selectors that either select a top element with inputs inside (e.g. 'form')
             // or that select specific input elements (e.g. '#div1 [name]')
             // or both (e.g. 'form,#div1 [name]')
-            return $( params.form );//.find( ':input' ).add( $( params.form ).filter( ':input' ) );
+            return $form.find( ':input' ).add( $form.filter( ':input' ) );
         }
         // only a submit button can submit an enclosing form
         if ( $( params.source ).is( '[type=submit]' ) ) {
