@@ -1,3 +1,6 @@
+Test posting individual forms. Manually raise jQuery's submit event for submitted forms.
+Will it be possible to cancel a submit inside a handler if the event is triggered manually?
+
 Create my own custom event implementation. I know we could use jQuery's event plugin. 
 But I don't want to require an extra plugin for event support given that lojax events offer mission critical behaviors.
 

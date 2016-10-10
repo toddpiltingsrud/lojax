@@ -89,6 +89,7 @@ $.extend( jx.Controller, {
 
                 // if the control key is down and this is a hash url, let the browser handle it
                 if ( instance.isControl ) {
+                    priv.enable( $this );
                     return;
                 }
 
