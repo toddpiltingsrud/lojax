@@ -14,10 +14,17 @@ jx.priv = priv;
 \***********/
 
 // handle an arbitrary event and execute a request
-jx.on = function ( event, params ) {
-    $( document ).on( event, function () {
-        instance.executeRequest( params );
-    } );
+jx.on = function ( event, selector, request ) {
+    if ( request === undefined ) {
+        $( document ).on( event, function () {
+            instance.executeRequest( selector );
+        } );
+    }
+    else {
+        $( document ).on( event, selector, function () {
+            instance.executeRequest( request );
+        } );
+    }
 };
 
 // remove event handler
@@ -91,18 +98,28 @@ Object.getOwnPropertyNames( jx.events ).forEach( function ( prop ) {
 jx.config = {
     prefix: 'jx-',
     transition: 'fade-in',
-    navHistory: false,
-    setNavHistory: function(b) {
-        jx.config.navHistory = b;
-        b ? window.addEventListener( "hashchange", jx.Controller.handleHash, false )
-          : window.removeEventListener( "hashchange", jx.Controller.handleHash, false );
-    },
     // This action is executed when a browser nav button is clicked
     // which changes window.location.hash to an empty string.
     // This can be a url, a config object for creating a new request, 
     // or a function which returns a url or config object.
     emptyHashAction: null
 };
+
+var navHistory = false;
+
+Object.defineProperty(jx.config, 'navHistory', {
+    get: function() {
+        return navHistory;
+    },
+    set: function(b) {
+        navHistory = b;
+        b ? window.addEventListener( "hashchange", jx.Controller.handleHash, false )
+          : window.removeEventListener( "hashchange", jx.Controller.handleHash, false );
+        if ( b ) {
+            jx.Controller.handleHash();
+        }
+    }
+});
 
 jx.select = {
     methodOrRequest: [

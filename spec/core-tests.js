@@ -83,6 +83,29 @@ var escapeHTML = function ( obj ) {
     return obj;
 };
 
+QUnit.test( 'call lojax.in with target', function ( assert ) {
+
+    var done1 = assert.async();
+
+    div.empty()
+        .append( '<div id="calling-in-with-target" jx-src="partials/InWithTarget.html" />' );
+
+    tests.onSuccess = function ( id ) {
+        assert.strictEqual( id, 'calling-in-with-target', 'context should be the target' );
+        done1();
+    };
+
+    lojax.exec( {
+        action: 'partials/InWithTarget.html',
+        method: 'ajax-get',
+        target: '#calling-in-with-target'
+    } );
+
+    lojax.Controller.loadSrc();
+
+} );
+
+
 QUnit.test( 'resolveForm', function ( assert ) {
 
     div.empty();
@@ -258,7 +281,7 @@ QUnit.test( 'emptyHashAction', function ( assert ) {
 
     lojax.logging = true;
 
-    lojax.config.setNavHistory( true );
+    lojax.config.navHistory = true;
 
     //window.location.hash = '';
 

@@ -4,8 +4,6 @@ Will it be possible to cancel a submit inside a handler if the event is triggere
 Create my own custom event implementation. I know we could use jQuery's event plugin. 
 But I don't want to require an extra plugin for event support given that lojax events offer mission critical behaviors.
 
-Add a preload API function.
-
 Add support for files. Was thinking specifically of input[type=file]. 
 Can these be cloned?
 

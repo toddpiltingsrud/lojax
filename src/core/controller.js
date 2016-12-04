@@ -199,7 +199,9 @@ $.extend( jx.Controller, {
             } )
             .catch( function ( e ) {
                 priv.enable( $( request.source ) );
-                instance.handleError( e, request );
+                if ( typeof request.callbacks['catch'] !== 'function' ) {
+                    instance.handleError( e, request );
+                }
                 // handle polling even if there was an error
                 instance.handlePolling( request );
             } )
