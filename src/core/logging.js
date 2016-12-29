@@ -17,9 +17,9 @@
                 _logging = val;
                 if ( val && window.console != undefined ) {
                     context.log = console.log.bind( console );
-                    context.info = /info/.test( val ) && console.info ? console.info.bind( console ) : function () { };
-                    context.warn = /info|warn/.test( val ) && console.warn ? console.warn.bind( console ) : function () { };
-                    context.debug = /info|warn|debug/.test( val ) && console.debug ? console.debug.bind( console ) : function () { };
+                    context.info = (/info/).test( val ) && console.info ? console.info.bind( console ) : function () { };
+                    context.warn = (/info|warn/).test( val ) && console.warn ? console.warn.bind( console ) : function () { };
+                    context.debug = (/info|warn|debug/).test( val ) && console.debug ? console.debug.bind( console ) : function () { };
                 }
                 else {
                     context.log = context.info = context.warn = context.debug = function () { };

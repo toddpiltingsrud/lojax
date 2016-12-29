@@ -54,12 +54,12 @@ Now how about the scenario of a grid where the rows are bound to models?
 Also assume there's a link for editing the row:
 
 <table>
-	<tr jx-model="{...}">
-		<td name="color"></td>
-		<td>
-			<a href="partials/modal.html" jx-preload jx-method="ajax-get">edit</a>
-		</td>
-	</tr>
+    <tr jx-model="{...}">
+        <td name="color"></td>
+        <td>
+            <a href="partials/modal.html" jx-preload jx-method="ajax-get">edit</a>
+        </td>
+    </tr>
 </table>
 
 When the user clicks the edit link, we want to bind the form in the modal (which has already been loaded and cached) to the model for the row.
@@ -67,22 +67,22 @@ But we've already got the data in the jx-model attribute, so we shouldn't have t
 For these kinds of cases we can use lojax.in.
 
 <form jx-panel="theForm">
-	<input name="color" type="color" />
-	...
+    <input name="color" type="color" />
+    ...
 
-	<script>
-		lojax.in(function(request){
-			// 'this' is the form
-			// 'request' contains a reference to the link that initiated the request (request.source)
-			// so we can get a reference to the model thusly:
-			
-			var model = $(request.source).closest('[jx-model]').data('model');
+    <script>
+        lojax.in(function(request){
+            // 'this' is the form
+            // 'request' contains a reference to the link that initiated the request (request.source)
+            // so we can get a reference to the model thusly:
+            
+            var model = $(request.source).closest('[jx-model]').data('model');
 
-			// and bind the form to the model thusly:
-			
-			lojax.bind(this, model);
-		});
-	</script>
+            // and bind the form to the model thusly:
+            
+            lojax.bind(this, model);
+        });
+    </script>
 </form>
 
 The script in the form will run when it is injected into the page, setting lojax's in callback.

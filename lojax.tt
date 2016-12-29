@@ -20,13 +20,13 @@ if (coverage)
 #>
 lojax.covered = [];
 lojax.cover = function(index) {
-	lojax.covered[index] = true;
+    lojax.covered[index] = true;
 };
 <#
 }
 #>
 
-(function($, jx) { 
+(function($, jx) {
 <#
 var path = Host.ResolvePath("src");
 
@@ -34,47 +34,47 @@ var files = new DirectoryInfo(path + @"\core").GetFiles("*.js", SearchOption.All
 
 foreach (var file in files)
 {
-	var lines = File.ReadAllLines(file.FullName);
+    var lines = File.ReadAllLines(file.FullName);
     foreach (var line in lines)
     {
         if (stripLogging && IsLogExpression(line)) continue;
 #>
     <#= line #>
-<#  
-		if (coverage) {
+<#
+        if (coverage) {
 #>
-<#= OutputCoverage(line) #><#  
-		}
-	}
+<#= OutputCoverage(line) #><#
+        }
+    }
 }
 
-if (addModules) 
+if (addModules)
 {
-	files = new DirectoryInfo(path + @"\modules").GetFiles("*.js", SearchOption.AllDirectories);
+    files = new DirectoryInfo(path + @"\modules").GetFiles("*.js", SearchOption.AllDirectories);
 
-	foreach (var file in files)
-	{
-		var lines = File.ReadAllLines(file.FullName);
-		foreach (var line in lines)
-		{
-			if (stripLogging && IsLogExpression(line)) continue;
+    foreach (var file in files)
+    {
+        var lines = File.ReadAllLines(file.FullName);
+        foreach (var line in lines)
+        {
+            if (stripLogging && IsLogExpression(line)) continue;
 #>
-	<#= line #>
-<#  
-			if (coverage) {
+    <#= line #>
+<#
+            if (coverage) {
 #>
-<#= OutputCoverage(line) #><#  
-			}
-		}
-	}
+<#= OutputCoverage(line) #><#
+            }
+        }
+    }
 }
 #>
 
-	jx.Controller.init();
+    jx.Controller.init();
 
 })(jQuery, lojax);
 
-<#+ 
+<#+
 
 int coverageIndex = 0;
 System.Text.RegularExpressions.Regex comment = new System.Text.RegularExpressions.Regex(@"\s*//");
@@ -86,24 +86,24 @@ System.Text.RegularExpressions.Regex rLog = new System.Text.RegularExpressions.R
 
 private bool IsLogExpression(string line)
 {
-	return rLog.IsMatch(line);
+    return rLog.IsMatch(line);
 }
 
 bool inQualifyingStatement = false;
 
 private string OutputCoverage(string line)
 {
-	if (!comment.IsMatch(line) && 
-		(function.IsMatch(line) || ifStatement.IsMatch(line) || elseStatement.IsMatch(line)))
-	{
-		inQualifyingStatement = true;
-	}
-	if (inQualifyingStatement && lineEnd.IsMatch(line))
-	{
-		inQualifyingStatement = false;
-		return "lojax.cover("+ (++coverageIndex).ToString() + ");\r\n";
-	}
+    if (!comment.IsMatch(line) &&
+        (function.IsMatch(line) || ifStatement.IsMatch(line) || elseStatement.IsMatch(line)))
+    {
+        inQualifyingStatement = true;
+    }
+    if (inQualifyingStatement && lineEnd.IsMatch(line))
+    {
+        inQualifyingStatement = false;
+        return "lojax.cover("+ (++coverageIndex).ToString() + ");\r\n";
+    }
 
-	return "";
+    return "";
 }
 #>

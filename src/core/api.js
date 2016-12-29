@@ -1,5 +1,5 @@
 ﻿// prevent this script from running more than once
-if ( jx.Controller ) return;
+if ( jx.Controller ) { return; }
 
 var priv = {};
 var rexp = {};
@@ -100,7 +100,7 @@ jx.config = {
     transition: 'fade-in',
     // This action is executed when a browser nav button is clicked
     // which changes window.location.hash to an empty string.
-    // This can be a url, a config object for creating a new request, 
+    // This can be a url, a config object for creating a new request,
     // or a function which returns a url or config object.
     emptyHashAction: null
 };

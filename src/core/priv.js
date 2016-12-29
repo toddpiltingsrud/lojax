@@ -14,7 +14,7 @@ $.extend(rexp, {
 
 $.extend( priv, {
     afterRequest: function ( arg, suppress ) {
-        if ( !suppress ) priv.triggerEvent( jx.events.afterRequest, arg );
+        if ( !suppress ) { priv.triggerEvent( jx.events.afterRequest, arg ); }
     },
     attr: function ( elem, name ) {
         // use attr instead of data function to account for changing attribute values
@@ -29,9 +29,9 @@ $.extend( priv, {
     },
     beforeSubmit: function ( request ) {
         // if the request source is a submit button and the method is 'post' or 'ajax-post', raise a submit event
-        if (priv.hasValue(request.source) 
-            && $(request.source).is('[type=submit]') 
-            && /post/.test( request.method ) ) {
+        if (priv.hasValue(request.source)
+            && $(request.source).is('[type=submit]')
+            && (/post/).test( request.method ) ) {
             priv.triggerEvent( jx.events.beforeSubmit, request );
         }
     },
@@ -290,7 +290,7 @@ $.extend( priv, {
         return action;
     },
     resolveForm: function ( params ) {
-        var closest;
+        var closest, $form;
         // use the jQuery selector if present
         if ( priv.hasValue( params.form ) ) {
             $form = $( params.form );

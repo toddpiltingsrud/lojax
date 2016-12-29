@@ -15,7 +15,7 @@ $.extend( jx.Controller, {
         this.isControl = false;
 
         $( function () {
-            self.div = $( "<div style='display:none'></div>" ).appendTo( 'body' );
+            self.div = $( '<div style="display:none"></div>' ).appendTo( 'body' );
 
             self.removeHandlers();
             self.addHandlers();
@@ -147,9 +147,9 @@ $.extend( jx.Controller, {
         if ( priv.hasHash() ) {
 
             // If there's no anchor with this name, handle with default settings.
-            // We want to support url-only access, and we don't want to clutter 
-            // the url with request settings like transition and target. That 
-            // means that there must be enough information already in the page 
+            // We want to support url-only access, and we don't want to clutter
+            // the url with request settings like transition and target. That
+            // means that there must be enough information already in the page
             // or response (jx-panel) to be able to properly handle the response.
             handler = $( 'a[name="' + hash.substr( 1 ) + '"]' );
             if ( handler.length === 0 ) {
@@ -162,7 +162,7 @@ $.extend( jx.Controller, {
             instance.currentTransition = null;
         }
         else if ( hash === '' && jx.emptyHashAction ) {
-            // we got here because a browser navigation button 
+            // we got here because a browser navigation button
             // was clicked which changed the hash to an empty string
             // so execute the configured action if present, else do nothing
             instance.executeRequest( jx.emptyHashAction );
@@ -408,8 +408,8 @@ $.extend( jx.Controller, {
         if ( response.handled ) return;
         // filter out authentication errors, those are usually handled by the browser
         if ( response.status
-            && /^(4\d\d|5\d\d)/.test( response.status )
-            && /401|403|407/.test( response.status ) == false ) {
+            && (/^(4\d\d|5\d\d)/).test( response.status )
+            && (/401|403|407/).test( response.status ) == false ) {
             if ( !request || !request.suppressEvents ) {
                 alert( 'An error occurred while processing your request.' );
             }

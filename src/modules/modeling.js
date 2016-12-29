@@ -63,7 +63,7 @@ var modeler = {
     updateModel: function ( evt ) {
         var name = evt.target.name;
         if ( !priv.hasValue( name ) || name == '' ) return;
-        // model's change handler 
+        // model's change handler
         // provides simple one-way binding from HTML elements to a model
         // 'this' is the element with jx-model attribute
         var $this = $( this );
@@ -88,8 +88,6 @@ var modeler = {
         jx.log( 'updateModel: o.model: before:' , o.model );
 
         priv.setModelProperty( $this, o.model, elems );
-        // TODO: set an isDirty flag without corrupting the model
-        // maybe use a wrapper class to observe the model
         priv.triggerEvent( jx.events.afterUpdateModel, o, $this );
 
         jx.log( 'updateModel: o.model: after:' , o.model );
@@ -238,7 +236,7 @@ $.extend( jx.priv, {
             type = $.type( value );
             // jx assumes ISO 8601 date serialization format
             // ISO 8601 is easy to parse
-            // making it possible to skip the problem of converting 
+            // making it possible to skip the problem of converting
             // date strings to Date objects and back again in most cases
             if ( type === 'date' && this.type === 'date' ) {
                 // date inputs expect yyyy-MM-dd
