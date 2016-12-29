@@ -1,0 +1,17 @@
+﻿<div jx-panel="out-with-src">
+    <input type="hidden" value="call-out-with-src" />
+    <script>
+        lojax.in( function () {
+            // exec another call to trigger lojax.out
+            lojax.exec( {
+                action: 'partials/CallOutWithSrc2.html?v=1',
+                method: 'ajax-get'
+            } );
+        } );
+        lojax.out( function () {
+            // call the success function
+            val = $( this ).find( "input" ).val();
+            window.tests.callOutTest( val );
+        } );
+    </script>
+</div>

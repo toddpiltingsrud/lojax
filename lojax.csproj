@@ -197,7 +197,10 @@
       <LastGenOutput>lojax.js</LastGenOutput>
     </Content>
     <Content Include="spec\modeling-tests.js" />
+    <Content Include="spec\partials\CallOutWithSrc2.html" />
+    <Content Include="spec\partials\CallOutWithSrc.html" />
     <Content Include="spec\partials\ControlKeyTest.html" />
+    <Content Include="spec\partials\InWithTarget.html" />
     <Content Include="spec\partials\Modal2.html" />
     <Content Include="spec\partials\Preload1.html" />
     <Content Include="spec\partials\Modal.html" />

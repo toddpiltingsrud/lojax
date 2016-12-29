@@ -656,15 +656,30 @@ var lojax = lojax || {};
                 try {
                     fn.call( panel, context );
                 }
-                catch (ex) {
+                catch ( ex ) {
                     jx.error( ex );
                 }
             }
         },
+        //callOut: function ( panel ) {
+        //    if ( panel && typeof panel[0].out == 'function' ) {
+        //        panel[0].out.call( panel );
+        //        panel[0].out = null;
+        //    }
+        //},
         callOut: function ( panel ) {
-            if ( panel && typeof panel[0].out == 'function' ) {
-                panel[0].out.call( panel );
-                panel[0].out = null;
+            if ( panel ) {
+                if ( typeof panel[0].out == 'function' ) {
+                    panel[0].out.call( panel );
+                    panel[0].out = null;
+                }
+                else {
+                    var parent = panel.parent( jx.select.src );
+                    if ( parent.length && typeof parent[0].out == 'function' ) {
+                        parent[0].out.call( parent );
+                        parent[0].out = null;
+                    }
+                }
             }
         },
         callFunctionArray: function ( functions, context, arg ) {
@@ -851,7 +866,6 @@ var lojax = lojax || {};
             return url.replace( s, s + a );
         },
         nonce: jQuery.now(),
-        noop: function () { },
         resolveAction: function ( params ) {
             var action;
             // if there's an action in the params, return it
@@ -879,7 +893,7 @@ var lojax = lojax || {};
                 action = $( params.source ).attr( 'action' ) || window.location.href;
             }
     
-            if ( params.method === 'ajax-get' && priv.hasHash( action ) ) {
+            if ( jx.config.navHistory && params.method === 'ajax-get' && priv.hasHash( action ) ) {
                 action = priv.resolveHash( action );
                 params.isNavHistory = true;
             }
@@ -928,7 +942,6 @@ var lojax = lojax || {};
             else if ( priv.hasValue( params.source ) && $( params.source ).is( jx.select.model ) ) {
                 model = priv.getModel( params.source );
             }
-    
                 // only a submit button can submit an enclosing model
             else if ( $( params.source ).is( 'input[type=submit],button[type=submit]' ) ) {
                 // don't return anything if closest is form

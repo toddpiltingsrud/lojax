@@ -83,6 +83,22 @@ var escapeHTML = function ( obj ) {
     return obj;
 };
 
+QUnit.test( 'lojax.out with jx-src', function ( assert ) {
+
+    var done1 = assert.async();
+
+    div.empty()
+        .append( '<div id="calling-out-with-src" jx-src="partials/CallOutWithSrc.html?v=1" />' );
+
+    tests.callOutTest = function ( id ) {
+        assert.strictEqual( id, 'call-out-with-src', 'lojax.out can be used with jx-src' );
+        done1();
+    };
+
+    lojax.Controller.loadSrc();
+
+} );
+
 QUnit.test( 'call lojax.in with target', function ( assert ) {
 
     var done1 = assert.async();
