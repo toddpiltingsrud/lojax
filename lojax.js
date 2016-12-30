@@ -3,6 +3,7 @@
 var lojax = lojax || {};
 
 (function($, jx) {
+	'use strict';
     // prevent this script from running more than once
     if ( jx.Controller ) { return; }
     
@@ -1343,7 +1344,7 @@ var lojax = lojax || {};
         },
         bindToModels: function ( evt, context ) {
             context = context || document;
-            var $this, models = [];
+            var $this, model, models = [];
             var dataModels = $( context ).find( jx.select.model ).add( context ).filter( jx.select.model );
     
     

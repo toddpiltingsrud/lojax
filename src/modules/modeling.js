@@ -38,7 +38,7 @@ var modeler = {
     },
     bindToModels: function ( evt, context ) {
         context = context || document;
-        var $this, models = [];
+        var $this, model, models = [];
         var dataModels = $( context ).find( jx.select.model ).add( context ).filter( jx.select.model );
 
         jx.log( 'bindToModels: dataModels:' , dataModels );

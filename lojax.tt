@@ -27,6 +27,7 @@ lojax.cover = function(index) {
 #>
 
 (function($, jx) {
+	'use strict';
 <#
 var path = Host.ResolvePath("src");
 
