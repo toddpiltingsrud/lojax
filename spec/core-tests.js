@@ -83,6 +83,28 @@ var escapeHTML = function ( obj ) {
     return obj;
 };
 
+QUnit.test( 'getFunctionAtPath', function ( assert ) {
+
+    var path = 'window.escapeHTML';
+
+    var fn = lojax.priv.getFunctionAtPath( path );
+
+    assert.strictEqual( fn, escapeHTML, 'should resolve paths that start with "window"' );
+
+    path = "escapeHTML";
+
+    fn = lojax.priv.getFunctionAtPath( path );
+
+    assert.strictEqual( fn, escapeHTML, 'should resolve paths that do not start with "window"' );
+
+    path = escapeHTML;
+
+    fn = lojax.priv.getFunctionAtPath( path );
+
+    assert.strictEqual( fn, escapeHTML, 'if a function is passed in, it should return the function' );
+
+} );
+
 QUnit.test( 'lojax.out with jx-src', function ( assert ) {
 
     var done1 = assert.async();

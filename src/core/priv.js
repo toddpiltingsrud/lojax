@@ -187,7 +187,7 @@ $.extend( priv, {
         return config;
     },
     getFunctionAtPath: function ( path, root ) {
-        if ( !path ) return path;
+        if ( !path || typeof path === 'function' ) { return path; }
 
         path = Array.isArray( path ) ? path : path.match( rexp.splitPath );
 
