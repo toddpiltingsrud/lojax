@@ -1274,6 +1274,7 @@ var lojax = lojax || {};
         bindToModels: function bindToModels(evt, context) {
             context = context || document;
             var $this,
+                model,
                 models = [];
             var dataModels = $(context).find(jx.select.model).add(context).filter(jx.select.model);
 
