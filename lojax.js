@@ -1,9 +1,9 @@
-﻿
+﻿'use strict';
+
 // namespace
 var lojax = lojax || {};
 
 (function($, jx) {
-	'use strict';
     // prevent this script from running more than once
     if ( jx.Controller ) { return; }
     
