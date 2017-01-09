@@ -1,5 +1,8 @@
 Add support for files. Was thinking specifically of input[type=file]. 
-Can these be cloned?
+Implement this using the FormData object, falling back gracefully to current implementation if FormData is not available.
+The best way to support post and put would be to use the file element in its original form. 
+File inputs can't be cloned, and modifying existing elements by moving or wrapping them could cause side effects.
+So, since lojax is mainly an AJAX library, support for files will be limited to AJAX requests.
 
 If multiple elements are bound to an empty model or a model with missing properties, 
 use the input elements to supply the missing properties.
@@ -8,6 +11,7 @@ If lojax.bind is used on two elements without jx-model attributes, propagateChan
 One of the patterns I'd like to do away with is the inclusion of hidden inputs to post back values that are needed to save entity state. 
 It's easy to overlook.
 
+Add support for xhr progress event.
 
 
 ### Preloading and Models

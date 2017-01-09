@@ -35,36 +35,32 @@ $.extend( priv, {
             priv.triggerEvent( jx.events.beforeSubmit, request );
         }
     },
+    call: function ( fn, context, arg ) {
+        try {
+            fn.call( context, arg );
+        } catch ( e ) {
+            jx.error( e );
+        }
+    },
     callIn: function ( panel, context ) {
         // ensure in is called only once
         // and that calls to jx.in outside of a container are ignored
         var fn = instance.in;
         instance.in = null;
         if ( panel && fn ) {
-            try {
-                fn.call( panel, context );
-            }
-            catch ( ex ) {
-                jx.error( ex );
-            }
+            priv.call( fn, panel, context );
         }
     },
-    //callOut: function ( panel ) {
-    //    if ( panel && typeof panel[0].out == 'function' ) {
-    //        panel[0].out.call( panel );
-    //        panel[0].out = null;
-    //    }
-    //},
     callOut: function ( panel ) {
         if ( panel ) {
             if ( typeof panel[0].out == 'function' ) {
-                panel[0].out.call( panel );
+                priv.call( panel[0].out, panel );
                 panel[0].out = null;
             }
             else {
                 var parent = panel.parent( jx.select.src );
                 if ( parent.length && typeof parent[0].out == 'function' ) {
-                    parent[0].out.call( parent );
+                    priv.call( parent[0].out, parent );
                     parent[0].out = null;
                 }
             }
@@ -72,13 +68,9 @@ $.extend( priv, {
     },
     callFunctionArray: function ( functions, context, arg ) {
         if ( Array.isArray( functions ) ) {
-            functions.forEach( function (fn) {
+            functions.forEach( function ( fn ) {
                 if ( typeof fn === 'function' ) {
-                    try {
-                        fn.call( context, arg );
-                    } catch ( e ) {
-                        jx.error( e );
-                    }
+                    priv.call( fn, context, arg );
                 }
             } );
         }
@@ -102,6 +94,7 @@ $.extend( priv, {
 
         // if forms is a single form element, just use that instead of building a new one
         // this will come in handy for doing client-side validation
+        // it also allows support for files
         if ( $forms.is( 'form' )
             && $forms.length == 1
             && ( action == '' || action == $forms.attr( 'action' ) )
@@ -185,6 +178,23 @@ $.extend( priv, {
         config.source = elem;
 
         return config;
+    },
+    getFormData: function ( forms ) {
+        var fd = new FormData();
+
+        // use serializeArray to get the successful form elements
+        $( forms ).serializeArray().forEach( function (item) {
+            fd.append( item.name, item.value );
+        } );
+
+        // serializeArray doesn't include files
+        $( forms ).find( '[type=file]' ).each( function () {
+            if ( this.files.length ) {
+                fd.append( this.name, this.files[0] );
+            }
+        } );
+
+        return fd;
     },
     getFunctionAtPath: function ( path, root ) {
         if ( !path || typeof path === 'function' ) { return path; }
@@ -387,20 +397,13 @@ $.extend( priv, {
         if ( typeof date === 'string' ) {
             return date.substring( 0, 10 );
         }
-        var y = date.getFullYear();
         var m = date.getMonth() + 1;
         var d = date.getDate();
-        var out = [];
-        out.push( y );
-        out.push( '-' );
-        if ( m < 10 )
-            out.push( '0' );
-        out.push( m );
-        out.push( '-' );
-        if ( d < 10 )
-            out.push( '0' );
-        out.push( d );
-        return out.join( '' );
+        return [
+            date.getFullYear(),
+            ( '0' + m ).slice( -2 ),
+            ( '0' + d ).slice( -2 )
+        ].join( '-' );
     },
     triggerEvent: function ( name, arg, src ) {
         try {

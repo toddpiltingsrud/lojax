@@ -1,9 +1,11 @@
-﻿'use strict';
-
+﻿
 // namespace
+'use strict';
+
 var lojax = lojax || {};
 
 (function ($, jx) {
+    'use strict';
     // prevent this script from running more than once
     if (jx.Controller) {
         return;
@@ -605,34 +607,31 @@ var lojax = lojax || {};
                 priv.triggerEvent(jx.events.beforeSubmit, request);
             }
         },
+        call: function call(fn, context, arg) {
+            try {
+                fn.call(context, arg);
+            } catch (e) {
+                jx.error(e);
+            }
+        },
         callIn: function callIn(panel, context) {
             // ensure in is called only once
             // and that calls to jx.in outside of a container are ignored
             var fn = instance['in'];
             instance['in'] = null;
             if (panel && fn) {
-                try {
-                    fn.call(panel, context);
-                } catch (ex) {
-                    jx.error(ex);
-                }
+                priv.call(fn, panel, context);
             }
         },
-        //callOut: function ( panel ) {
-        //    if ( panel && typeof panel[0].out == 'function' ) {
-        //        panel[0].out.call( panel );
-        //        panel[0].out = null;
-        //    }
-        //},
         callOut: function callOut(panel) {
             if (panel) {
                 if (typeof panel[0].out == 'function') {
-                    panel[0].out.call(panel);
+                    priv.call(panel[0].out, panel);
                     panel[0].out = null;
                 } else {
                     var parent = panel.parent(jx.select.src);
                     if (parent.length && typeof parent[0].out == 'function') {
-                        parent[0].out.call(parent);
+                        priv.call(parent[0].out, parent);
                         parent[0].out = null;
                     }
                 }
@@ -642,11 +641,7 @@ var lojax = lojax || {};
             if (Array.isArray(functions)) {
                 functions.forEach(function (fn) {
                     if (typeof fn === 'function') {
-                        try {
-                            fn.call(context, arg);
-                        } catch (e) {
-                            jx.error(e);
-                        }
+                        priv.call(fn, context, arg);
                     }
                 });
             }
@@ -670,6 +665,7 @@ var lojax = lojax || {};
 
             // if forms is a single form element, just use that instead of building a new one
             // this will come in handy for doing client-side validation
+            // it also allows support for files
             if ($forms.is('form') && $forms.length == 1 && (action == '' || action == $forms.attr('action')) && (method == '' || method == $forms.attr('method'))) return $forms;
 
             // Trying to use jQuery's clone function here fails for select elements.
@@ -749,6 +745,23 @@ var lojax = lojax || {};
             config.source = elem;
 
             return config;
+        },
+        getFormData: function getFormData(forms) {
+            var fd = new FormData();
+
+            // use serializeArray to get the successful form elements
+            $(forms).serializeArray().forEach(function (item) {
+                fd.append(item.name, item.value);
+            });
+
+            // serializeArray doesn't include files
+            $(forms).find('[type=file]').each(function () {
+                if (this.files.length) {
+                    fd.append(this.name, this.files[0]);
+                }
+            });
+
+            return fd;
         },
         getFunctionAtPath: function getFunctionAtPath(path, root) {
             if (!path || typeof path === 'function') {
@@ -944,18 +957,9 @@ var lojax = lojax || {};
             if (typeof date === 'string') {
                 return date.substring(0, 10);
             }
-            var y = date.getFullYear();
             var m = date.getMonth() + 1;
             var d = date.getDate();
-            var out = [];
-            out.push(y);
-            out.push('-');
-            if (m < 10) out.push('0');
-            out.push(m);
-            out.push('-');
-            if (d < 10) out.push('0');
-            out.push(d);
-            return out.join('');
+            return [date.getFullYear(), ('0' + m).slice(-2), ('0' + d).slice(-2)].join('-');
         },
         triggerEvent: function triggerEvent(name, arg, src) {
             try {
@@ -997,6 +1001,7 @@ var lojax = lojax || {};
         this.transition = obj.transition;
         this.target = priv.resolveTarget(obj);
         this.poll = priv.resolvePoll(obj);
+        this.processData = true;
         this.data = this.getData(obj);
         this.source = obj.source;
         this.preload = 'preload' in obj;
@@ -1011,6 +1016,7 @@ var lojax = lojax || {};
             then: priv.getFunctionAtPath(obj.then),
             'catch': priv.getFunctionAtPath(obj['catch'])
         };
+        this.before = priv.getFunctionAtPath(obj.before);
     };
 
     jx.Request.prototype = {
@@ -1027,28 +1033,37 @@ var lojax = lojax || {};
                     if (this.model) {
                         data = priv.formFromModel(this.model).serialize();
                     } else if (this.form) {
-                        data = priv.formFromInputs(this.form, '', '').serialize();
+                        data = $(this.form).serialize();
                     }
                     break;
                 case 'post':
+                case 'put':
                     // convert model to form and submit
                     if (this.model) {
                         data = priv.formFromModel(this.model);
                     } else if (this.form) {
                         data = priv.formFromInputs(this.form, this.action, this.method);
                     } else {
-                        // post requires a form, it's the only way we can do a post from JS
-                        data = $("<form method='POST' action='" + this.action + "' style='display:none'></form>");
+                        // post and put require a form, it's the only way we can do a post or put from JS
+                        data = $("<form method='" + this.method.toUpperCase() + "' action='" + this.action + "' style='display:none'></form>");
                     }
                     break;
                 case 'ajax-post':
                 case 'ajax-put':
-                    //serialize form, JSON.stringify model and change content-type to application/json
+                    // serialize form, JSON.stringify model and change content-type to application/json
                     if (this.model) {
                         data = JSON.stringify(this.model);
                         this.contentType = 'application/json';
                     } else if (this.form) {
-                        data = priv.formFromInputs(this.form, '', '').serialize();
+                        if (window.FormData) {
+                            // && $(this.form).find('[type=file]').length ) {
+                            data = priv.getFormData(this.form);
+                            // prevent jQuery from converting this into a string
+                            this.processData = false;
+                            this.contentType = false;
+                        } else {
+                            data = $(this.form).serialize();
+                        }
                     }
                     break;
             }
@@ -1065,14 +1080,16 @@ var lojax = lojax || {};
                     return this.action;
             }
         },
-        ajax: function ajax(type) {
-            var self = this;
-            $.ajax({
+        ajax: function ajax() {
+            var s = this;
+            var obj = {
                 url: this.action,
-                type: type.toUpperCase(),
+                'type': this.method.toUpperCase(),
                 data: this.data,
-                contentType: this.contentType
-            }).done(self.done.bind(self)).fail(self.fail.bind(self));
+                contentType: this.contentType,
+                processData: this.processData
+            };
+            $.ajax(obj).done(s.done.bind(s)).fail(s.fail.bind(s));
         },
         done: function done(response) {
             this.result = response;
@@ -1101,17 +1118,29 @@ var lojax = lojax || {};
                     priv.afterRequest(self, self.suppressEvents);
                 }, 0);
             },
+            put: function put() {
+                var self = this;
+                var form = this.data;
+                form.appendTo('body');
+                form[0].submit();
+                // in the case of downloading a file, the page is not refreshed
+                // so we still need to clean up after ourselves
+                setTimeout(function () {
+                    form.remove();
+                    priv.afterRequest(self, self.suppressEvents);
+                }, 0);
+            },
             'ajax-get': function ajaxGet() {
                 $.get(this.action, this.data).done(this.done.bind(this)).fail(this.fail.bind(this));
             },
             'ajax-post': function ajaxPost() {
-                this.ajax('post');
+                this.ajax();
             },
             'ajax-put': function ajaxPut() {
-                this.ajax('put');
+                this.ajax();
             },
             'ajax-delete': function ajaxDelete() {
-                this.ajax('delete');
+                this.ajax();
             },
             jsonp: function jsonp() {
                 var self = this;
@@ -1135,6 +1164,10 @@ var lojax = lojax || {};
             if (!priv.hasValue(this.methods[this.method])) throw 'Unsupported method: ' + this.method;
 
             if (priv.hasValue(this.action) && this.action !== '') {
+                if (typeof this.before === 'function') {
+                    priv.call(this.before, this, this);
+                    if (this.cancel) return;
+                }
                 // don't trigger any events for beforeSubmit
                 // it's typically used as a validation hook
                 // if validation fails we want lojax to take no action at all
@@ -1160,14 +1193,14 @@ var lojax = lojax || {};
                 this.resolve.push(resolve);
                 if (this.result !== null) {
                     // the response came before calling this function
-                    resolve.call(this, this.result);
+                    priv.call(resolve, this, this.result);
                 }
             }
             if (typeof reject === 'function') {
                 this.reject.push(reject);
                 if (this.error !== null) {
                     // the response came before calling this function
-                    reject.call(this, this.error);
+                    priv.call(reject, this, this.error);
                 }
             }
             return this;

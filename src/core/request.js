@@ -24,6 +24,7 @@ jx.Request = function ( obj ) {
     this.transition = obj.transition;
     this.target = priv.resolveTarget( obj );
     this.poll = priv.resolvePoll( obj );
+    this.processData = true;
     this.data = this.getData( obj );
     this.source = obj.source;
     this.preload = 'preload' in obj;
@@ -38,6 +39,7 @@ jx.Request = function ( obj ) {
         then: priv.getFunctionAtPath( obj.then ),
         'catch': priv.getFunctionAtPath( obj['catch'] )
     };
+    this.before = priv.getFunctionAtPath( obj.before );
 };
 
 jx.Request.prototype = {
@@ -56,10 +58,11 @@ jx.Request.prototype = {
                     data = priv.formFromModel( this.model ).serialize();
                 }
                 else if ( this.form ) {
-                    data = priv.formFromInputs( this.form, '', '' ).serialize();
+                    data = $( this.form ).serialize();
                 }
                 break;
             case 'post':
+            case 'put':
                 // convert model to form and submit
                 if ( this.model ) {
                     data = priv.formFromModel( this.model );
@@ -68,19 +71,27 @@ jx.Request.prototype = {
                     data = priv.formFromInputs( this.form, this.action, this.method );
                 }
                 else {
-                    // post requires a form, it's the only way we can do a post from JS
-                    data = $( "<form method='POST' action='" + this.action + "' style='display:none'></form>" );
+                    // post and put require a form, it's the only way we can do a post or put from JS
+                    data = $( "<form method='" + this.method.toUpperCase() + "' action='" + this.action + "' style='display:none'></form>" );
                 }
                 break;
             case 'ajax-post':
             case 'ajax-put':
-                //serialize form, JSON.stringify model and change content-type to application/json
+                // serialize form, JSON.stringify model and change content-type to application/json
                 if ( this.model ) {
                     data = JSON.stringify( this.model );
                     this.contentType = 'application/json';
                 }
                 else if ( this.form ) {
-                    data = priv.formFromInputs( this.form, '', '' ).serialize();
+                    if ( window.FormData ) { // && $(this.form).find('[type=file]').length ) {
+                        data = priv.getFormData( this.form );
+                        // prevent jQuery from converting this into a string
+                        this.processData = false;
+                        this.contentType = false;
+                    }
+                    else {
+                        data = $( this.form ).serialize();
+                    }
                 }
                 break;
         }
@@ -97,16 +108,18 @@ jx.Request.prototype = {
                 return this.action;
         }
     },
-    ajax: function ( type ) {
+    ajax: function () {
         var self = this;
-        $.ajax({
-                url: this.action,
-                type: type.toUpperCase(),
-                data: this.data,
-                contentType: this.contentType
-            })
+        $.ajax( {
+            url: this.action,
+            type: this.method.toUpperCase(),
+            data: this.data,
+            contentType: this.contentType,
+            processData: this.processData
+        } )
             .done( self.done.bind( self ) )
             .fail( self.fail.bind( self ) );
+
     },
     done: function ( response ) {
         this.result = response;
@@ -135,19 +148,31 @@ jx.Request.prototype = {
                 priv.afterRequest( self, self.suppressEvents );
             }, 0 );
         },
+        put: function () {
+            var self = this;
+            var form = this.data;
+            form.appendTo( 'body' );
+            form[0].submit();
+            // in the case of downloading a file, the page is not refreshed
+            // so we still need to clean up after ourselves
+            setTimeout( function () {
+                form.remove();
+                priv.afterRequest( self, self.suppressEvents );
+            }, 0 );
+        },
         'ajax-get': function () {
             $.get( this.action, this.data )
                 .done( this.done.bind( this ) )
                 .fail( this.fail.bind( this ) );
         },
         'ajax-post': function () {
-            this.ajax( 'post' );
+            this.ajax();
         },
         'ajax-put': function () {
-            this.ajax( 'put' );
+            this.ajax();
         },
         'ajax-delete': function () {
-            this.ajax( 'delete' );
+            this.ajax();
         },
         jsonp: function () {
             var self = this;
@@ -173,6 +198,10 @@ jx.Request.prototype = {
         if ( !priv.hasValue( this.methods[this.method] ) ) throw 'Unsupported method: ' + this.method;
 
         if ( priv.hasValue( this.action ) && this.action !== '' ) {
+            if ( typeof this.before === 'function' ) {
+                priv.call( this.before, this, this );
+                if ( this.cancel ) return;
+            }
             // don't trigger any events for beforeSubmit
             // it's typically used as a validation hook
             // if validation fails we want lojax to take no action at all
@@ -200,14 +229,14 @@ jx.Request.prototype = {
             this.resolve.push( resolve );
             if ( this.result !== null ) {
                 // the response came before calling this function
-                resolve.call( this, this.result );
+                priv.call( resolve, this, this.result );
             }
         }
         if ( typeof reject === 'function' ) {
             this.reject.push( reject );
             if ( this.error !== null ) {
                 // the response came before calling this function
-                reject.call( this, this.error );
+                priv.call( reject, this, this.error );
             }
         }
         return this;

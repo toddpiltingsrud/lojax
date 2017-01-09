@@ -151,7 +151,8 @@ if ( lojax.bindAllModels ) {
                     assert.equal( arg.data, 'number=5', arg.method );
                     break;
                 case 'post':
-                    assert.ok( arg.data.is( 'form' ), 'post should use a form' );
+                case 'put':
+                    assert.ok( arg.data.is( 'form' ), 'post and put should use a form' );
                     break;
                 default:
                     assert.equal( arg.data, '{"number":5}', arg.method );

@@ -4,7 +4,7 @@ var tests = tests || {};
 
 var div = null;
 
-var methods = 'get post ajax-get ajax-post ajax-put ajax-delete jsonp'.split( ' ' );
+var methods = 'get post put ajax-get ajax-post ajax-put ajax-delete jsonp'.split( ' ' );
 
 var getForm = function () {
     var out = [];
@@ -82,6 +82,25 @@ var escapeHTML = function ( obj ) {
     }
     return obj;
 };
+
+QUnit.test( 'getFormData', function ( assert ) {
+
+    var form = getForm();
+
+    var formData = lojax.priv.getFormData( form );
+
+    assert.ok( formData != null, 'formData should not be null' );
+
+    if ( formData.keys ) {
+        var key,
+            successful = $( form ).serializeArray();
+
+        successful.forEach( function ( item ) {
+            assert.ok( formData.get( item.name ) != null );
+        } );
+    }
+
+} );
 
 QUnit.test( 'getFunctionAtPath', function ( assert ) {
 
@@ -592,14 +611,24 @@ QUnit.test( 'methods1', function ( assert ) {
 
         switch (arg.method) {
             case 'post':
-                assert.ok( arg.data.is( 'form' ), 'non-ajax post should use a form' );
+            case 'put':
+                assert.ok( arg.data.is( 'form' ), 'non-ajax post or put should use a form' );
+                break;
+            case 'ajax-post':
+            case 'ajax-put':
+                if ( window.FormData ) {
+                    assert.ok( arg.data instanceof window.FormData, arg.method );
+                }
+                else {
+                    assert.equal( arg.data, 'number=5', arg.method );
+                }
                 break;
             default:
-                assert.equal( arg.data, 'number=5' );
+                assert.equal( arg.data, 'number=5', arg.method );
                 break;
         }
         // mongoose doesn't support put or delete :(
-        if ( /get|post|ajax-put|ajax-delete/.test( arg.method ) ) arg.cancel = true;
+        if ( /get|post|put|ajax-put|ajax-delete/.test( arg.method ) ) arg.cancel = true;
         done();
     } );
 
