@@ -1081,15 +1081,14 @@ var lojax = lojax || {};
             }
         },
         ajax: function ajax() {
-            var s = this;
-            var obj = {
+            var self = this;
+            $.ajax({
                 url: this.action,
-                'type': this.method.toUpperCase(),
+                type: this.method.toUpperCase(),
                 data: this.data,
                 contentType: this.contentType,
                 processData: this.processData
-            };
-            $.ajax(obj).done(s.done.bind(s)).fail(s.fail.bind(s));
+            }).done(self.done.bind(self)).fail(self.fail.bind(self));
         },
         done: function done(response) {
             this.result = response;
