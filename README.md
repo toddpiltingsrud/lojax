@@ -9,4 +9,4 @@ the main layout, scripts, stylesheets and other resources are loaded once at the
 requested again, and the application communicates with the server entirely via AJAX, resulting in a cleaner, more fluid
 and faster application.
 
-See it in action <a href="https://lojax.herokuapp.com/index.php">here</a>.
+See it in action <a href="https://lojax.herokuapp.com/index.html">here</a>.
