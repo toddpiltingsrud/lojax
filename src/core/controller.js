@@ -175,8 +175,6 @@ $.extend( jx.Controller, {
             request = new jx.Request( request );
         }
 
-        jx.log( 'executeRequest: request: ' , request );
-
         // no action? we're done here
         if ( request.action === null ) return;
 
@@ -184,9 +182,11 @@ $.extend( jx.Controller, {
         if ( request.action in this.cache ) {
             request = this.cache[request.action];
             delete this.cache[request.action];
-            jx.info( 'executeRequest: retrieved from cache' );
         }
         else {
+            if ( request.source && $( request.source ).is( ':button,a' ) ) {
+                priv.disable( request.source, 30 );
+            }
             request.exec();
         }
 
@@ -287,8 +287,6 @@ $.extend( jx.Controller, {
     createModal: function ( content, request ) {
         // injectContent delegates modals here
 
-        jx.info( 'createModal.content', content );
-
         // check for bootstrap
         if ( $.fn.modal ) {
             instance.modal = $( content ).appendTo( 'body' ).modal( {
@@ -354,24 +352,18 @@ $.extend( jx.Controller, {
     },
 
     preloadAsync: function ( root ) {
-        var self = this, config, request;
+        var config, requests = [];
         root = root || document;
-        // do this after everything else
-        setTimeout( function () {
-            // find elements that are supposed to be pre-loaded
-            $( root ).find( jx.select.preload ).each( function () {
-                config = priv.getConfig( this );
-                config.method = config.method || 'ajax-get';
-                config.suppressEvents = true;
-                request = new jx.Request( config );
-                // if it's got a valid action that hasn't already been cached, cache and execute
-                if ( priv.hasValue( request.action ) && !self.cache[request.action] ) {
-                    self.cache[request.action] = request;
-                    request.exec();
-                    jx.info( 'preloadAsync: request:' , request );
-                }
-            } );
+        // find elements that are supposed to be pre-loaded
+        $( root ).find( jx.select.preload ).each( function () {
+            config = priv.getConfig( this );
+            config.method = config.method || 'ajax-get';
+            config.suppressEvents = true;
+            requests.push( config );
         } );
+        if ( requests.length ) {
+            jx.preload( requests );
+        }
     },
 
     handlePolling: function ( request ) {

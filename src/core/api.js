@@ -121,6 +121,32 @@ Object.defineProperty(jx.config, 'navHistory', {
     }
 });
 
+jx.preload = function(urls) {
+    // do this after everything else
+    setTimeout(function(){
+        var obj, request;
+        if (!Array.isArray(urls)) { urls = [urls]; }
+        urls.forEach(function(url){
+            if (typeof url === 'string') {
+                obj = {
+                    action: url
+                };
+            }
+            else {
+                obj = url;
+            }
+            obj.method = obj.method || 'ajax-get';
+            obj.suppressEvents = true;
+            request = new jx.Request( obj );
+            // if it's got a valid action that hasn't already been cached, cache and execute
+            if ( priv.hasValue( request.action ) && !jx.Controller.cache[request.action] ) {
+                jx.Controller.cache[request.action] = request;
+                request.exec();
+            }
+        });
+    });
+};
+
 jx.select = {
     methodOrRequest: [
         '[data-request]',

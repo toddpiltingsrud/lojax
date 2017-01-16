@@ -1,6 +1,6 @@
 # lojax
 
-This is a JavaScript library I’ve been slowly tweaking for a few years. 
+This is a JavaScript library I've been slowly tweaking for a few years. 
 It enables flexible communication between client and server via a declarative syntax and a JavaScript API. 
 This version has been completely refactored and has been extended to include JSON modeling and binding features.
 

@@ -265,22 +265,22 @@ $.extend( priv, {
         return url.replace( s, s + a );
     },
     nonce: jQuery.now(),
-    resolveAction: function ( params ) {
+    resolveAction: function ( obj ) {
         var action;
-        // if there's an action in the params, return it
-        if ( priv.hasValue( params.action ) && params.action.length ) {
-            action = params.action;
+        // if there's an action in the obj, return it
+        if ( priv.hasValue( obj.action ) && obj.action.length ) {
+            action = obj.action;
         }
             // check for a valid href
-        else if ( priv.hasValue( params.source )
-            && priv.hasValue( params.source.href )
-            && params.source.href.length
-            && params.source.href.substr( 0, 11 ) !== 'javascript:' ) {
-            action = params.source.href;
+        else if ( priv.hasValue( obj.source )
+            && priv.hasValue( obj.source.href )
+            && obj.source.href.length
+            && obj.source.href.substr( 0, 11 ) !== 'javascript:' ) {
+            action = obj.source.href;
         }
             // if this is a submit button check for a form
-        else if ( $( params.source ).is( '[type=submit]' ) ) {
-            var closest = $( params.source ).closest( 'form,' + priv.attrSelector( 'model' ) );
+        else if ( $( obj.source ).is( '[type=submit]' ) ) {
+            var closest = $( obj.source ).closest( 'form,' + priv.attrSelector( 'model' ) );
             // is submit button inside a form?
             if ( closest.is( 'form' ) ) {
                 // post to form.action or current page
@@ -288,13 +288,17 @@ $.extend( priv, {
             }
         }
             // if this is a form use form.action or current page
-        else if ( $( params.source ).is( 'form' ) ) {
-            action = $( params.source ).attr( 'action' ) || window.location.href;
+        else if ( $( obj.source ).is( 'form' ) ) {
+            action = $( obj.source ).attr( 'action' ) || window.location.href;
+        }
+            // if obj.form is a form with an action
+        else if ( $( obj.form ).is( 'form[action]' ) ) {
+            action = $( obj.form ).attr( 'action' ) || window.location.href;
         }
 
-        if ( jx.config.navHistory && params.method === 'ajax-get' && priv.hasHash( action ) ) {
+        if ( jx.config.navHistory && obj.method === 'ajax-get' && priv.hasHash( action ) ) {
             action = priv.resolveHash( action );
-            params.isNavHistory = true;
+            obj.isNavHistory = true;
         }
 
         return action;

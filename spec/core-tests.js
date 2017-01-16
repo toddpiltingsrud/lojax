@@ -83,6 +83,97 @@ var escapeHTML = function ( obj ) {
     return obj;
 };
 
+QUnit.test( 'request.source 1', function ( assert ) {
+
+    var done = assert.async();
+
+    // create a form with a submit button
+    var form = $( '<form></form>' );
+    var submitBtn = $( '<button type="button" id="request_source_test" />' );
+
+    div.append( form );
+
+    // add some inputs
+    form.append( getForm() );
+    form.append( submitBtn );
+
+    $( '#request_source_test' ).click( function () {
+        lojax.exec( {
+            action: 'controller/action/id',
+            form: '#div1 form',
+            method: 'ajax-get',
+            source: this,
+            before: function ( req ) {
+                var isBusy = $( '#request_source_test' ).is( '.busy' );
+                assert.strictEqual( isBusy, true );
+                req.cancel = true;
+                div.empty();
+                done();
+            }
+        } );
+    } );
+
+    $( '#request_source_test' ).click();
+
+} );
+
+QUnit.test( 'request.source 2', function ( assert ) {
+
+    var done = assert.async();
+
+    // create a form with a fake button
+    var form = $( '<form></form>' );
+    var submitBtn = $( '<div class="btn" id="request_source_test">Submit</div>' );
+
+    div.append( form );
+
+    // add some inputs
+    form.append( getForm() );
+    form.append( submitBtn );
+
+    $( '#request_source_test' ).click( function () {
+        lojax.exec( {
+            action: 'controller/action/id',
+            form: '#div1 form',
+            method: 'ajax-get',
+            source: this,
+            before: function ( req ) {
+                var isBusy = $( '#request_source_test' ).is( '.busy' );
+                assert.strictEqual( isBusy, false );
+                req.cancel = true;
+                div.empty();
+                done();
+            }
+        } );
+    } );
+
+    $( '#request_source_test' ).click();
+
+} );
+
+QUnit.test( 'request.action from form', function ( assert ) {
+
+    var done = assert.async();
+
+    var form = getForm();
+
+    var form = $( '<form action="controller/action/id"></form>' ).appendTo( div );
+
+    var request = {
+        form: '#div1 form',
+        method: 'ajax-get',
+        before: function ( req ) {
+            assert.strictEqual( req.action, "controller/action/id" );
+            req.cancel = true;
+            div.empty();
+            done();
+        }
+    };
+
+    lojax.exec( request );
+
+} );
+
 QUnit.test( 'getFormData', function ( assert ) {
 
     var form = getForm();
@@ -886,7 +977,13 @@ QUnit.test( 'posting forms 1', function ( assert ) {
 
     $( document ).on( lojax.events.afterRequest, function ( evt, arg ) {
         assert.ok( arg != null );
-        assert.equal( arg.contentType, 'application/x-www-form-urlencoded; charset=UTF-8' );
+        if ( window.FormData ) {
+            assert.equal( arg.data instanceof window.FormData, true );
+            assert.equal( arg.contentType, false );
+        }
+        else {
+            assert.equal( arg.contentType, 'application/x-www-form-urlencoded; charset=UTF-8' );
+        }
         assert.equal( arg.action, 'partials/EmptyResponse.html#withhash' );
         $( document ).off( lojax.events.afterRequest );
         done1();
@@ -962,7 +1059,13 @@ QUnit.test( 'posting forms 2', function ( assert ) {
     $( document ).one( lojax.events.beforeRequest, function ( evt, arg ) {
         arg.cancel = true;
         assert.ok( arg != null );
-        assert.equal( arg.contentType, 'application/x-www-form-urlencoded; charset=UTF-8' );
+        if ( window.FormData ) {
+            assert.equal( arg.contentType, false );
+            assert.equal( arg.data instanceof window.FormData, true );
+        }
+        else {
+            assert.equal( arg.contentType, 'application/x-www-form-urlencoded; charset=UTF-8' );
+        }
         assert.equal( arg.action, window.location.href, 'forms should use the current url if none is specified' );
         $( document ).off( lojax.events.beforeRequest );
         done1();
@@ -972,7 +1075,7 @@ QUnit.test( 'posting forms 2', function ( assert ) {
 
     submitBtn.click();
 
-   //div.empty();
+    //div.empty();
 
 } );
 

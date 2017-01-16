@@ -125,6 +125,32 @@ var lojax = lojax || {};
         }
     });
     
+    jx.preload = function(urls) {
+        // do this after everything else
+        setTimeout(function(){
+            var obj, request;
+            if (!Array.isArray(urls)) { urls = [urls]; }
+            urls.forEach(function(url){
+                if (typeof url === 'string') {
+                    obj = {
+                        action: url
+                    };
+                }
+                else {
+                    obj = url;
+                }
+                obj.method = obj.method || 'ajax-get';
+                obj.suppressEvents = true;
+                request = new jx.Request( obj );
+                // if it's got a valid action that hasn't already been cached, cache and execute
+                if ( priv.hasValue( request.action ) && !jx.Controller.cache[request.action] ) {
+                    jx.Controller.cache[request.action] = request;
+                    request.exec();
+                }
+            });
+        });
+    };
+    
     jx.select = {
         methodOrRequest: [
             '[data-request]',
@@ -331,7 +357,6 @@ var lojax = lojax || {};
                 request = new jx.Request( request );
             }
     
-    
             // no action? we're done here
             if ( request.action === null ) return;
     
@@ -341,6 +366,9 @@ var lojax = lojax || {};
                 delete this.cache[request.action];
             }
             else {
+                if ( request.source && $( request.source ).is( ':button,a' ) ) {
+                    priv.disable( request.source, 30 );
+                }
                 request.exec();
             }
     
@@ -441,7 +469,6 @@ var lojax = lojax || {};
         createModal: function ( content, request ) {
             // injectContent delegates modals here
     
-    
             // check for bootstrap
             if ( $.fn.modal ) {
                 instance.modal = $( content ).appendTo( 'body' ).modal( {
@@ -507,23 +534,18 @@ var lojax = lojax || {};
         },
     
         preloadAsync: function ( root ) {
-            var self = this, config, request;
+            var config, requests = [];
             root = root || document;
-            // do this after everything else
-            setTimeout( function () {
-                // find elements that are supposed to be pre-loaded
-                $( root ).find( jx.select.preload ).each( function () {
-                    config = priv.getConfig( this );
-                    config.method = config.method || 'ajax-get';
-                    config.suppressEvents = true;
-                    request = new jx.Request( config );
-                    // if it's got a valid action that hasn't already been cached, cache and execute
-                    if ( priv.hasValue( request.action ) && !self.cache[request.action] ) {
-                        self.cache[request.action] = request;
-                        request.exec();
-                    }
-                } );
+            // find elements that are supposed to be pre-loaded
+            $( root ).find( jx.select.preload ).each( function () {
+                config = priv.getConfig( this );
+                config.method = config.method || 'ajax-get';
+                config.suppressEvents = true;
+                requests.push( config );
             } );
+            if ( requests.length ) {
+                jx.preload( requests );
+            }
         },
     
         handlePolling: function ( request ) {
@@ -877,22 +899,22 @@ var lojax = lojax || {};
             return url.replace( s, s + a );
         },
         nonce: jQuery.now(),
-        resolveAction: function ( params ) {
+        resolveAction: function ( obj ) {
             var action;
-            // if there's an action in the params, return it
-            if ( priv.hasValue( params.action ) && params.action.length ) {
-                action = params.action;
+            // if there's an action in the obj, return it
+            if ( priv.hasValue( obj.action ) && obj.action.length ) {
+                action = obj.action;
             }
                 // check for a valid href
-            else if ( priv.hasValue( params.source )
-                && priv.hasValue( params.source.href )
-                && params.source.href.length
-                && params.source.href.substr( 0, 11 ) !== 'javascript:' ) {
-                action = params.source.href;
+            else if ( priv.hasValue( obj.source )
+                && priv.hasValue( obj.source.href )
+                && obj.source.href.length
+                && obj.source.href.substr( 0, 11 ) !== 'javascript:' ) {
+                action = obj.source.href;
             }
                 // if this is a submit button check for a form
-            else if ( $( params.source ).is( '[type=submit]' ) ) {
-                var closest = $( params.source ).closest( 'form,' + priv.attrSelector( 'model' ) );
+            else if ( $( obj.source ).is( '[type=submit]' ) ) {
+                var closest = $( obj.source ).closest( 'form,' + priv.attrSelector( 'model' ) );
                 // is submit button inside a form?
                 if ( closest.is( 'form' ) ) {
                     // post to form.action or current page
@@ -900,13 +922,17 @@ var lojax = lojax || {};
                 }
             }
                 // if this is a form use form.action or current page
-            else if ( $( params.source ).is( 'form' ) ) {
-                action = $( params.source ).attr( 'action' ) || window.location.href;
+            else if ( $( obj.source ).is( 'form' ) ) {
+                action = $( obj.source ).attr( 'action' ) || window.location.href;
+            }
+                // if obj.form is a form with an action
+            else if ( $( obj.form ).is( 'form[action]' ) ) {
+                action = $( obj.form ).attr( 'action' ) || window.location.href;
             }
     
-            if ( jx.config.navHistory && params.method === 'ajax-get' && priv.hasHash( action ) ) {
+            if ( jx.config.navHistory && obj.method === 'ajax-get' && priv.hasHash( action ) ) {
                 action = priv.resolveHash( action );
-                params.isNavHistory = true;
+                obj.isNavHistory = true;
             }
     
             return action;
