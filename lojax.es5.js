@@ -1218,7 +1218,7 @@ var lojax = lojax || {};
                 }
                 return false;
             },
-            createModal: function createModal(content) {
+            createModal: function createModal(content, request) {
                 bsModal = $(content).appendTo('body').modal({
                     show: true,
                     keyboard: true

@@ -3,7 +3,7 @@
  Bootstrap modal 
 \****************/
 
-( function () {
+( function ( jx ) {
 
     var bsModal = null;
 
@@ -27,7 +27,7 @@
                     bsModal = null;
                 }
             } );
-            lojax.Controller.postInject( bsModal, content, request );
+            jx.Controller.postInject( bsModal, content, request );
         },
     };
 
@@ -38,7 +38,7 @@
             show: true,
             keyboard: true
         } );
-        bsModal.on( 'hidden.bs.modal', function () {
+        bsModal.one( 'hidden.bs.modal', function () {
             if ( priv.hasValue( bsModal ) ) {
                 bsModal.off( 'hidden.bs.modal', instance.onModalClose );
                 bsModal = null;
@@ -47,18 +47,16 @@
     };
 
     jx.closeModal = function ( onModalClose ) {
-        if ( priv.hasValue( bsModal ) ) {
-            if ( $.fn.modal ) {
-                if ( typeof onModalClose == 'function' ) {
-                    bsModal.one( 'hidden.bs.modal', onModalClose );
-                }
-                bsModal.modal( 'hide' );
+        if ( priv.hasValue( bsModal ) && $.fn.modal ) {
+            if ( typeof onModalClose == 'function' ) {
+                bsModal.one( 'hidden.bs.modal', onModalClose );
             }
-            // don't set bsModal to null here or the close handlers in controller won't fire
+            bsModal.modal( 'hide' );
+            // don't set bsModal to null here or the close handlers won't fire
         }
     };
 
     // register
     jx.registerModule( module.canHandle );
 
-} )();
+} )( lojax );
