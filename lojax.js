@@ -13,6 +13,7 @@ var lojax = lojax || {};
     jx.Transitions = {};
     var instance = jx.Controller;
     jx.priv = priv;
+    jx.modules = [];
     
     
     /***********\
@@ -51,33 +52,6 @@ var lojax = lojax || {};
     
     jx.out = function ( callback ) {
         instance.out = callback;
-    };
-    
-    jx.createModal = function ( content ) {
-        jx.closeModal();
-        instance.modal = $( content ).modal( {
-            show: true,
-            keyboard: true
-        } );
-        instance.modal.on( 'hidden.bs.modal', function () {
-            if ( priv.hasValue( instance.modal ) ) {
-                instance.modal.off( 'hidden.bs.modal', instance.onModalClose );
-                instance.modal.modal( 'hide' );
-                instance.modal = null;
-            }
-        } );
-    };
-    
-    jx.closeModal = function () {
-        if ( priv.hasValue( instance.modal ) ) {
-            if ( $.fn.modal ) {
-                instance.modal.modal( 'hide' );
-            }
-            else if ( $.fn.kendoWindow ) {
-                instance.modal.data( 'kendoWindow' ).close();
-            }
-            // don't set instance.modal to null here or the close handlers in controller won't fire
-        }
     };
     
     jx.events = {
@@ -126,29 +100,32 @@ var lojax = lojax || {};
     });
     
     jx.preload = function(urls) {
-        // do this after everything else
-        setTimeout(function(){
-            var obj, request;
-            if (!Array.isArray(urls)) { urls = [urls]; }
-            urls.forEach(function(url){
-                if (typeof url === 'string') {
-                    obj = {
-                        action: url
-                    };
-                }
-                else {
-                    obj = url;
-                }
-                obj.method = obj.method || 'ajax-get';
-                obj.suppressEvents = true;
-                request = new jx.Request( obj );
-                // if it's got a valid action that hasn't already been cached, cache and execute
-                if ( priv.hasValue( request.action ) && !jx.Controller.cache[request.action] ) {
-                    jx.Controller.cache[request.action] = request;
-                    request.exec();
-                }
-            });
+        var obj, request;
+        if (!Array.isArray(urls)) { urls = [urls]; }
+        urls.forEach(function(url){
+            if (typeof url === 'string') {
+                obj = {
+                    action: url
+                };
+            }
+            else {
+                obj = url;
+            }
+            obj.method = obj.method || 'ajax-get';
+            obj.suppressEvents = true;
+            request = new jx.Request( obj );
+            // if it's got a valid action that hasn't already been cached, cache and execute
+            if ( priv.hasValue( request.action ) && !jx.Controller.cache[request.action] ) {
+                jx.Controller.cache[request.action] = request;
+                request.exec();
+            }
         });
+    };
+    
+    jx.registerModule = function(fn) {
+        if (typeof fn === 'function') {
+            jx.modules.push(fn);
+        }
     };
     
     jx.select = {
@@ -220,7 +197,8 @@ var lojax = lojax || {};
                 .on( 'keydown', jx.select.methodWithEnterOrModel, this.handleEnterKey )
                 .on( 'submit', jx.select.formWithMethod, this.handleRequest )
                 // handle the control key
-                .on( 'keydown', this.handleControlKey ).on( 'keyup', this.handleControlKey )
+                .on( 'keydown', this.handleControlKey )
+                .on( 'keyup', this.handleControlKey )
                 .on( lojax.events.beforeRequest, this.disableButton )
                 .on( lojax.events.afterRequest, this.enableButton );
             if ( jx.config.navHistory ) {
@@ -245,7 +223,10 @@ var lojax = lojax || {};
     
         disableButton: function ( evt, arg ) {
             // prevent users from double-clicking, timeout of 30 seconds
-            if ( arg.eventType == 'click' ) priv.disable( arg.source, 30 );
+            if ( arg.eventType == 'click' ) {
+                priv.disable( arg.source, 30 )
+                $( arg.source ).addClass( 'busy' );
+            };
         },
     
         enableButton: function ( evt, arg ) {
@@ -300,7 +281,7 @@ var lojax = lojax || {};
             }
             catch ( ex ) {
                 priv.enable( $this );
-                jx.error( ex );
+                priv.error( ex );
             }
     
             evt.preventDefault();
@@ -319,12 +300,11 @@ var lojax = lojax || {};
         },
     
         handleHash: function () {
-    
-            if ( !jx.config.navHistory ) return;
-    
             // grab the current hash and request it with ajax-get
-    
             var handler, request, hash = window.location.hash;
+    
+            // ignore the hash change if navHistory is not turned on
+            if ( !jx.config.navHistory ) return;
     
             if ( priv.hasHash() ) {
     
@@ -352,46 +332,57 @@ var lojax = lojax || {};
         },
     
         executeRequest: function ( request ) {
+            var req,
+                copyProps;
     
             if ( !( request instanceof jx.Request ) ) {
                 request = new jx.Request( request );
             }
     
             // no action? we're done here
+            // this check must be done after the Request constructor executes priv.resolveAction
             if ( request.action === null ) return;
     
             // check for caching
             if ( request.action in this.cache ) {
-                request = this.cache[request.action];
-                delete this.cache[request.action];
+                req = this.cache[request.action];
+                // copy properties that were likely not included in the preloaded version
+                copyProps = 'isNavHistory transition source before callbacks suppressEvents eventType'.split( ' ' );
+                copyProps.forEach( function ( prop ) {
+                    req[prop] = req[prop] || request[prop];
+                } );
+                delete this.cache[req.action];
             }
             else {
-                if ( request.source && $( request.source ).is( ':button,a' ) ) {
-                    priv.disable( request.source, 30 );
+                req = request;
+                // if we got here by through lojax.exec
+                // the source won't be disabled by the event handlers
+                if ( req.source && $( req.source ).is( ':button,a' ) ) {
+                    priv.disable( req.source, 30 );
                 }
                 request.exec();
             }
     
-            request
+            req
                 .then( function ( response ) {
-                    instance.injectContent( request, response );
+                    instance.injectContent( req, response );
                     // if the request has a poll interval, handle it after the request has been processed
-                    instance.handlePolling( request );
-                    priv.enable( $( request.source ) );
+                    instance.handlePolling( req );
+                    priv.enable( $( req.source ) );
                 } )
                 .catch( function ( e ) {
-                    priv.enable( $( request.source ) );
-                    if ( typeof request.callbacks['catch'] !== 'function' ) {
-                        instance.handleError( e, request );
+                    priv.enable( $( req.source ) );
+                    if ( typeof req.callbacks['catch'] !== 'function' ) {
+                        instance.handleError( e, req );
                     }
                     // handle polling even if there was an error
-                    instance.handlePolling( request );
+                    instance.handlePolling( req );
                 } )
-                .then( request.callbacks.then, request.callbacks['catch'] );
+                .then( req.callbacks.then, req.callbacks['catch'] );
         },
     
         injectContent: function ( request, response ) {
-            var id, target, transition, $node, result, root;
+            var id, target, transition, $node, result, root, handled;
     
             // ensure any loose calls to jx.in are ignored
             instance.in = null;
@@ -431,16 +422,11 @@ var lojax = lojax || {};
     
                     priv.triggerEvent( jx.events.beforeInject, nodes, $node );
     
-                    // don't create more than one modal at a time
-                    if ( $node.is( '.modal' ) ) {
-                        if ( instance.modal !== null ) {
-                            // set the root to the current modal so its panels will be replaced
-                            root = instance.modal;
-                        }
-                        else {
-                            instance.createModal( $node, request );
-                            continue;
-                        }
+                    // check for a handler module
+                    handled = this.checkForModule( $node, request );
+    
+                    if ( handled ) {
+                        continue;
                     }
     
                     // find all the panels in the new content
@@ -466,55 +452,14 @@ var lojax = lojax || {};
             }
         },
     
-        createModal: function ( content, request ) {
-            // injectContent delegates modals here
-    
-            // check for bootstrap
-            if ( $.fn.modal ) {
-                instance.modal = $( content ).appendTo( 'body' ).modal( {
-                    show: true,
-                    keyboard: true
-                } );
-                instance.modal.on( 'hidden.bs.modal', function () {
-                    if ( priv.hasValue( instance.modal ) ) {
-                        instance.modal.off( 'hidden.bs.modal', instance.onModalClose );
-                        instance.modal.modal( 'hide' );
-                        $( instance.modal ).remove();
-                        instance.modal = null;
-                    }
-                } );
+        checkForModule: function(node, request) {
+            var module;
+            for ( var i = 0; i < jx.modules.length; i++ ) {
+                if ( jx.modules[i]( node, request ) ) {
+                    return true;
+                }
             }
-                // check for kendo
-            else if ( $.fn.kendoWindow ) {
-                instance.modal = $( content ).appendTo( 'body' ).kendoWindow( {
-                    title: $( content ).find( '.dialog-header' ).text(),
-                    modal: true,
-                    animation: {
-                        open: {
-                            effects: "fade:in"
-                        }
-                    },
-                    visible: false,
-                    close: function () {
-                        if ( priv.hasValue( instance.modal ) ) {
-                            instance.modal.data( 'kendoWindow' ).destroy();
-                            $( instance.modal ).remove();
-                            instance.modal = null;
-                        }
-                    }
-                } );
-                instance.modal.find( '.modal-header' ).remove();
-                instance.modal.data( 'kendoWindow' ).center();
-                instance.modal.closest( '.k-window' ).css( { top: '20px', position: 'fixed' } );
-                instance.modal.data( 'kendoWindow' ).open();
-                // attach this handler to the top element in case the footer is replaced
-                instance.modal.one( 'click', '[data-dismiss=modal]', function () {
-                    instance.modal.data( 'kendoWindow' ).close();
-                } );
-            }
-            if ( instance.modal ) {
-                instance.postInject( instance.modal, content, request );
-            }
+            return false;
         },
     
         // an AJAX alternative to iframes
@@ -534,18 +479,21 @@ var lojax = lojax || {};
         },
     
         preloadAsync: function ( root ) {
-            var config, requests = [];
-            root = root || document;
-            // find elements that are supposed to be pre-loaded
-            $( root ).find( jx.select.preload ).each( function () {
-                config = priv.getConfig( this );
-                config.method = config.method || 'ajax-get';
-                config.suppressEvents = true;
-                requests.push( config );
+            // do this after everything else
+            setTimeout( function () {
+                var config, requests = [];
+                root = root || document;
+                // find elements that are supposed to be pre-loaded
+                $( root ).find( jx.select.preload ).each( function () {
+                    config = priv.getConfig( this );
+                    config.method = config.method || 'ajax-get';
+                    config.suppressEvents = true;
+                    requests.push( config );
+                } );
+                if ( requests.length ) {
+                    jx.preload( requests );
+                }
             } );
-            if ( requests.length ) {
-                jx.preload( requests );
-            }
         },
     
         handlePolling: function ( request ) {
@@ -587,52 +535,12 @@ var lojax = lojax || {};
                 if ( !request || !request.suppressEvents ) {
                     alert( 'An error occurred while processing your request.' );
                 }
-                if ( window.console && window.console.error ) window.console.error( response );
+                priv.error( response );
             }
         }
     
     } );
     
-    
-    /***********\
-       logging
-    \***********/
-    
-    ( function (context) {
-    
-        if ( !'logging' in context ) {
-            var _logging = 'info';
-    
-            Object.defineProperty( context, 'logging', {
-                get: function () {
-                    return _logging;
-                },
-                set: function ( val ) {
-                    if ( val === true ) val = 'info';
-                    _logging = val;
-                    if ( val && window.console != undefined ) {
-                        context.log = console.log.bind( console );
-                        context.info = (/info/).test( val ) && console.info ? console.info.bind( console ) : function () { };
-                        context.warn = (/info|warn/).test( val ) && console.warn ? console.warn.bind( console ) : function () { };
-                        context.debug = (/info|warn|debug/).test( val ) && console.debug ? console.debug.bind( console ) : function () { };
-                    }
-                    else {
-                        context.log = context.info = context.warn = context.debug = function () { };
-                    }
-                }
-            } );
-        }
-    
-        // create context.log
-        context.logging = 'info';
-    
-        context.error = function ( e ) {
-            if ( window.console != undefined && window.console.error != undefined ) {
-                console.error( e );
-            }
-        };
-    
-    } )(jx);
     
     /***************\
     private functions
@@ -674,7 +582,7 @@ var lojax = lojax || {};
             try {
                 fn.call( context, arg );
             } catch ( e ) {
-                jx.error( e );
+                jx.priv.error( e );
             }
         },
         callIn: function ( panel, context ) {
@@ -711,8 +619,8 @@ var lojax = lojax || {};
             }
         },
         disable: function ( elem, seconds ) {
-            elem = $( elem );
-            elem.attr( 'disabled', 'disabled' ).addClass( 'disabled busy' );
+            if ( !elem ) { return; }
+            $( elem ).attr( 'disabled', 'disabled' ).addClass( 'disabled' );
             if ( typeof seconds == 'number' && seconds > 0 ) {
                 setTimeout( function () {
                     priv.enable( elem );
@@ -720,9 +628,12 @@ var lojax = lojax || {};
             }
         },
         enable: function ( elem ) {
-            elem = elem || $( '[disabled].disabled.busy' );
-            elem = $( elem );
-            elem.removeAttr( 'disabled' ).removeClass( 'disabled busy' );
+            $( elem ).removeAttr( 'disabled' ).removeClass( 'disabled busy' );
+        },
+        error: function ( e ) {
+            if ( window.console != undefined && window.console.error != undefined ) {
+                console.error( e );
+            }
         },
         formFromInputs: function ( forms, action, method ) {
             var $forms = $( forms );
@@ -1051,9 +962,7 @@ var lojax = lojax || {};
                 }, arg );
             }
             catch ( ex ) {
-                if ( console && console.error ) {
-                    console.error( ex );
-                }
+                priv.error( ex );
             }
         }
     
@@ -1079,8 +988,8 @@ var lojax = lojax || {};
         this.form = priv.resolveForm( obj );
         this.action = priv.resolveAction( obj );
         this.isNavHistory = obj.isNavHistory;
-        if (priv.resolveModel) this.model = priv.resolveModel( obj );
-        this.contentType = 'application/x-www-form-urlencoded; charset=UTF-8';
+        this.model = priv.resolveModel( obj );
+        this.contentType = obj.contentType || 'application/x-www-form-urlencoded; charset=UTF-8';
         this.transition = obj.transition;
         this.target = priv.resolveTarget( obj );
         this.poll = priv.resolvePoll( obj );
@@ -1092,8 +1001,9 @@ var lojax = lojax || {};
         this.cancel = false;
         this.resolve = [];
         this.reject = [];
-        this.result = null;
-        this.error = null;
+        // set result and error in case we are recycling a cached request
+        this.result = obj.result || null;
+        this.error = obj.rerror || null;
         this.suppressEvents = obj.suppressEvents || false;
         this.callbacks = {
             then: priv.getFunctionAtPath( obj.then ),
@@ -1105,7 +1015,6 @@ var lojax = lojax || {};
     jx.Request.prototype = {
     
         getData: function () {
-            var data;
             switch ( this.method ) {
                 case 'get':
                 case 'ajax-get':
@@ -1114,64 +1023,59 @@ var lojax = lojax || {};
                     // convert model to form, serialize form
                     // currently the api doesn't provide a way to specify a model
                     if ( this.model ) {
-                        data = priv.formFromModel( this.model ).serialize();
+                        return priv.formFromModel( this.model ).serialize();
                     }
                     else if ( this.form ) {
-                        data = $( this.form ).serialize();
+                        return $( this.form ).serialize();
                     }
                     break;
                 case 'post':
                 case 'put':
                     // convert model to form and submit
                     if ( this.model ) {
-                        data = priv.formFromModel( this.model );
+                        return priv.formFromModel( this.model );
                     }
                     else if ( this.form ) {
-                        data = priv.formFromInputs( this.form, this.action, this.method );
+                        return priv.formFromInputs( this.form, this.action, this.method );
                     }
                     else {
                         // post and put require a form, it's the only way we can do a post or put from JS
-                        data = $( "<form method='" + this.method.toUpperCase() + "' action='" + this.action + "' style='display:none'></form>" );
+                        return $( "<form method='" + this.method.toUpperCase() + "' action='" + this.action + "' style='display:none'></form>" );
                     }
                     break;
                 case 'ajax-post':
                 case 'ajax-put':
                     // serialize form, JSON.stringify model and change content-type to application/json
                     if ( this.model ) {
-                        data = JSON.stringify( this.model );
+                        return JSON.stringify( this.model );
                         this.contentType = 'application/json';
                     }
                     else if ( this.form ) {
-                        if ( window.FormData ) { // && $(this.form).find('[type=file]').length ) {
-                            data = priv.getFormData( this.form );
+                        if ( window.FormData ) {
                             // prevent jQuery from converting this into a string
                             this.processData = false;
                             this.contentType = false;
+                            return priv.getFormData( this.form );
                         }
                         else {
-                            data = $( this.form ).serialize();
+                            return $( this.form ).serialize();
                         }
                     }
                     break;
             }
-            return data;
+            return null;
         },
-        getFullUrl: function() {
-            switch ( this.method ) {
-                case 'get':
-                case 'ajax-get':
-                case 'ajax-delete':
-                case 'jsonp':
-                    return this.action + ( this.data ? '?' + this.data : '' );
-                default:
-                    return this.action;
+        getFullUrl: function () {
+            if ( (/^(get|ajax-get|ajax-delete|jsonp)$/).test(this.method)) {
+                return this.action + ( this.data ? '?' + this.data : '' );
             }
+            return this.action;
         },
-        ajax: function () {
+        ajax: function (type) {
             var self = this;
             $.ajax( {
                 url: this.action,
-                type: this.method.toUpperCase(),
+                type: type,
                 data: this.data,
                 contentType: this.contentType,
                 processData: this.processData
@@ -1225,13 +1129,13 @@ var lojax = lojax || {};
                     .fail( this.fail.bind( this ) );
             },
             'ajax-post': function () {
-                this.ajax();
+                this.ajax('POST');
             },
             'ajax-put': function () {
-                this.ajax();
+                this.ajax('PUT');
             },
             'ajax-delete': function () {
-                this.ajax();
+                this.ajax('DELETE');
             },
             jsonp: function () {
                 var self = this;
@@ -1251,7 +1155,6 @@ var lojax = lojax || {};
         exec: function () {
             var cancel = false;
             this.reset();
-    
     
             if ( !priv.hasValue( this.methods[this.method] ) ) throw 'Unsupported method: ' + this.method;
     
@@ -1305,10 +1208,8 @@ var lojax = lojax || {};
         },
     
         reset: function () {
-            if ( !this.cache ) {
-                this.result = null;
-                this.error = null;
-            }
+            this.result = null;
+            this.error = null;
             this.cancel = false;
             this.resolve = [];
             this.reject = [];
@@ -1362,6 +1263,70 @@ var lojax = lojax || {};
         }
     
     } );
+    
+    /****************\
+     Bootstrap modal 
+    \****************/
+    
+    ( function () {
+    
+        var bsModal = null;
+    
+        var module = {
+            canHandle: function ( $node, request ) {
+                // don't create more than one modal at a time
+                if ( $.fn.modal && $node.is( '.modal' ) && bsModal == null ) {
+                    module.createModal( $node, request );
+                    return true;
+                }
+                return false;
+            },
+            createModal: function ( content, request ) {
+                bsModal = $( content ).appendTo( 'body' ).modal( {
+                    show: true,
+                    keyboard: true
+                } );
+                bsModal.one( 'hidden.bs.modal', function () {
+                    if ( priv.hasValue( bsModal ) ) {
+                        $( bsModal ).remove();
+                        bsModal = null;
+                    }
+                } );
+                lojax.Controller.postInject( bsModal, content, request );
+            },
+        };
+    
+        // add API functions
+        jx.createModal = function ( content ) {
+            jx.closeModal();
+            bsModal = $( content ).modal( {
+                show: true,
+                keyboard: true
+            } );
+            bsModal.on( 'hidden.bs.modal', function () {
+                if ( priv.hasValue( bsModal ) ) {
+                    bsModal.off( 'hidden.bs.modal', instance.onModalClose );
+                    bsModal = null;
+                }
+            } );
+        };
+    
+        jx.closeModal = function ( onModalClose ) {
+            if ( priv.hasValue( bsModal ) ) {
+                if ( $.fn.modal ) {
+                    if ( typeof onModalClose == 'function' ) {
+                        bsModal.one( 'hidden.bs.modal', onModalClose );
+                    }
+                    bsModal.modal( 'hide' );
+                }
+                // don't set bsModal to null here or the close handlers in controller won't fire
+            }
+        };
+    
+        // register
+        jx.registerModule( module.canHandle );
+    
+    } )();
     
     /***********\
       modeling
@@ -1625,10 +1590,8 @@ var lojax = lojax || {};
                 return obj;
             }
             catch ( err ) {
-                if ( console && console.error ) {
-                    console.error( 'Could not resolve object path: ' + path );
-                    console.error( err );
-                }
+                priv.error( 'Could not resolve object path: ' + path );
+                priv.error( err );
             }
         },
         getValue: function ( elems ) {

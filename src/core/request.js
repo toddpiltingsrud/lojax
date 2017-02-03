@@ -19,8 +19,8 @@ jx.Request = function ( obj ) {
     this.form = priv.resolveForm( obj );
     this.action = priv.resolveAction( obj );
     this.isNavHistory = obj.isNavHistory;
-    if (priv.resolveModel) this.model = priv.resolveModel( obj );
-    this.contentType = 'application/x-www-form-urlencoded; charset=UTF-8';
+    this.model = priv.resolveModel( obj );
+    this.contentType = obj.contentType || 'application/x-www-form-urlencoded; charset=UTF-8';
     this.transition = obj.transition;
     this.target = priv.resolveTarget( obj );
     this.poll = priv.resolvePoll( obj );
@@ -32,8 +32,9 @@ jx.Request = function ( obj ) {
     this.cancel = false;
     this.resolve = [];
     this.reject = [];
-    this.result = null;
-    this.error = null;
+    // set result and error in case we are recycling a cached request
+    this.result = obj.result || null;
+    this.error = obj.rerror || null;
     this.suppressEvents = obj.suppressEvents || false;
     this.callbacks = {
         then: priv.getFunctionAtPath( obj.then ),
@@ -45,8 +46,6 @@ jx.Request = function ( obj ) {
 jx.Request.prototype = {
 
     getData: function () {
-        var data;
-        jx.info( 'resolveData: method:' , this.method );
         switch ( this.method ) {
             case 'get':
             case 'ajax-get':
@@ -55,64 +54,59 @@ jx.Request.prototype = {
                 // convert model to form, serialize form
                 // currently the api doesn't provide a way to specify a model
                 if ( this.model ) {
-                    data = priv.formFromModel( this.model ).serialize();
+                    return priv.formFromModel( this.model ).serialize();
                 }
                 else if ( this.form ) {
-                    data = $( this.form ).serialize();
+                    return $( this.form ).serialize();
                 }
                 break;
             case 'post':
             case 'put':
                 // convert model to form and submit
                 if ( this.model ) {
-                    data = priv.formFromModel( this.model );
+                    return priv.formFromModel( this.model );
                 }
                 else if ( this.form ) {
-                    data = priv.formFromInputs( this.form, this.action, this.method );
+                    return priv.formFromInputs( this.form, this.action, this.method );
                 }
                 else {
                     // post and put require a form, it's the only way we can do a post or put from JS
-                    data = $( "<form method='" + this.method.toUpperCase() + "' action='" + this.action + "' style='display:none'></form>" );
+                    return $( "<form method='" + this.method.toUpperCase() + "' action='" + this.action + "' style='display:none'></form>" );
                 }
                 break;
             case 'ajax-post':
             case 'ajax-put':
                 // serialize form, JSON.stringify model and change content-type to application/json
                 if ( this.model ) {
-                    data = JSON.stringify( this.model );
+                    return JSON.stringify( this.model );
                     this.contentType = 'application/json';
                 }
                 else if ( this.form ) {
-                    if ( window.FormData ) { // && $(this.form).find('[type=file]').length ) {
-                        data = priv.getFormData( this.form );
+                    if ( window.FormData ) {
                         // prevent jQuery from converting this into a string
                         this.processData = false;
                         this.contentType = false;
+                        return priv.getFormData( this.form );
                     }
                     else {
-                        data = $( this.form ).serialize();
+                        return $( this.form ).serialize();
                     }
                 }
                 break;
         }
-        return data;
+        return null;
     },
-    getFullUrl: function() {
-        switch ( this.method ) {
-            case 'get':
-            case 'ajax-get':
-            case 'ajax-delete':
-            case 'jsonp':
-                return this.action + ( this.data ? '?' + this.data : '' );
-            default:
-                return this.action;
+    getFullUrl: function () {
+        if ( (/^(get|ajax-get|ajax-delete|jsonp)$/).test(this.method)) {
+            return this.action + ( this.data ? '?' + this.data : '' );
         }
+        return this.action;
     },
-    ajax: function () {
+    ajax: function (type) {
         var self = this;
         $.ajax( {
             url: this.action,
-            type: this.method.toUpperCase(),
+            type: type,
             data: this.data,
             contentType: this.contentType,
             processData: this.processData
@@ -166,13 +160,13 @@ jx.Request.prototype = {
                 .fail( this.fail.bind( this ) );
         },
         'ajax-post': function () {
-            this.ajax();
+            this.ajax('POST');
         },
         'ajax-put': function () {
-            this.ajax();
+            this.ajax('PUT');
         },
         'ajax-delete': function () {
-            this.ajax();
+            this.ajax('DELETE');
         },
         jsonp: function () {
             var self = this;
@@ -193,8 +187,6 @@ jx.Request.prototype = {
         var cancel = false;
         this.reset();
 
-        jx.info( 'request.exec: this:' , this );
-
         if ( !priv.hasValue( this.methods[this.method] ) ) throw 'Unsupported method: ' + this.method;
 
         if ( priv.hasValue( this.action ) && this.action !== '' ) {
@@ -211,7 +203,6 @@ jx.Request.prototype = {
             if ( !this.cancel ) {
                 // execute the method function
                 this.methods[this.method].bind( this )();
-                jx.info( 'request.exec: executed' );
             }
             else {
                 // always trigger afterRequest even if there was no request
@@ -248,10 +239,8 @@ jx.Request.prototype = {
     },
 
     reset: function () {
-        if ( !this.cache ) {
-            this.result = null;
-            this.error = null;
-        }
+        this.result = null;
+        this.error = null;
         this.cancel = false;
         this.resolve = [];
         this.reject = [];

@@ -1,0 +1,49 @@
+﻿    createModal: function ( content, request ) {
+        // injectContent delegates modals here
+
+        // check for bootstrap
+        if ( $.fn.modal ) {
+            instance.modal = $( content ).appendTo( 'body' ).modal( {
+                show: true,
+                keyboard: true
+            } );
+            instance.modal.one( 'hidden.bs.modal', function () {
+                if ( priv.hasValue( instance.modal ) ) {
+                    instance.modal.modal( 'hide' );
+                    $( instance.modal ).remove();
+                    instance.modal = null;
+                }
+            } );
+        }
+            // check for kendo
+        else if ( $.fn.kendoWindow ) {
+            instance.modal = $( content ).appendTo( 'body' ).kendoWindow( {
+                title: $( content ).find( '.dialog-header' ).text(),
+                modal: true,
+                animation: {
+                    open: {
+                        effects: "fade:in"
+                    }
+                },
+                visible: false,
+                close: function () {
+                    if ( priv.hasValue( instance.modal ) ) {
+                        instance.modal.data( 'kendoWindow' ).destroy();
+                        $( instance.modal ).remove();
+                        instance.modal = null;
+                    }
+                }
+            } );
+            instance.modal.find( '.modal-header' ).remove();
+            instance.modal.data( 'kendoWindow' ).center();
+            instance.modal.closest( '.k-window' ).css( { top: '20px', position: 'fixed' } );
+            instance.modal.data( 'kendoWindow' ).open();
+            // attach this handler to the top element in case the footer is replaced
+            instance.modal.one( 'click', '[data-dismiss=modal]', function () {
+                instance.modal.data( 'kendoWindow' ).close();
+            } );
+        }
+        if ( instance.modal ) {
+            instance.postInject( instance.modal, content, request );
+        }
+    },

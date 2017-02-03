@@ -39,7 +39,7 @@ $.extend( priv, {
         try {
             fn.call( context, arg );
         } catch ( e ) {
-            jx.error( e );
+            jx.priv.error( e );
         }
     },
     callIn: function ( panel, context ) {
@@ -76,8 +76,8 @@ $.extend( priv, {
         }
     },
     disable: function ( elem, seconds ) {
-        elem = $( elem );
-        elem.attr( 'disabled', 'disabled' ).addClass( 'disabled busy' );
+        if ( !elem ) { return; }
+        $( elem ).attr( 'disabled', 'disabled' ).addClass( 'disabled' );
         if ( typeof seconds == 'number' && seconds > 0 ) {
             setTimeout( function () {
                 priv.enable( elem );
@@ -85,9 +85,12 @@ $.extend( priv, {
         }
     },
     enable: function ( elem ) {
-        elem = elem || $( '[disabled].disabled.busy' );
-        elem = $( elem );
-        elem.removeAttr( 'disabled' ).removeClass( 'disabled busy' );
+        $( elem ).removeAttr( 'disabled' ).removeClass( 'disabled busy' );
+    },
+    error: function ( e ) {
+        if ( window.console != undefined && window.console.error != undefined ) {
+            console.error( e );
+        }
     },
     formFromInputs: function ( forms, action, method ) {
         var $forms = $( forms );
@@ -417,9 +420,7 @@ $.extend( priv, {
             }, arg );
         }
         catch ( ex ) {
-            if ( console && console.error ) {
-                console.error( ex );
-            }
+            priv.error( ex );
         }
     }
 

@@ -269,10 +269,8 @@ $.extend( jx.priv, {
             return obj;
         }
         catch ( err ) {
-            if ( console && console.error ) {
-                console.error( 'Could not resolve object path: ' + path );
-                console.error( err );
-            }
+            priv.error( 'Could not resolve object path: ' + path );
+            priv.error( err );
         }
     },
     getValue: function ( elems ) {

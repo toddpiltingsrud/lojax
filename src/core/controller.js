@@ -38,7 +38,8 @@ $.extend( jx.Controller, {
             .on( 'keydown', jx.select.methodWithEnterOrModel, this.handleEnterKey )
             .on( 'submit', jx.select.formWithMethod, this.handleRequest )
             // handle the control key
-            .on( 'keydown', this.handleControlKey ).on( 'keyup', this.handleControlKey )
+            .on( 'keydown', this.handleControlKey )
+            .on( 'keyup', this.handleControlKey )
             .on( lojax.events.beforeRequest, this.disableButton )
             .on( lojax.events.afterRequest, this.enableButton );
         if ( jx.config.navHistory ) {
@@ -63,7 +64,10 @@ $.extend( jx.Controller, {
 
     disableButton: function ( evt, arg ) {
         // prevent users from double-clicking, timeout of 30 seconds
-        if ( arg.eventType == 'click' ) priv.disable( arg.source, 30 );
+        if ( arg.eventType == 'click' ) {
+            priv.disable( arg.source, 30 )
+            $( arg.source ).addClass( 'busy' );
+        };
     },
 
     enableButton: function ( evt, arg ) {
@@ -118,7 +122,7 @@ $.extend( jx.Controller, {
         }
         catch ( ex ) {
             priv.enable( $this );
-            jx.error( ex );
+            priv.error( ex );
         }
 
         evt.preventDefault();
@@ -137,12 +141,11 @@ $.extend( jx.Controller, {
     },
 
     handleHash: function () {
-
-        if ( !jx.config.navHistory ) return;
-
         // grab the current hash and request it with ajax-get
-
         var handler, request, hash = window.location.hash;
+
+        // ignore the hash change if navHistory is not turned on
+        if ( !jx.config.navHistory ) return;
 
         if ( priv.hasHash() ) {
 
@@ -170,46 +173,57 @@ $.extend( jx.Controller, {
     },
 
     executeRequest: function ( request ) {
+        var req,
+            copyProps;
 
         if ( !( request instanceof jx.Request ) ) {
             request = new jx.Request( request );
         }
 
         // no action? we're done here
+        // this check must be done after the Request constructor executes priv.resolveAction
         if ( request.action === null ) return;
 
         // check for caching
         if ( request.action in this.cache ) {
-            request = this.cache[request.action];
-            delete this.cache[request.action];
+            req = this.cache[request.action];
+            // copy properties that were likely not included in the preloaded version
+            copyProps = 'isNavHistory transition source before callbacks suppressEvents eventType'.split( ' ' );
+            copyProps.forEach( function ( prop ) {
+                req[prop] = req[prop] || request[prop];
+            } );
+            delete this.cache[req.action];
         }
         else {
-            if ( request.source && $( request.source ).is( ':button,a' ) ) {
-                priv.disable( request.source, 30 );
+            req = request;
+            // if we got here by through lojax.exec
+            // the source won't be disabled by the event handlers
+            if ( req.source && $( req.source ).is( ':button,a' ) ) {
+                priv.disable( req.source, 30 );
             }
             request.exec();
         }
 
-        request
+        req
             .then( function ( response ) {
-                instance.injectContent( request, response );
+                instance.injectContent( req, response );
                 // if the request has a poll interval, handle it after the request has been processed
-                instance.handlePolling( request );
-                priv.enable( $( request.source ) );
+                instance.handlePolling( req );
+                priv.enable( $( req.source ) );
             } )
             .catch( function ( e ) {
-                priv.enable( $( request.source ) );
-                if ( typeof request.callbacks['catch'] !== 'function' ) {
-                    instance.handleError( e, request );
+                priv.enable( $( req.source ) );
+                if ( typeof req.callbacks['catch'] !== 'function' ) {
+                    instance.handleError( e, req );
                 }
                 // handle polling even if there was an error
-                instance.handlePolling( request );
+                instance.handlePolling( req );
             } )
-            .then( request.callbacks.then, request.callbacks['catch'] );
+            .then( req.callbacks.then, req.callbacks['catch'] );
     },
 
     injectContent: function ( request, response ) {
-        var id, target, transition, $node, result, root;
+        var id, target, transition, $node, result, root, handled;
 
         // ensure any loose calls to jx.in are ignored
         instance.in = null;
@@ -249,16 +263,11 @@ $.extend( jx.Controller, {
 
                 priv.triggerEvent( jx.events.beforeInject, nodes, $node );
 
-                // don't create more than one modal at a time
-                if ( $node.is( '.modal' ) ) {
-                    if ( instance.modal !== null ) {
-                        // set the root to the current modal so its panels will be replaced
-                        root = instance.modal;
-                    }
-                    else {
-                        instance.createModal( $node, request );
-                        continue;
-                    }
+                // check for a handler module
+                handled = this.checkForModule( $node, request );
+
+                if ( handled ) {
+                    continue;
                 }
 
                 // find all the panels in the new content
@@ -284,55 +293,14 @@ $.extend( jx.Controller, {
         }
     },
 
-    createModal: function ( content, request ) {
-        // injectContent delegates modals here
-
-        // check for bootstrap
-        if ( $.fn.modal ) {
-            instance.modal = $( content ).appendTo( 'body' ).modal( {
-                show: true,
-                keyboard: true
-            } );
-            instance.modal.on( 'hidden.bs.modal', function () {
-                if ( priv.hasValue( instance.modal ) ) {
-                    instance.modal.off( 'hidden.bs.modal', instance.onModalClose );
-                    instance.modal.modal( 'hide' );
-                    $( instance.modal ).remove();
-                    instance.modal = null;
-                }
-            } );
+    checkForModule: function(node, request) {
+        var module;
+        for ( var i = 0; i < jx.modules.length; i++ ) {
+            if ( jx.modules[i]( node, request ) ) {
+                return true;
+            }
         }
-            // check for kendo
-        else if ( $.fn.kendoWindow ) {
-            instance.modal = $( content ).appendTo( 'body' ).kendoWindow( {
-                title: $( content ).find( '.dialog-header' ).text(),
-                modal: true,
-                animation: {
-                    open: {
-                        effects: "fade:in"
-                    }
-                },
-                visible: false,
-                close: function () {
-                    if ( priv.hasValue( instance.modal ) ) {
-                        instance.modal.data( 'kendoWindow' ).destroy();
-                        $( instance.modal ).remove();
-                        instance.modal = null;
-                    }
-                }
-            } );
-            instance.modal.find( '.modal-header' ).remove();
-            instance.modal.data( 'kendoWindow' ).center();
-            instance.modal.closest( '.k-window' ).css( { top: '20px', position: 'fixed' } );
-            instance.modal.data( 'kendoWindow' ).open();
-            // attach this handler to the top element in case the footer is replaced
-            instance.modal.one( 'click', '[data-dismiss=modal]', function () {
-                instance.modal.data( 'kendoWindow' ).close();
-            } );
-        }
-        if ( instance.modal ) {
-            instance.postInject( instance.modal, content, request );
-        }
+        return false;
     },
 
     // an AJAX alternative to iframes
@@ -352,18 +320,21 @@ $.extend( jx.Controller, {
     },
 
     preloadAsync: function ( root ) {
-        var config, requests = [];
-        root = root || document;
-        // find elements that are supposed to be pre-loaded
-        $( root ).find( jx.select.preload ).each( function () {
-            config = priv.getConfig( this );
-            config.method = config.method || 'ajax-get';
-            config.suppressEvents = true;
-            requests.push( config );
+        // do this after everything else
+        setTimeout( function () {
+            var config, requests = [];
+            root = root || document;
+            // find elements that are supposed to be pre-loaded
+            $( root ).find( jx.select.preload ).each( function () {
+                config = priv.getConfig( this );
+                config.method = config.method || 'ajax-get';
+                config.suppressEvents = true;
+                requests.push( config );
+            } );
+            if ( requests.length ) {
+                jx.preload( requests );
+            }
         } );
-        if ( requests.length ) {
-            jx.preload( requests );
-        }
     },
 
     handlePolling: function ( request ) {
@@ -405,7 +376,7 @@ $.extend( jx.Controller, {
             if ( !request || !request.suppressEvents ) {
                 alert( 'An error occurred while processing your request.' );
             }
-            if ( window.console && window.console.error ) window.console.error( response );
+            priv.error( response );
         }
     }
 

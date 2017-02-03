@@ -7,6 +7,7 @@ jx.Controller = {};
 jx.Transitions = {};
 var instance = jx.Controller;
 jx.priv = priv;
+jx.modules = [];
 
 
 /***********\
@@ -40,40 +41,11 @@ jx.exec = function ( params ) {
 // call this from a script that is located inside a jx-panel, div[data-src] or .modal
 // executes a callback with the context set to the injected node
 jx.in = function ( callback ) {
-    jx.info( 'jx.in called' );
     instance.in = callback;
 };
 
 jx.out = function ( callback ) {
-    jx.info( 'jx.out called' );
     instance.out = callback;
-};
-
-jx.createModal = function ( content ) {
-    jx.closeModal();
-    instance.modal = $( content ).modal( {
-        show: true,
-        keyboard: true
-    } );
-    instance.modal.on( 'hidden.bs.modal', function () {
-        if ( priv.hasValue( instance.modal ) ) {
-            instance.modal.off( 'hidden.bs.modal', instance.onModalClose );
-            instance.modal.modal( 'hide' );
-            instance.modal = null;
-        }
-    } );
-};
-
-jx.closeModal = function () {
-    if ( priv.hasValue( instance.modal ) ) {
-        if ( $.fn.modal ) {
-            instance.modal.modal( 'hide' );
-        }
-        else if ( $.fn.kendoWindow ) {
-            instance.modal.data( 'kendoWindow' ).close();
-        }
-        // don't set instance.modal to null here or the close handlers in controller won't fire
-    }
 };
 
 jx.events = {
@@ -122,29 +94,32 @@ Object.defineProperty(jx.config, 'navHistory', {
 });
 
 jx.preload = function(urls) {
-    // do this after everything else
-    setTimeout(function(){
-        var obj, request;
-        if (!Array.isArray(urls)) { urls = [urls]; }
-        urls.forEach(function(url){
-            if (typeof url === 'string') {
-                obj = {
-                    action: url
-                };
-            }
-            else {
-                obj = url;
-            }
-            obj.method = obj.method || 'ajax-get';
-            obj.suppressEvents = true;
-            request = new jx.Request( obj );
-            // if it's got a valid action that hasn't already been cached, cache and execute
-            if ( priv.hasValue( request.action ) && !jx.Controller.cache[request.action] ) {
-                jx.Controller.cache[request.action] = request;
-                request.exec();
-            }
-        });
+    var obj, request;
+    if (!Array.isArray(urls)) { urls = [urls]; }
+    urls.forEach(function(url){
+        if (typeof url === 'string') {
+            obj = {
+                action: url
+            };
+        }
+        else {
+            obj = url;
+        }
+        obj.method = obj.method || 'ajax-get';
+        obj.suppressEvents = true;
+        request = new jx.Request( obj );
+        // if it's got a valid action that hasn't already been cached, cache and execute
+        if ( priv.hasValue( request.action ) && !jx.Controller.cache[request.action] ) {
+            jx.Controller.cache[request.action] = request;
+            request.exec();
+        }
     });
+};
+
+jx.registerModule = function(fn) {
+    if (typeof fn === 'function') {
+        jx.modules.push(fn);
+    }
 };
 
 jx.select = {

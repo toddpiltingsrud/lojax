@@ -83,6 +83,49 @@ var escapeHTML = function ( obj ) {
     return obj;
 };
 
+QUnit.test( 'preload api function', function ( assert ) {
+
+    div.empty();
+
+    var done = assert.async();
+
+    var store = lojax.Controller.cache;
+    var prop;
+    var requestHandled = false;
+
+    lojax.preload( 'partials/RaiseEvent.html' );
+
+    //$( document ).one( lojax.events.beforeRequest, function ( evt, arg ) {
+        prop = Object.getOwnPropertyNames( store )[0];
+        assert.ok( /RaiseEvent/.test( prop ), 'make sure we have the right request: ' + prop );
+        var request = lojax.Controller.cache[prop];
+        assert.ok( request != null, 'stuff should get cached' );
+        // wait for it to return, then check the contents
+        request.then( function ( response ) {
+            assert.ok( /customEvent/.test( response ), '' );
+        },
+        function ( error ) {
+            assert.ok( false, 'ajax error' );
+            console.log( error );
+        } );
+        requestHandled = true;
+    //} );
+
+    $( document ).off( 'customEvent' );
+
+    $( document ).on( 'customEvent', function () {
+        assert.strictEqual( requestHandled, true, 'beforeRequest should have been raised' );
+        assert.ok( true, 'customEvent was raised' );
+        setTimeout( function () {
+            assert.equal( store[prop], undefined, 'preloaded requests should be automatically removed' );
+            done();
+        } );
+    } );
+
+    $( '<button data-method="ajax-get" data-action="partials/RaiseEvent.html">' ).appendTo( div ).click();
+
+} );
+
 QUnit.test( 'request.source 1', function ( assert ) {
 
     var done = assert.async();
@@ -104,7 +147,7 @@ QUnit.test( 'request.source 1', function ( assert ) {
             method: 'ajax-get',
             source: this,
             before: function ( req ) {
-                var isBusy = $( '#request_source_test' ).is( '.busy' );
+                var isBusy = $( '#request_source_test' ).is( '.disabled' );
                 assert.strictEqual( isBusy, true );
                 req.cancel = true;
                 div.empty();
@@ -378,7 +421,7 @@ QUnit.test( 'submit event', function ( assert ) {
         assert.ok( arg != null );
         arg.cancel = true; 
         done1();
-        lojax.logging = false;
+        
         $( document ).off( lojax.events.beforeRequest );
     } );
 
@@ -387,7 +430,7 @@ QUnit.test( 'submit event', function ( assert ) {
         done1();
     } );
 
-    lojax.logging = true;
+    
 
     submitBtn.click();
 
@@ -397,7 +440,7 @@ QUnit.test( 'polling', function ( assert ) {
 
     div.empty();
 
-    lojax.logging = true;
+    
 
     $( div ).append( '<div jx-src="partials/RaiseEvent.html" jx-poll="1" />' );
 
@@ -427,7 +470,7 @@ QUnit.test( 'emptyHashAction', function ( assert ) {
 
     div.empty();
 
-    lojax.logging = true;
+    
 
     lojax.config.navHistory = true;
 
@@ -468,14 +511,14 @@ QUnit.test( 'handleHash2', function ( assert ) {
 
     div.empty();
 
-    lojax.logging = true;
+    
 
     var done = assert.async();
 
     $( document ).one( 'customEvent', function ( evt, arg ) {
         assert.ok( true, 'hash change handled' );
         done();
-        //lojax.logging = false;
+        //
     } );
 
     $( '<a href="#partials/RaiseEvent.html" jx-method="ajax-get"></a>' ).appendTo( div ).click();
@@ -556,11 +599,11 @@ QUnit.test( 'isJSON', function ( assert ) {
 
 QUnit.test( 'formFromModel', function ( assert ) {
 
-    lojax.logging = true;
+    
 
     var form = lojax.priv.formFromModel( getModel() );
 
-    lojax.logging = false;
+    
 
     assert.strictEqual( form.find( '[name=number]' ).val(), '3.14' );
     assert.strictEqual( form.find( '[name=daterange]:first' ).val(), '2015-11-13' );
@@ -682,7 +725,7 @@ QUnit.test( 'priv.noCache', function ( assert ) {
 
 QUnit.test( 'methods1', function ( assert ) {
 
-    lojax.logging = true;
+    
 
     var link = $( '<a href="partials/EmptyResponse.html" jx-form="#div1 [name=number]"></a>' );
 
@@ -816,7 +859,7 @@ QUnit.test( 'change event handler', function ( assert ) {
 QUnit.test( 'loadSrc', function ( assert ) {
     div.empty();
 
-    lojax.logging = true;
+    
 
     var done = assert.async();
 
@@ -831,7 +874,7 @@ QUnit.test( 'loadSrc', function ( assert ) {
 
         done();
 
-        lojax.logging = false;
+        
     } );
 
     div.append( '<div data-src="partials/ModelTest.html"><span id="replaceThis"></span></div>' );
@@ -847,7 +890,7 @@ QUnit.test( 'injectContent1', function ( assert ) {
 
     div.append( btn );
 
-    lojax.logging = true;
+    
 
     window.scriptExecuted = false;
 
@@ -874,14 +917,14 @@ QUnit.test( 'injectContent2', function ( assert ) {
 
     var done = assert.async();
 
-    lojax.logging = true;
+    
 
     $( document ).on( lojax.events.afterRequest, function () {
         assert.equal( window.testvalue, '1', 'new content should be queried by new script' );
         assert.equal( window.testvalue2, true, 'loose scripts should run' );
         assert.equal( div.find( '#testinput' ).length, 1, 'jx-panels should get injected' );
         done();
-        lojax.logging = false;
+        
     } );
 
     btn.click();
@@ -989,17 +1032,13 @@ QUnit.test( 'posting forms 1', function ( assert ) {
         done1();
     } );
 
-    lojax.logging = true;
-
     submitBtn.click();
-
-    lojax.logging = false;
 
 } );
 
 QUnit.test( 'callIn', function ( assert ) {
 
-    lojax.logging = true;
+    
 
     var div2 = $( '<div jx-panel="hidden-div2" style="display:none"></div>' ).appendTo( 'body' );
 
@@ -1033,8 +1072,6 @@ QUnit.test( 'callIn', function ( assert ) {
     };
 
     $( '<button data-method="ajax-get" data-action="partials/CallInTest.html?v=2">' ).appendTo( div ).click().remove();
-
-    //lojax.logging = false;
 
 } );
 
@@ -1071,7 +1108,7 @@ QUnit.test( 'posting forms 2', function ( assert ) {
         done1();
     } );
 
-    lojax.logging = true;
+    
 
     submitBtn.click();
 
@@ -1100,14 +1137,14 @@ QUnit.test( 'posting forms 3', function ( assert ) {
         done();
     } );
 
-    lojax.logging = true;
+    
 
     submitBtn.click();
 
     // test with default url (current page)
     div.empty();
 
-    lojax.logging = false;
+    
 
 } );
 
@@ -1126,10 +1163,10 @@ QUnit.test( 'posting forms 4', function ( assert ) {
         console.log( arg );
         assert.equal( $(arg.form).val(), 'single input', 'if the event source is a single input, assume it is suposed to be the form' );
         done();
-        lojax.logging = false;
+        
     } );
 
-    lojax.logging = true;
+    
 
     input.change();
 
@@ -1137,7 +1174,7 @@ QUnit.test( 'posting forms 4', function ( assert ) {
 
 QUnit.test( 'modals2', function ( assert ) {
 
-    lojax.logging = true;
+    
 
     div.empty();
 
@@ -1161,7 +1198,7 @@ QUnit.test( 'preload', function ( assert ) {
 
     var done = assert.async();
 
-    lojax.logging = false;
+    
     var store = lojax.Controller.cache;
     var prop;
 
@@ -1181,7 +1218,7 @@ QUnit.test( 'preload', function ( assert ) {
                 assert.ok( false, 'ajax error' );
                 console.log( error );
             } );
-            lojax.logging = false;
+            
         } );
     } );
 
